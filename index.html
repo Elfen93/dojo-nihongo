@@ -30,23 +30,22 @@ html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
   --bg:#151a17; --fg:#e3e4dc; --muted:#959b92; --line:#283029; --card:#1b211d; --card2:#232b25;
   --accent:#9db48f; --accent-fg:#131813; --accent-soft:#25302a;
   --leaf:#9db48f; --leaf-soft:#25302a; --warn:#cf9a8a; --warn-soft:#382a26; --ok:#9db48f; --ok-soft:#25302a; --gold:#c6b27e; --kanji:#eceee6; --kanji-c:#c2ad98; --kanji-soft:#302b25; --shadow:none; color-scheme:dark }
-:root[data-theme="dark"] body{background-image:repeating-linear-gradient(180deg,transparent 0 11px,rgba(255,255,255,.012) 11px 12px)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body{background-image:repeating-linear-gradient(180deg,transparent 0 11px,rgba(255,255,255,.012) 11px 12px)} } }
+ }
 :root[data-theme="dark"]{
   --bg:#151a17; --fg:#e3e4dc; --muted:#959b92; --line:#283029; --card:#1b211d; --card2:#232b25;
   --accent:#9db48f; --accent-fg:#131813; --accent-soft:#25302a;
   --leaf:#9db48f; --leaf-soft:#25302a; --warn:#cf9a8a; --warn-soft:#382a26; --ok:#9db48f; --ok-soft:#25302a; --gold:#c6b27e; --kanji:#eceee6; --kanji-c:#c2ad98; --kanji-soft:#302b25; --shadow:none; color-scheme:dark }
-:root[data-theme="dark"] body{background-image:repeating-linear-gradient(180deg,transparent 0 11px,rgba(255,255,255,.012) 11px 12px)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body{background-image:repeating-linear-gradient(180deg,transparent 0 11px,rgba(255,255,255,.012) 11px 12px)} }
+
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);background-image:repeating-linear-gradient(180deg,transparent 0 11px,rgba(0,0,0,.018) 11px 12px);color:var(--fg);font-family:var(--f-ui);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:url("icons/garden.svg") center bottom / cover no-repeat;opacity:.09}
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:url("icons/garden.svg") center bottom / cover no-repeat;opacity:.2;transition:opacity .8s}
+body.login-mode::after{opacity:.4}
 .app{position:relative;z-index:1}
-@media (max-width:860px){ body::after{background-size:220% auto;background-position:60% 100%;opacity:.10} }
-:root[data-theme="dark"] body::after{opacity:.07;filter:invert(1)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body::after{opacity:.07;filter:invert(1)} }
+@media (max-width:860px){ body::after{background-size:220% auto;background-position:62% 100%;opacity:.19} body.login-mode::after{opacity:.38} }
+:root[data-theme="dark"] body::after{opacity:.16;filter:brightness(.55) saturate(.8)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body::after{opacity:.16;filter:brightness(.55) saturate(.8)} }
 :lang(ja),.jp{font-family:var(--f-jp)}
 button{font:inherit;color:inherit;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
@@ -185,6 +184,25 @@ main{min-width:0;padding-block:28px 48px;display:flex;flex-direction:column;padd
 .hero .sub{color:var(--muted);font-size:.9rem}
 .hero .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .hero .chip{background:transparent;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.78rem;font-weight:500;line-height:1.5;display:inline-flex;align-items:center;color:var(--muted)}
+/* Acceso */
+.login-wrap{min-height:calc(100vh - 80px);display:flex;align-items:center;justify-content:center;animation:fadein .9s ease both}
+.login{width:min(420px,100%);text-align:center;padding:36px 28px;background:color-mix(in srgb, var(--card) 86%, transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:22px}
+.login .enso{width:120px;height:120px;margin:0 auto 10px}
+.login .enso path{fill:none;stroke:var(--fg);stroke-width:7;stroke-linecap:round;stroke-dasharray:330;stroke-dashoffset:330;animation:draw 1.6s .2s ease-out forwards;opacity:.85}
+.login .enso text{font-family:var(--f-jp-display);font-size:34px;fill:var(--fg)}
+.login h1{font-size:1.6rem;margin-top:6px}
+.login .sub{color:var(--muted);margin:4px 0 22px}
+.login .google{display:inline-flex;align-items:center;gap:10px;width:100%;justify-content:center;background:var(--fg);color:var(--bg);border:0;border-radius:12px;padding:13px 16px;font-weight:600;font-size:1rem;min-height:48px;transition:transform .15s,opacity .15s}
+.login .google:hover{opacity:.92}
+.login .google:active{transform:scale(.985)}
+.login .google svg{width:20px;height:20px;flex:none}
+.login .note{color:var(--muted);font-size:.78rem;margin-top:16px}
+body.leaving .login-wrap{animation:fadeout .55s ease forwards}
+.app{animation:fadein .7s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fadeout{to{opacity:0;transform:translateY(-8px) scale(.98)}}
+@keyframes draw{to{stroke-dashoffset:40}}
+@media (prefers-reduced-motion:reduce){ .login .enso path{animation:none;stroke-dashoffset:40} }
 /* Consejos */
 .tips{display:flex;flex-direction:column;gap:8px}
 .tip{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
@@ -2346,7 +2364,7 @@ async function initDb(){
     const { data:{ session } } = await sb.auth.getSession();
     USER = session ? session.user : null; AUTH_PENDING=false;
     if (USER && !emailAllowed(USER)) { await sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); }
-    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ pullRemote().then(render); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
+    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
     if (USER) await pullRemote(); else setSyncLabel('Sin sesión');
     render();
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }
@@ -2870,7 +2888,7 @@ function renderNav(){
   const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Progreso',onclick:()=>go('progreso')},'進'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes',onclick:()=>go('ajustes')},'⚙')); }
   const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
 }
-function render(){ if (needsLogin()) { renderLoginWall(); return; } renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
+function render(){ if (needsLogin()) { renderLoginWall(); return; } document.body.classList.remove('login-mode'); renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
 
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
@@ -3009,13 +3027,12 @@ function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING; }
 let AUTH_PENDING=true;
 function renderLoginWall(){
   const el=$('#main'); el.innerHTML=''; $('#sidenav').innerHTML=''; $('#tabnav').innerHTML=''; const mh=$('#mobilehead'); if(mh) mh.innerHTML='';
-  const email=h('input',{id:'l-email',type:'email',placeholder:'tu@correo.com',autocomplete:'email',style:'flex:1;min-width:0'});
-  const msg=h('div',{class:'small muted'});
-  el.append(h('div',{style:'max-width:420px;margin:10vh auto 0'}, h('div',{class:'card stack',style:'text-align:center'},
-    h('div',{style:'font-family:var(--f-jp-display);font-size:3rem;line-height:1'},'道場'), h('h1',{},'Dojo 日本語'), h('p',{class:'muted',style:'margin:0'},'App privada. Inicia sesión para continuar.'),
-    h('div',{class:'row',style:'margin-top:8px'}, email, h('button',{class:'btn primary',onclick:()=>{ if(email.value.includes('@')){ signInEmail(email.value.trim()); msg.textContent='Revisa tu correo y pulsa el enlace.'; } }},'Enlace')),
-    CONFIG.GOOGLE_LOGIN?h('button',{class:'btn',onclick:signInGoogle},'Entrar con Google'):null, msg,
-    CONFIG.ALLOWED_EMAILS&&CONFIG.ALLOWED_EMAILS.length?h('div',{class:'small muted'},'Solo las cuentas autorizadas pueden entrar.'):null)));
+  document.body.classList.remove('leaving'); document.body.classList.add('login-mode');
+  const enso=h('div',{class:'enso',html:'<svg viewBox="0 0 120 120"><path d="M92 36 A40 40 0 1 1 60 20"/><text x="60" y="72" text-anchor="middle">道</text></svg>'});
+  const gicon='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z" opacity=".9"/><path fill="currentColor" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z" opacity=".7"/><path fill="currentColor" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9z" opacity=".5"/><path fill="currentColor" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z" opacity=".8"/></svg>';
+  el.append(h('div',{class:'login-wrap'}, h('div',{class:'login'}, enso, h('h1',{},'Dojo 日本語'), h('div',{class:'sub'},'Un rato de japonés, cada día.'),
+    h('button',{class:'google',onclick:()=>{ signInGoogle(); }}, h('span',{html:gicon}), 'Entrar con Google'),
+    h('div',{class:'note'},'Acceso privado. Solo cuentas autorizadas.'))));
 }
 
 // ===================== Ajustes, importación y sincronización =====================

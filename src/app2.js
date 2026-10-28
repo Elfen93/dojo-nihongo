@@ -99,7 +99,7 @@ async function initDb(){
     const { data:{ session } } = await sb.auth.getSession();
     USER = session ? session.user : null; AUTH_PENDING=false;
     if (USER && !emailAllowed(USER)) { await sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); }
-    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ pullRemote().then(render); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
+    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
     if (USER) await pullRemote(); else setSyncLabel('Sin sesión');
     render();
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }

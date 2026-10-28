@@ -49,7 +49,7 @@ function renderNav(){
   const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Progreso',onclick:()=>go('progreso')},'進'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes',onclick:()=>go('ajustes')},'⚙')); }
   const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
 }
-function render(){ if (needsLogin()) { renderLoginWall(); return; } renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
+function render(){ if (needsLogin()) { renderLoginWall(); return; } document.body.classList.remove('login-mode'); renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
 
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
@@ -188,11 +188,10 @@ function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING; }
 let AUTH_PENDING=true;
 function renderLoginWall(){
   const el=$('#main'); el.innerHTML=''; $('#sidenav').innerHTML=''; $('#tabnav').innerHTML=''; const mh=$('#mobilehead'); if(mh) mh.innerHTML='';
-  const email=h('input',{id:'l-email',type:'email',placeholder:'tu@correo.com',autocomplete:'email',style:'flex:1;min-width:0'});
-  const msg=h('div',{class:'small muted'});
-  el.append(h('div',{style:'max-width:420px;margin:10vh auto 0'}, h('div',{class:'card stack',style:'text-align:center'},
-    h('div',{style:'font-family:var(--f-jp-display);font-size:3rem;line-height:1'},'道場'), h('h1',{},'Dojo 日本語'), h('p',{class:'muted',style:'margin:0'},'App privada. Inicia sesión para continuar.'),
-    h('div',{class:'row',style:'margin-top:8px'}, email, h('button',{class:'btn primary',onclick:()=>{ if(email.value.includes('@')){ signInEmail(email.value.trim()); msg.textContent='Revisa tu correo y pulsa el enlace.'; } }},'Enlace')),
-    CONFIG.GOOGLE_LOGIN?h('button',{class:'btn',onclick:signInGoogle},'Entrar con Google'):null, msg,
-    CONFIG.ALLOWED_EMAILS&&CONFIG.ALLOWED_EMAILS.length?h('div',{class:'small muted'},'Solo las cuentas autorizadas pueden entrar.'):null)));
+  document.body.classList.remove('leaving'); document.body.classList.add('login-mode');
+  const enso=h('div',{class:'enso',html:'<svg viewBox="0 0 120 120"><path d="M92 36 A40 40 0 1 1 60 20"/><text x="60" y="72" text-anchor="middle">道</text></svg>'});
+  const gicon='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z" opacity=".9"/><path fill="currentColor" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z" opacity=".7"/><path fill="currentColor" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9z" opacity=".5"/><path fill="currentColor" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z" opacity=".8"/></svg>';
+  el.append(h('div',{class:'login-wrap'}, h('div',{class:'login'}, enso, h('h1',{},'Dojo 日本語'), h('div',{class:'sub'},'Un rato de japonés, cada día.'),
+    h('button',{class:'google',onclick:()=>{ signInGoogle(); }}, h('span',{html:gicon}), 'Entrar con Google'),
+    h('div',{class:'note'},'Acceso privado. Solo cuentas autorizadas.'))));
 }
