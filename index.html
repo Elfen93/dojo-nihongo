@@ -2599,7 +2599,7 @@ function pushMessage(){
 }
 function paceInfo(){
   const tier=tierByName(S.settings.targetTier||'N4')||tierOf(S.level); const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null;
-  let remaining=0; for(let lv=S.level;lv<=tier.to;lv++) remaining+=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0)).length;
+  let remaining=0; for(let lv=S.level;lv<=tier.to;lv++){ const its=itemsOfLevel(lv); if(its.length||!isGenerated(lv)) remaining+=its.filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0)).length; else { const t=tierOf(lv).n; const ks=((ROADMAP[t]||{}).kanjiByLevel||{})[lv]||[]; const gs=((ROADMAP[t]||{}).grammarByLevel||{})[lv]||[]; remaining+=ks.length*3+gs.length; } }
   if (!target) return {remaining};
   const days=Math.max(1,Math.ceil((target-now())/D)); return {remaining, days, perDay:Math.ceil(remaining/days)};
 }
