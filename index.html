@@ -2344,7 +2344,7 @@ function registerGenerated(){ for (const lv of Object.keys(S.gen)){ const g=S.ge
 let syncLabel='…'; function setSyncLabel(t){ syncLabel=t; const el=$('#synclabel'); if(el) el.textContent=t; const el2=$('#synclabel2'); if(el2) el2.textContent=t; }
 // Autenticación
 async function signInEmail(email){ if(!sb) return toast('Cuenta no configurada'); const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:location.origin+location.pathname}}); if(error) toast('Error: '+error.message); else toast('Te he enviado un enlace de acceso al correo'); }
-async function signInGoogle(){ if(!sb) return toast('Cuenta no configurada'); const {error}=await sb.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin+location.pathname, queryParams:{prompt:'select_account'}}}); if(error) toast('Error: '+error.message); }
+async function signInGoogle(){ if(!sb) return toast('Cuenta no configurada'); const {error}=await sb.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin+location.pathname}}); if(error) toast('Error: '+error.message); }
 async function signOut(){ if(sb){ await sb.auth.signOut(); } USER=null; toast('Sesión cerrada'); render(); }
 async function callFunction(name, body){
   if(!sb) throw new Error('Cuenta no configurada');
