@@ -75,7 +75,7 @@ function renderLesson(){
     (it.ex||[]).forEach(ex=>{ const c=parseCloze(ex.j); card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, c.pre, h('b',{style:'color:var(--leaf)'},c.answers[0]), c.post, ' ', spkBtn(c.pre+c.answers[0]+c.post)), h('div',{class:'small muted'}, ex.s))); });
   }
   el.append(h('div',{class:'study stack'}, head, card,
-    h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('span',{class:'sp'}),
+    h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('button',{class:'btn ghost sm',onclick:()=>{ const k=keyOf(it); S.items[k]={s:9,due:Infinity,c:0,w:0,lrn:now(),ls:now()}; bump(it.kind==='g'?'lg':'l'); save(); L.batch.splice(L.i,1); toast('Quemado: no volverá a salir'); if(!L.batch.length){ LESSON=null; go('lecciones'); return; } if(L.i>=L.batch.length) L.i=L.batch.length-1; renderLesson(); }},'Ya lo sé'), h('span',{class:'sp'}),
       L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b,{track:L.track});}},'Empezar el test de la lección'))));
   window.scrollTo(0,0);
 }

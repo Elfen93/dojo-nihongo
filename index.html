@@ -2766,7 +2766,7 @@ function feedbackPanel(c){
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
   fb.append(next);
-  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null));
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:()=>{ clearTimeout(SESSION.autoT); const s=SESSION; const k=c.k; S.items[k]={...(S.items[k]||{}),s:9,due:Infinity,ls:now()}; s.queue=s.queue.filter(q=>q.k!==k); s.results[k].left.clear(); save(); toast('Quemado: no volverá a salir'); nextCard(); }},'Ya lo domino, quemar'):null));
   const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); document.removeEventListener('keydown',handler); nextCard(); } };
   document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
   return fb;
@@ -2856,7 +2856,7 @@ function renderLesson(){
     (it.ex||[]).forEach(ex=>{ const c=parseCloze(ex.j); card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, c.pre, h('b',{style:'color:var(--leaf)'},c.answers[0]), c.post, ' ', spkBtn(c.pre+c.answers[0]+c.post)), h('div',{class:'small muted'}, ex.s))); });
   }
   el.append(h('div',{class:'study stack'}, head, card,
-    h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('span',{class:'sp'}),
+    h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('button',{class:'btn ghost sm',onclick:()=>{ const k=keyOf(it); S.items[k]={s:9,due:Infinity,c:0,w:0,lrn:now(),ls:now()}; bump(it.kind==='g'?'lg':'l'); save(); L.batch.splice(L.i,1); toast('Quemado: no volverá a salir'); if(!L.batch.length){ LESSON=null; go('lecciones'); return; } if(L.i>=L.batch.length) L.i=L.batch.length-1; renderLesson(); }},'Ya lo sé'), h('span',{class:'sp'}),
       L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b,{track:L.track});}},'Empezar el test de la lección'))));
   window.scrollTo(0,0);
 }
@@ -2997,8 +2997,11 @@ function renderLectura(){
   if (!READER.id){
     el.append(h('div',{class:'topline'}, h('h1',{},'Lectura'), h('span',{class:'muted small'},'Al estilo Satori Reader: toca una palabra para verla.')));
     const list=h('div',{class:'list'});
-    allReadings().forEach(r=>{ const unlocked=(r.lv||1)<=S.level; const done=S.readings[r.id]; list.append(h('button',{class:'item'+(done?' done':'')+(unlocked?'':' locked'),disabled:!unlocked,onclick:()=>{READER={id:r.id,sel:null,furi:S.settings.furigana,trans:false,answers:{}};renderLectura();}}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t jp'},r.title), h('div',{class:'small muted'}, r.sub+' · nivel '+r.lv+(unlocked?'':' · se desbloquea en el nivel '+r.lv))), done?h('span',{class:'badge ok'},done.score+'%'):unlocked?h('span',{class:'badge soft'},r.user?'Importada':'Nueva'):h('span',{class:'badge soft'},'🔒'))); });
+    const ordered=allReadings().filter(r=>!r.user).sort((a,b)=>(a.lv-b.lv)||(a.id>b.id?1:-1)); const userR=allReadings().filter(r=>r.user);
+    let prevDone=true;
+    [...ordered,...userR].forEach(r=>{ const done=S.readings[r.id]; let unlocked=(r.lv||1)<=S.level; if(!r.user){ unlocked=unlocked&&prevDone; prevDone=!!done; } list.append(h('button',{class:'item'+(done?' done':'')+(unlocked?'':' locked'),disabled:!unlocked,onclick:()=>{READER={id:r.id,sel:null,furi:S.settings.furigana,trans:false,answers:{}};renderLectura();}}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t jp'},r.title), h('div',{class:'small muted'}, r.sub+' · nivel '+r.lv+(unlocked?'':((r.lv||1)>S.level?' · se desbloquea en el nivel '+r.lv:' · termina la lectura anterior')))), done?h('span',{class:'badge ok'},done.score+'%'):unlocked?h('span',{class:'badge soft'},r.user?'Importada':'Nueva'):h('span',{class:'badge soft'},'—'))); });
     el.append(list);
+    el.append(h('p',{class:'small muted',style:'margin-top:10px'},'Las lecturas se abren en orden: termina una (responde sus preguntas) para pasar a la siguiente. Las importadas no tienen orden.'));
     el.append(importReadingCard());
     el.append(h('div',{class:'card soft',style:'margin-top:12px'}, h('h3',{},'Lectura graduada gratuita fuera de la app'), h('p',{class:'small',style:'margin:6px 0 0'},'Los libros de ', h('a',{href:'https://tadoku.org/japanese/en/free-books-en/',target:'_blank',rel:'noopener'},'Tadoku'), ' (niveles 0 a 5) y ', h('a',{href:'https://www3.nhk.or.jp/news/easy/',target:'_blank',rel:'noopener'},'NHK News Web Easy'), ' son gratis. Copia el texto y pégalo arriba en "Importar texto" para leerlo aquí con glosario y preguntas.')));
     el.append(h('p',{class:'small muted',style:'margin-top:14px'},'Lee sin furigana primero (ajuste por defecto). Solo cuando te atasques, toca la palabra. Después responde en japonés: así es el 読解 del JLPT.'));
@@ -3200,7 +3203,8 @@ function itemSheet(it){
   else if (it.kind==='v') body.append(h('div',{class:'big-jp',style:'text-align:center;font-size:2.2rem'},it.w), h('div',{style:'text-align:center'},h('span',{class:'jp'},it.r),' · ',it.m.join(', ')), it.ex?h('div',{class:'small'}, h('div',{class:'jp'},it.ex), h('div',{class:'muted'},it.es||'')):null);
   else body.append(h('div',{class:'mid-jp',style:'text-align:center;font-weight:600'},it.t), h('div',{class:'small muted jp',style:'text-align:center'},it.s||''), h('p',{class:'small',style:'margin:0'},it.e||''), ...(it.ex||[]).slice(0,2).map(ex=>{ const c=parseCloze(ex.j); return h('div',{class:'small'}, h('span',{class:'jp'},c.pre+c.answers[0]+c.post), h('span',{class:'muted'},' · '+ex.s)); }));
   body.append(h('div',{class:'row small muted',style:'justify-content:center'}, h('span',{},STAGE_NAMES[rec.s]), rec.s>0&&rec.s<9?h('span',{},'· próximo repaso '+fmtRel(rec.due)):null, total?h('span',{},`· ${acc} % de acierto (${rec.c||0}/${total})`):null));
-  const box=h('div',{class:'card stack',style:'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;max-width:420px;width:calc(100% - 32px);max-height:80vh;overflow:auto'}, body, h('div',{class:'row'}, h('span',{class:'sp'}), spkBtn(it.kind==='g'?parseCloze(it.ex[0].j).pre+parseCloze(it.ex[0].j).answers[0]+parseCloze(it.ex[0].j).post:(it.w||it.k)), h('button',{class:'btn sm',onclick:()=>{box.remove();veil.remove();}},'Cerrar')));
+  const burnBtn = rec.s>=9 ? h('button',{class:'btn sm ghost',onclick:()=>{ S.items[k]={...rec,s:1,due:now(),ls:now()}; save(); box.remove(); veil.remove(); toast('Vuelve a los repasos'); render(); }},'Desquemar') : h('button',{class:'btn sm ghost',onclick:()=>{ S.items[k]={...rec,s:9,due:Infinity,lrn:rec.lrn||now(),ls:now()}; save(); box.remove(); veil.remove(); toast('Quemado: no volverá a salir'); render(); }},'Ya lo sé (quemar)');
+  const box=h('div',{class:'card stack',style:'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;max-width:420px;width:calc(100% - 32px);max-height:80vh;overflow:auto'}, body, h('div',{class:'row'}, burnBtn, h('span',{class:'sp'}), spkBtn(it.kind==='g'?parseCloze(it.ex[0].j).pre+parseCloze(it.ex[0].j).answers[0]+parseCloze(it.ex[0].j).post:(it.w||it.k)), h('button',{class:'btn sm',onclick:()=>{box.remove();veil.remove();}},'Cerrar')));
   const veil=h('div',{style:'position:fixed;inset:0;z-index:59;background:rgba(0,0,0,.25)',onclick:()=>{box.remove();veil.remove();}});
   document.body.append(veil,box);
 }

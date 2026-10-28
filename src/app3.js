@@ -190,7 +190,7 @@ function feedbackPanel(c){
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
   fb.append(next);
-  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null));
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:()=>{ clearTimeout(SESSION.autoT); const s=SESSION; const k=c.k; S.items[k]={...(S.items[k]||{}),s:9,due:Infinity,ls:now()}; s.queue=s.queue.filter(q=>q.k!==k); s.results[k].left.clear(); save(); toast('Quemado: no volverá a salir'); nextCard(); }},'Ya lo domino, quemar'):null));
   const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); document.removeEventListener('keydown',handler); nextCard(); } };
   document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
   return fb;
