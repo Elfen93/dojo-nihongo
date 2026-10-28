@@ -82,7 +82,9 @@ function buildExam(kind){
   else { pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:2}; title='Simulacro JLPT'; minutes=60; }
   // ítems más débiles primero, mezcla con aleatorios
   const weak=pool.slice().sort((a,b)=>leechScore(S.items[keyOf(b)]||{})-leechScore(S.items[keyOf(a)]||{}));
-  const vs=uniq([...weak.filter(i=>i.kind==='v'&&i.ex).slice(0,10), ...shuffle(pool.filter(i=>i.kind==='v'&&i.ex))]);
+  const hasBank=v=>(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).some(x=>x.lv<=S.level&&x.v.includes(v.w));
+  let vs=uniq([...weak.filter(i=>i.kind==='v'&&i.ex).slice(0,10), ...shuffle(pool.filter(i=>i.kind==='v'&&i.ex))]);
+  vs=[...vs.filter(hasBank), ...vs.filter(v=>!hasBank(v))];
   const gs=uniq([...weak.filter(i=>i.kind==='g').slice(0,6), ...shuffle(pool.filter(i=>i.kind==='g'))]);
   const qs=[]; let vi=0;
   const take=(fn,count,arr)=>{ let c=0,tries=0; while(c<count&&tries<arr.length*2&&arr.length){ const it=arr[(vi++)%arr.length]; tries++; const q=fn(it); if(q&&!qs.some(x=>x.key===q.key&&x.sec===q.sec)){ qs.push(q); c++; } } };
