@@ -166,7 +166,7 @@ function evaluate(ans){
 function feedbackPanel(c){
   const p=c.p, it=p.it, ok=c.ok;
   const fb=h('div',{class:'feedback'});
-  fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},toKana(c.answer,true))):null));
+  fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null));
   const dl=h('dl');
   const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
   if (it.kind==='k'){
