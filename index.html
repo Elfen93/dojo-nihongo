@@ -158,6 +158,20 @@ main{min-width:0;padding-block:28px 48px;display:flex;flex-direction:column;padd
 .feedback dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:6px 0 0}
 .feedback dt{color:var(--muted);font-size:.85rem}
 .feedback dd{margin:0}
+.feedback.quick{text-align:center;padding:12px 14px}
+.feedback.quick .verdict{margin-bottom:2px}
+/* Resumen de sesión: cada ítem con su ficha desplegable */
+.sess{display:flex;flex-direction:column;gap:8px}
+.sess details{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 12px}
+.sess details.ko{border-color:var(--warn)}
+.sess summary{display:flex;align-items:center;gap:12px;min-height:56px;cursor:pointer;list-style:none;padding:6px 0}
+.sess summary::-webkit-details-marker{display:none}
+.sess summary .t{font-weight:600}
+.sess details[open] summary{border-bottom:1px dashed var(--line)}
+.sess .body{padding:8px 0 12px}
+.sess .body dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.sess .body dt{color:var(--muted);font-size:.85rem}
+.sess .body dd{margin:0;min-width:0}
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
 .choices button{border:2px solid var(--line);background:var(--card);border-radius:10px;padding:12px;font-family:var(--f-jp);font-size:1.25rem;min-height:56px}
 .choices button.right{border-color:var(--ok);background:var(--ok-soft)}
@@ -2705,7 +2719,7 @@ function snapshotForUndo(){ const s=SESSION, c=s.cur; const rec=S.items[c.k]; s.
 function undoLast(){ const s=SESSION; if(!s||!s.undo) return; clearTimeout(s.autoT); if(s.enterHandler){ document.removeEventListener('keydown',s.enterHandler); s.enterHandler=null; } const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
 function markAsCorrect(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; const ans=u.cur.answer; undoLast(); SESSION.cur=u.cur; SESSION.cur.answer=ans; answerCurrent(true); }
 function answerCurrent(correct){
-  const s=SESSION, c=s.cur, r=s.results[c.k]; snapshotForUndo();
+  const s=SESSION, c=s.cur, r=s.results[c.k]; snapshotForUndo(); r.lastP=c.p; if(!correct) r.failed=true;
   if (s.mode!=='lesson'){ S.stats=S.stats||{}; const st=S.stats[c.f]=S.stats[c.f]||{c:0,w:0}; if(correct) st.c++; else st.w++; }
   if (correct){
     r.left.delete(c.f);
@@ -2715,7 +2729,7 @@ function answerCurrent(correct){
     const pos=Math.min(s.queue.length, 2+Math.floor(Math.random()*5)); s.queue.splice(pos,0,{k:c.k,f:c.f});
   }
   s.phase='feedback'; c.ok=correct; renderStudy();
-  if (correct && S.settings.autoNext!==false){ const token=s.cur; s.autoT=setTimeout(()=>{ if(SESSION===s && s.cur===token && s.phase==='feedback') nextCard(); }, s.mode==='lesson'?900:700); }
+  if (correct && S.settings.autoNext!==false){ const token=s.cur; s.autoT=setTimeout(()=>{ if(SESSION===s && s.cur===token && s.phase==='feedback' && !token.full) nextCard(); }, 550); }
 }
 function completeItem(k){
   const s=SESSION, r=s.results[k]; s.done++;
@@ -2737,7 +2751,7 @@ function finishSession(){
       h('p',{class:'muted'}, s.mode==='lesson' ? `${s.total} ${plural(s.total,'ítem','ítems')} nuevos. Primer repaso en 4 horas.` : s.mode==='drill' ? `${s.total-wrong.length} de ${s.total} correctos. El refuerzo no cambia la etapa SRS; lo fallado vuelve a la cola de repasos.` : `${s.total-wrong.length} de ${s.total} correctos. Los fallos vuelven antes.`),
       s.mode!=='lesson' && pct<70 ? h('div',{class:'push'}, 'Menos del 70 %. Esto no es mala suerte: son ítems que todavía no están asentados. Repásalos ahora con el botón de abajo y vuelve mañana.') : null
     ),
-    wrong.length ? h('div',{class:'card'}, h('h3',{},'Fallados'), h('div',{class:'list',style:'margin-top:8px'}, wrong.map(it=>itemRow(it)))) : null,
+    sessionSummary(s),
     h('div',{class:'row'},
       wrong.length ? h('button',{class:'btn warn',onclick:()=>startSession('drill',wrong,{facets:s.opts&&s.opts.facets})},'Repetir solo los fallados') : null,
       h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'),
@@ -2745,6 +2759,15 @@ function finishSession(){
     )
   ));
   window.scrollTo(0,0);
+}
+function sessionSummary(s){
+  const rs=Object.values(s.results).filter(r=>r.lastP); if(!rs.length) return null;
+  rs.sort((a,b)=>(b.failed?1:0)-(a.failed?1:0));
+  const nf=rs.filter(r=>r.failed).length;
+  const card=r=>{ const it=r.it, rec=S.items[keyOf(it)]||{s:0}; const main=it.kind==='k'?it.k:it.kind==='v'?it.w:it.t; const sub=it.kind==='k'?(it.m||[]).join(', '):it.kind==='v'?it.r+' · '+it.m.join(', '):(it.s||'');
+    return h('details',{class:r.failed?'ko':'',open:!!r.failed}, h('summary',{}, h('span',{class:'pill '+it.kind}, it.kind==='k'?'kanji':it.kind==='v'?'vocab':'gram.'), h('div',{style:'min-width:0;flex:1'}, h('div',{class:'t jp'},main), h('div',{class:'small muted'},sub)), h('span',{class:'badge '+(r.failed?'warn':'soft')}, r.failed?'fallado':STAGE_NAMES[rec.s]||'Nuevo')), h('div',{class:'body'}, itemDetails(it, r.lastP)));
+  };
+  return h('div',{class:'card'}, h('h3',{}, s.mode==='lesson'?'Lo aprendido en esta lección':'Lo repasado en esta sesión'), h('p',{class:'small muted',style:'margin:2px 0 8px'}, nf?`${nf} ${plural(nf,'fallado')} (abiertos) y ${rs.length-nf} ${plural(rs.length-nf,'acertado')}. Toca cualquiera para ver su ficha.`:'Todo acertado. Toca cualquiera para ver su ficha.'), h('div',{class:'sess'}, rs.map(card)));
 }
 function itemRow(it){
   const rec=S.items[keyOf(it)]||{s:0};
@@ -2808,7 +2831,7 @@ function renderStudy(){
     p.pick.options.forEach(o=>ch.append(h('button',{lang:'ja',onclick:()=>{ const ok=o===p.pick.correct; [...ch.children].forEach(b=>{ b.disabled=true; if(b.textContent===p.pick.correct) b.classList.add('right'); else if(b.textContent===o&&!ok) b.classList.add('wrong'); }); setTimeout(()=>answerCurrent(ok),350); }},o)));
     study.append(ch);
   } else {
-    study.append(feedbackPanel(c));
+    study.append(c.ok && S.settings.autoNext!==false && !c.full ? quickFeedback(c) : feedbackPanel(c));
   }
 }
 function evaluate(ans){
@@ -2818,10 +2841,20 @@ function evaluate(ans){
   if (ok && p.pick){ s.phase='pick'; setTimeout(renderStudy,250); return; }
   setTimeout(()=>answerCurrent(ok), ok?250:0);
 }
-function feedbackPanel(c){
-  const p=c.p, it=p.it, ok=c.ok;
-  const fb=h('div',{class:'feedback'});
-  fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null));
+// Línea de acierto: la respuesta en una línea y adelante (Enter o espera). "Ver ficha" abre la ficha completa y para el avance.
+function quickFeedback(c){
+  const p=c.p, it=p.it, s=SESSION;
+  const line = it.kind==='v' ? h('span',{class:'jp'}, it.w, ' ', h('span',{class:'muted'},'（'+it.r+'）'), ' · ', h('span',{style:'font-family:var(--f-ui)'},it.m.join(', ')))
+    : it.kind==='k' ? h('span',{class:'jp'}, it.k, ' · ', kanjiReadings(it).join('・'), ' · ', h('span',{style:'font-family:var(--f-ui)'},it.m.join(', ')))
+    : h('span',{class:'jp'}, p.cloze.pre+p.cloze.answers[0]+p.cloze.post);
+  const fb=h('div',{class:'feedback quick'}, h('div',{class:'verdict ok'},'Correcto'), h('div',{},line),
+    h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>{ if(SESSION!==s||s.cur!==c) return; clearTimeout(s.autoT); c.full=true; renderStudy(); }},'Ver ficha'), h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer')));
+  const handler=e=>{ if(e.key==='Enter' && SESSION===s && s.cur===c && s.phase==='feedback'){ e.preventDefault(); nextCard(); } };
+  if (s.enterHandler) document.removeEventListener('keydown',s.enterHandler);
+  s.enterHandler=handler; document.addEventListener('keydown',handler);
+  return fb;
+}
+function itemDetails(it, p){
   const dl=h('dl');
   const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
   if (it.kind==='k'){
@@ -2834,12 +2867,19 @@ function feedbackPanel(c){
     if (it.ex) add('Ejemplo', h('div',{}, h('div',{class:'jp'}, it.ex, ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
     const kinfo=[...it.w].filter(hasKanji).map(ch=>KANJI_META[ch]).filter(Boolean); if(kinfo.length) add('Kanji', h('span',{class:'jp'}, kinfo.map(k=>k.k+' = '+k.m[0]).join(' · ')));
   } else {
-    add('Respuesta', h('span',{class:'jp'}, p.cloze.answers.join(' / ')));
-    add('Frase', h('div',{}, h('div',{class:'jp'}, p.cloze.pre+p.cloze.answers[0]+p.cloze.post, ' ', spkBtn(p.cloze.pre+p.cloze.answers[0]+p.cloze.post)), h('div',{class:'small muted'}, p.ex.s)));
+    const ex=(p&&p.ex)||(it.ex||[])[0]||{j:'',s:''}; const cl=(p&&p.cloze)||parseCloze(ex.j);
+    add('Respuesta', h('span',{class:'jp'}, cl.answers.join(' / ')));
+    add('Frase', h('div',{}, h('div',{class:'jp'}, cl.pre+cl.answers[0]+cl.post, ' ', spkBtn(cl.pre+cl.answers[0]+cl.post)), h('div',{class:'small muted'}, ex.s)));
     add('Punto', h('span',{}, h('b',{class:'jp'},it.t), ' — ', h('span',{class:'jp'},it.s||'')));
     add('Explicación', it.e||'');
   }
-  fb.append(dl);
+  return dl;
+}
+function feedbackPanel(c){
+  const p=c.p, it=p.it, ok=c.ok;
+  const fb=h('div',{class:'feedback'});
+  fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null));
+  fb.append(itemDetails(it, p));
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
   fb.append(next);

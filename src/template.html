@@ -158,6 +158,20 @@ main{min-width:0;padding-block:28px 48px;display:flex;flex-direction:column;padd
 .feedback dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:6px 0 0}
 .feedback dt{color:var(--muted);font-size:.85rem}
 .feedback dd{margin:0}
+.feedback.quick{text-align:center;padding:12px 14px}
+.feedback.quick .verdict{margin-bottom:2px}
+/* Resumen de sesión: cada ítem con su ficha desplegable */
+.sess{display:flex;flex-direction:column;gap:8px}
+.sess details{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 12px}
+.sess details.ko{border-color:var(--warn)}
+.sess summary{display:flex;align-items:center;gap:12px;min-height:56px;cursor:pointer;list-style:none;padding:6px 0}
+.sess summary::-webkit-details-marker{display:none}
+.sess summary .t{font-weight:600}
+.sess details[open] summary{border-bottom:1px dashed var(--line)}
+.sess .body{padding:8px 0 12px}
+.sess .body dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.sess .body dt{color:var(--muted);font-size:.85rem}
+.sess .body dd{margin:0;min-width:0}
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
 .choices button{border:2px solid var(--line);background:var(--card);border-radius:10px;padding:12px;font-family:var(--f-jp);font-size:1.25rem;min-height:56px}
 .choices button.right{border-color:var(--ok);background:var(--ok-soft)}
