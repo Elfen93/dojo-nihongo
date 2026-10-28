@@ -28,7 +28,7 @@ supabase functions deploy generate
 Sin estas funciones la app sigue funcionando: Bunpro no se sincroniza y los niveles N3+ se generan copiando el prompt a mano.
 
 ### 3. Publicación
-- **GitHub Pages**: Settings → Pages → Source: *GitHub Actions*. Rellena `config.js` con la URL y la anon key de Supabase (son públicas por diseño). Cada push a `main` publica.
+- **GitHub Pages**: Settings → Pages → Source: *Deploy from a branch*, rama `main`, carpeta `/ (root)`. `index.html` va construido en el repositorio (`python3 build.py` antes de cada push) y `config.js` lleva la URL y la anon key de Supabase (públicas por diseño).
 - **Cualquier otro hosting estático** (Netlify, Cloudflare Pages, Vercel): ejecuta `python3 build.py`, rellena `config.js` y sube la carpeta.
 
 ## Desarrollo
