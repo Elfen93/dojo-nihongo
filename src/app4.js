@@ -200,11 +200,11 @@ function finishExam(){
 function plainReading(r){ return r.t.replace(/\[([^|\]]+)\|[^\]]*\]/g,'$1'); }
 
 // ===================== Repasos =====================
-function startReviews(onlyLeeches=false){
+function startReviews(onlyLeeches=false, limit=null){
   let due=dueItems();
   if (onlyLeeches){ due=leeches(); if(!due.length){toast('No tienes sanguijuelas ahora mismo.');return;} startSession('drill',due); return; }
   if (!due.length){ toast('No hay repasos pendientes'); return; }
   due.sort((a,b)=>S.items[keyOf(a)].due-S.items[keyOf(b)].due);
-  startSession('review', due.slice(0,paceToday().maxReviews||100));
+  startSession('review', due.slice(0, limit||paceToday().maxReviews||100));
 }
 function leeches(){ return Object.entries(S.items).filter(([k,r])=>r.s>0&&r.s<9&&ITEMS.has(k)&&(r.w||0)>=3&&leechScore(r)>=1).sort((a,b)=>leechScore(b[1])-leechScore(a[1])).slice(0,10).map(([k])=>ITEMS.get(k)); }

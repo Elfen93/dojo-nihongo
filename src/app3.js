@@ -51,8 +51,11 @@ function nextCard(){
   const q=s.queue.shift(); const it=s.results[q.k].it;
   s.cur={k:q.k,f:q.f,p:buildPrompt(it,q.f),wrong:false}; s.phase='ask'; renderStudy();
 }
+function snapshotForUndo(){ const s=SESSION, c=s.cur; const rec=S.items[c.k]; s.undo={cur:{...c}, result:{wrong:s.results[c.k].wrong, left:new Set(s.results[c.k].left)}, queue:s.queue.slice(), done:s.done, correct:s.correct, rec:rec?JSON.parse(JSON.stringify(rec)):null, hadRec:!!rec, day:JSON.parse(JSON.stringify(day())), stats:JSON.parse(JSON.stringify(S.stats||{})), wrongHad:s.wrongKeys.has(c.k)}; }
+function undoLast(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
+function markAsCorrect(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; undoLast(); SESSION.cur=u.cur; SESSION.cur.answer=u.cur.answer; answerCurrent(true); }
 function answerCurrent(correct){
-  const s=SESSION, c=s.cur, r=s.results[c.k];
+  const s=SESSION, c=s.cur, r=s.results[c.k]; snapshotForUndo();
   if (s.mode!=='lesson'){ S.stats=S.stats||{}; const st=S.stats[c.f]=S.stats[c.f]||{c:0,w:0}; if(correct) st.c++; else st.w++; }
   if (correct){
     r.left.delete(c.f);
@@ -185,6 +188,7 @@ function feedbackPanel(c){
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},'Siguiente (Enter)');
   fb.append(next);
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null));
   const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); document.removeEventListener('keydown',handler); nextCard(); } };
   document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
   return fb;

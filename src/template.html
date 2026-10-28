@@ -203,6 +203,14 @@ body.leaving .login-wrap{animation:fadeout .55s ease forwards}
 @keyframes fadeout{to{opacity:0;transform:translateY(-8px) scale(.98)}}
 @keyframes draw{to{stroke-dashoffset:40}}
 @media (prefers-reduced-motion:reduce){ .login .enso path{animation:none;stroke-dashoffset:40} }
+/* Micro-interacción */
+.prompt-card{animation:cardin .28s ease both}
+@keyframes cardin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.answer input{transition:border-color .2s,background .2s}
+.feedback{animation:cardin .25s ease both}
+.sent-play{border:0;background:transparent;color:var(--muted);font-size:.75em;padding:0 4px;cursor:pointer;vertical-align:middle;opacity:.7}
+.sent-play:hover{color:var(--accent);opacity:1}
+.sent.reading{background:var(--accent-soft);border-radius:4px}
 /* Consejos */
 .tips{display:flex;flex-direction:column;gap:8px}
 .tip{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}

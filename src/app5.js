@@ -18,6 +18,8 @@ function renderLectura(){
   const addPlain=t=>{ t.split('\n').forEach((part,i)=>{ if(i) reader.append(h('br')); if(part) reader.append(part); }); };
   while((m=re.exec(r.t))){ addPlain(r.t.slice(last,m.index)); const [,w,rd,gl]=m; const tok=h('span',{class:'tok',onclick:()=>{ [...reader.querySelectorAll('.tok.sel')].forEach(x=>x.classList.remove('sel')); tok.classList.add('sel'); READER.sel={w,rd,gl}; renderGloss(); }}, rd&&rd!==w?h('ruby',{},w,h('rt',{},rd)):w); reader.append(tok); last=m.index+m[0].length; }
   addPlain(r.t.slice(last));
+  // botones de audio por frase: tras cada 。
+  (function(){ const nodes=[...reader.childNodes]; reader.innerHTML=''; let sent=h('span',{class:'sent'}); let txt=''; const flush=()=>{ if(!sent.childNodes.length) return; const t=txt; const s=sent; const btn=h('button',{class:'sent-play',title:'Escuchar esta frase',onclick:e=>{ e.stopPropagation(); [...reader.querySelectorAll('.sent.reading')].forEach(x=>x.classList.remove('reading')); s.classList.add('reading'); speak(t); const iv=setInterval(()=>{ if(!speaking){ s.classList.remove('reading'); clearInterval(iv); } },300); }},'音'); s.append(btn); reader.append(s); sent=h('span',{class:'sent'}); txt=''; }; nodes.forEach(n=>{ if(n.nodeName==='BR'){ flush(); reader.append(n); return; } if(n.nodeType===3){ let str=n.textContent; while(str.length){ const i=str.indexOf('。'); if(i<0){ sent.append(str); txt+=str; break; } sent.append(str.slice(0,i+1)); txt+=str.slice(0,i+1); flush(); str=str.slice(i+1); } } else { sent.append(n); txt+=(n.querySelector('rt')?n.textContent.replace(n.querySelector('rt').textContent,''):n.textContent); } }); flush(); })();
   const gloss=h('div',{id:'gloss'});
   const qa=h('div',{class:'stack',style:'margin-top:16px'});
   r.q.forEach((q,qi)=>{ const box=h('div',{class:'card'}, h('div',{class:'jp',style:'font-weight:600'},(qi+1)+'. '+q.q)); const ch=h('div',{class:'choices text one'}); q.o.forEach((o,oi)=>ch.append(h('button',{lang:'ja',onclick:()=>{ if(READER.answers[qi]!=null) return; READER.answers[qi]=oi; [...ch.children].forEach((b,i)=>{ b.disabled=true; if(i===q.a) b.classList.add('right'); else if(i===oi) b.classList.add('wrong'); }); checkReadingDone(r); }},o))); box.append(ch); qa.append(box); });
@@ -131,7 +133,7 @@ function renderLecciones(){
   el.append(h('div',{class:'small muted',style:'margin-bottom:12px'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]} · kanji/vocab ${paceToday().lessons}/día (techo ${S.settings.goalLessons}) · gramática ${grammarGoalToday()}/día (techo ${S.settings.goalGrammar!=null?S.settings.goalGrammar:2}). Como en WaniKani, cada palabra se desbloquea cuando sus kanji están en Gurú.`));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
-  groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('span',{class:'pill jp '+kind,style:'font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),title:(it.m?it.m.join(', '):it.s||'')+' · '+STAGE_NAMES[st]}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
+  groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('button',{class:'pill jp '+kind,style:'border:0;cursor:pointer;font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),onclick:()=>itemSheet(it)}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
   el.append(h('p',{class:'small muted',style:'margin-top:12px'},'Opacos: sin aprender. Con borde verde: en Gurú o superior.'));
 }
 function renderRepasos(){
@@ -139,7 +141,7 @@ function renderRepasos(){
   el.append(h('div',{class:'topline'}, h('h1',{},'Repasos'), h('span',{class:'pill'},`${due.length} pendientes`), h('span',{class:'small muted'},`${soon} más en las próximas 24 h`)));
   el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, due.length?h('button',{class:'btn primary big',onclick:()=>startReviews()},`Repasar ${Math.min(due.length,paceToday().maxReviews)} ahora`):h('div',{class:'push ok'},'Sin repasos pendientes. Vuelve más tarde o haz una lección.'),
     h('div',{class:'small muted'},'Cada ítem tiene varias preguntas: kanji (significado + lectura), vocabulario (significado, lectura y español→japonés con elección del kanji) y gramática (frase con hueco). Un fallo en cualquiera cuenta como fallo del ítem.'),
-    h('div',{class:'row'}, h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Solo sanguijuelas'), h('button',{class:'btn sm',onclick:()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); if(!its.length){toast('Nada aprendido aún');return;} startSession('drill',pick(its,20)); }},'Entrenar producción (20 palabras)'))));
+    h('div',{class:'row'}, due.length?h('button',{class:'btn sm',onclick:()=>startReviews(false,12)},'Sesión de 5 minutos (12 ítems)'):null, h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Solo sanguijuelas'), h('button',{class:'btn sm',onclick:()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); if(!its.length){toast('Nada aprendido aún');return;} startSession('drill',pick(its,20)); }},'Entrenar producción (20 palabras)'))));
   if (due.length) el.append(h('div',{class:'card'}, h('h3',{},'En la cola'), h('div',{class:'list',style:'margin-top:8px'}, due.slice(0,30).map(itemRow)), due.length>30?h('div',{class:'small muted',style:'margin-top:8px'},`… y ${due.length-30} más`):null));
 }
 function renderExamenes(){
@@ -195,4 +197,17 @@ function renderLoginWall(){
     h('button',{class:'google',onclick:()=>{ signInGoogle(); }}, h('span',{html:gicon}), 'Entrar con Google'),
     DENIED_EMAIL?h('div',{class:'note',style:'color:var(--warn)'},`La cuenta ${DENIED_EMAIL} no está autorizada. Pide acceso al administrador.`):h('div',{class:'note'},'Acceso privado. Solo cuentas autorizadas.'))));
   DENIED_EMAIL=null;
+}
+
+function itemSheet(it){
+  const k=keyOf(it), rec=S.items[k]||{s:0,c:0,w:0};
+  const total=(rec.c||0)+(rec.w||0); const acc=total?Math.round(100*(rec.c||0)/total):null;
+  const body=h('div',{class:'stack'});
+  if (it.kind==='k') body.append(h('div',{class:'big-jp',style:'text-align:center'},it.k), h('div',{style:'text-align:center'},it.m.join(', ')), h('div',{class:'small muted',style:'text-align:center'},'On: '+((it.on||[]).join('・')||'—')+' · Kun: '+((it.kun||[]).join('・')||'—')), it.mn?h('div',{class:'small'},it.mn):null, h('div',{class:'small jp'}, vocabWithKanji(it.k).slice(0,5).map(v=>v.w+'（'+v.r+'）').join('、')));
+  else if (it.kind==='v') body.append(h('div',{class:'big-jp',style:'text-align:center;font-size:2.2rem'},it.w), h('div',{style:'text-align:center'},h('span',{class:'jp'},it.r),' · ',it.m.join(', ')), it.ex?h('div',{class:'small'}, h('div',{class:'jp'},it.ex), h('div',{class:'muted'},it.es||'')):null);
+  else body.append(h('div',{class:'mid-jp',style:'text-align:center;font-weight:600'},it.t), h('div',{class:'small muted jp',style:'text-align:center'},it.s||''), h('p',{class:'small',style:'margin:0'},it.e||''), ...(it.ex||[]).slice(0,2).map(ex=>{ const c=parseCloze(ex.j); return h('div',{class:'small'}, h('span',{class:'jp'},c.pre+c.answers[0]+c.post), h('span',{class:'muted'},' · '+ex.s)); }));
+  body.append(h('div',{class:'row small muted',style:'justify-content:center'}, h('span',{},STAGE_NAMES[rec.s]), rec.s>0&&rec.s<9?h('span',{},'· próximo repaso '+fmtRel(rec.due)):null, total?h('span',{},`· ${acc} % de acierto (${rec.c||0}/${total})`):null));
+  const box=h('div',{class:'card stack',style:'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;max-width:420px;width:calc(100% - 32px);max-height:80vh;overflow:auto'}, body, h('div',{class:'row'}, h('span',{class:'sp'}), spkBtn(it.kind==='g'?parseCloze(it.ex[0].j).pre+parseCloze(it.ex[0].j).answers[0]+parseCloze(it.ex[0].j).post:(it.w||it.k)), h('button',{class:'btn sm',onclick:()=>{box.remove();veil.remove();}},'Cerrar')));
+  const veil=h('div',{style:'position:fixed;inset:0;z-index:59;background:rgba(0,0,0,.25)',onclick:()=>{box.remove();veil.remove();}});
+  document.body.append(veil,box);
 }
