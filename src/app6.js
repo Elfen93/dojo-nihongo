@@ -19,7 +19,7 @@ function renderAjustes(){
   // Sincronización WaniKani / Bunpro (directa)
   const wk=h('input',{id:'s-wk',type:'password',value:st.wkToken||'',placeholder:'Token de API v2 de WaniKani',autocomplete:'off'});
   const bp=h('input',{id:'s-bp',type:'password',value:st.bpKey||'',placeholder:'Clave de API de Bunpro',autocomplete:'off'});
-  const syncStatus=h('div',{class:'small muted'}, S.sync&&S.sync.date? `Última sincronización: ${fmtDate(S.sync.date)} · WaniKani nivel ${S.sync.wkLevel||'—'} · ${S.sync.wkMatched||0} ítems alineados · Bunpro ${S.sync.bpMatched||0} puntos alineados` : 'Sin sincronizar todavía.');
+  const syncStatus=h('div',{class:'small muted'}, S.sync&&S.sync.bpDiag?h('div',{style:'margin-bottom:6px'},S.sync.bpDiag):null, S.sync&&S.sync.date? `Última sincronización: ${fmtDate(S.sync.date)} · WaniKani nivel ${S.sync.wkLevel||'—'} · ${S.sync.wkMatched||0} ítems alineados · Bunpro ${S.sync.bpMatched||0} puntos alineados` : 'Sin sincronizar todavía.');
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'WaniKani y Bunpro'),
     h('p',{class:'small',style:'margin:0'},'Guarda tus claves (solo en tu cuenta) y pulsa sincronizar. Lo que tengas en Gurú o superior en WaniKani entra con ese nivel SRS; los puntos de Bunpro que dominas se marcan como aprendidos. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí.'),
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
@@ -59,7 +59,7 @@ function importSync(text){
     S.sync.wkLevel=o.wanikani.level;
   }
   if (o.bunpro && Array.isArray(o.bunpro.items)){
-    const norm=s=>String(s||'').replace(/[〜～\s()（）・]/g,'').toLowerCase();
+    const norm=s=>String(s||'').replace(/[〜～\s()（）・、。～\-ー]/g,'').replace(/[Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toLowerCase();
     for (const it of o.bunpro.items){ // {title, srs (0-12 Bunpro), learned}
       const t=norm(it.title); if(!t) continue;
       const g=GRAMMAR_ALL.find(x=>norm(x.bp)===t||norm(x.t)===t||norm(x.t).includes(t)||t.includes(norm(x.bp)));
@@ -140,7 +140,7 @@ async function syncExternal(){
   }
   if (st.bpKey){
     toast('Leyendo Bunpro…');
-    try{ const data=await callFunction('bunpro',{key:st.bpKey}); payload.bunpro=data; }catch(e){ toast('Bunpro no disponible: '+e.message); }
+    try{ const data=await callFunction('bunpro',{key:st.bpKey}); if(data&&data.error) throw new Error(data.error); payload.bunpro=data; S.sync.bpDiag='Bunpro devolvió '+((data&&data.items)||[]).length+' puntos. Ejemplos: '+((data&&data.items)||[]).slice(0,6).map(i=>i.title+' (srs '+i.srs+')').join(' · '); }catch(e){ S.sync.bpDiag='Error de Bunpro: '+e.message; toast('Bunpro no disponible: '+e.message); }
   }
   if (!payload.wanikani && !payload.bunpro) throw new Error('No hay claves guardadas');
   importSync(JSON.stringify(payload));
