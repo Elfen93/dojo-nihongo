@@ -66,9 +66,10 @@ function pushMessage(){
 }
 function paceInfo(){
   const tier=tierByName(S.settings.targetTier||'N4')||tierOf(S.level); const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null;
-  let remaining=0; for(let lv=S.level;lv<=tier.to;lv++){ const its=itemsOfLevel(lv); if(its.length||!isGenerated(lv)) remaining+=its.filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0)).length; else { const t=tierOf(lv).n; const ks=((ROADMAP[t]||{}).kanjiByLevel||{})[lv]||[]; const gs=((ROADMAP[t]||{}).grammarByLevel||{})[lv]||[]; remaining+=ks.length*3+gs.length; } }
-  if (!target) return {remaining};
-  const days=Math.max(1,Math.ceil((target-now())/D)); return {remaining, days, perDay:Math.ceil(remaining/days)};
+  let remaining=0, total=0;
+  for(let lv=1;lv<=tier.to;lv++){ const gs=itemsOfLevel(lv).filter(it=>it.kind==='g'); if(gs.length||!isGenerated(lv)){ total+=gs.length; remaining+=gs.filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0)).length; } else { const t=tierOf(lv).n; const n=(((ROADMAP[t]||{}).grammarByLevel||{})[lv]||[]).length; total+=n; remaining+=n; } }
+  if (!target) return {remaining,total};
+  const days=Math.max(1,Math.ceil((target-now())/D)); return {remaining,total,days,perDay:Math.ceil(remaining/days),perWeek:Math.ceil(remaining/days*7)};
 }
 function renderHoy(){
   const el=$('#main'); const due=dueItems().length, la=lessonsAvailable(), w=weeklyStatus(), le=levelExamStatus(), d=day(), pm=pushMessage(), pace=paceInfo();
@@ -76,7 +77,7 @@ function renderHoy(){
   const hello=S.settings.name?`Hola, ${S.settings.name}.`:'Hoy';
   const lvItems=itemsOfLevel(S.level), lvDone=lvItems.filter(it=>S.items[keyOf(it)]&&S.items[keyOf(it)].s>0).length, lvPct=lvItems.length?Math.round(100*lvDone/lvItems.length):0;
   const R=34, C=2*Math.PI*R; const ring=h('div',{class:'ring',html:`<svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="${R}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="8"/><circle cx="42" cy="42" r="${R}" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-lvPct/100)}" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="20">${S.level}</text></svg>`});
-  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`🔥 ${S.streak||0} ${plural(S.streak||0,'día')}`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):null, h('span',{class:'chip'},`${learnedKeys().length} aprendidos`)))));
+  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`🔥 ${S.streak||0} ${plural(S.streak||0,'día')}`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):null, h('span',{class:'chip'},`${pace.total-pace.remaining}/${pace.total} gramática ${S.settings.targetTier||'N4'}`)))));
   if (CONFIG.SUPABASE_URL && !USER) el.append(h('div',{class:'push info',style:'margin-bottom:10px'}, 'No has iniciado sesión: el progreso se guarda solo en este navegador. ', h('a',{href:'#ajustes',onclick:e=>{e.preventDefault();go('ajustes');}},'Inicia sesión'), ' para tenerlo en todos tus dispositivos.'));
   el.append(h('div',{class:'push '+pm.cls,style:'margin-bottom:14px'}, pm.t));
   const actions=h('div',{class:'grid c3'},
@@ -92,7 +93,7 @@ function renderHoy(){
       h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
       h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
       h('div',{class:'small muted'}, `Precisión hoy: ${d.r?Math.round(100*(d.rc||0)/d.r):0} % · ${d.rd||0} ${plural(d.rd||0,'lectura')} · ${d.ex||0} ${plural(d.ex||0,'examen','exámenes')}`),
-      pace.days?h('div',{class:'small'}, `Ritmo necesario para ${S.settings.targetTier||'N4'} el ${fmtDate(new Date(S.settings.target+'T09:00:00'))}: `, h('b',{},`${pace.perDay} ${plural(pace.perDay,'ítem nuevo','ítems nuevos')}/día`), ` (quedan ${pace.remaining}).`):null),
+      pace.days?h('div',{class:'small'}, `Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`), `. Para el ${fmtDate(new Date(S.settings.target+'T09:00:00'))} hacen falta `, h('b',{},`${pace.perWeek} puntos/semana`), '.'):h('div',{class:'small'},`Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`))),
     h('div',{class:'card stack'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`))
   ));
   const lch=leeches(); if (lch.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('div',{class:'row between'},h('h3',{},'Sanguijuelas'),h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Machacarlas ahora')), h('p',{class:'small muted',style:'margin:4px 0 8px'},'Ítems que fallas una y otra vez. Un repaso extra hoy evita que te hundan el examen.'), h('div',{class:'row'}, lch.slice(0,8).map(it=>h('span',{class:'pill jp '+it.kind}, it.kind==='k'?it.k:it.kind==='v'?it.w:it.t)))));
