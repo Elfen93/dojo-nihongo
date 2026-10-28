@@ -198,11 +198,19 @@ main{min-width:0;padding-block:28px 48px;display:flex;flex-direction:column;padd
 .login .google svg{width:20px;height:20px;flex:none}
 .login .note{color:var(--muted);font-size:.78rem;margin-top:16px}
 body.leaving .login-wrap{animation:fadeout .55s ease forwards}
-.app{animation:fadein .7s ease both}
-@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@keyframes fadeout{to{opacity:0;transform:translateY(-8px) scale(.98)}}
+@keyframes fadeout{to{opacity:0}}
+.app{animation:fadein .6s ease both}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+
 @keyframes draw{to{stroke-dashoffset:40}}
 @media (prefers-reduced-motion:reduce){ .login .enso path{animation:none;stroke-dashoffset:40} }
+/* Plegables */
+details.sec{border-top:1px solid var(--line);padding:10px 0}
+details.sec summary{cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;list-style:none;min-height:40px}
+details.sec summary::-webkit-details-marker{display:none}
+details.sec summary::after{content:"＋";margin-left:auto;color:var(--muted);font-weight:400}
+details.sec[open] summary::after{content:"－"}
+details.sec > :not(summary){margin-top:8px}
 /* Micro-interacción */
 .prompt-card{animation:cardin .28s ease both}
 @keyframes cardin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -287,7 +295,7 @@ details summary{cursor:pointer;font-weight:600}
   header.mobile .brand{padding:0;flex:1}
   header.mobile button{border:0;background:var(--card2);width:40px;height:40px;border-radius:12px;font-size:1.15rem;display:flex;align-items:center;justify-content:center;color:var(--fg)}
   header.mobile button.active{background:var(--accent-soft);color:var(--accent)}
-  nav.tabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  nav.tabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
   nav.tabs button{flex-direction:column;gap:2px;padding:6px 2px;font-size:.68rem;justify-content:center;align-items:center;color:var(--muted);position:relative}
   nav.tabs button .ic{font-family:var(--f-jp-display);font-size:1.25rem;color:inherit}
   nav.tabs button.active{color:var(--fg);background:none}
@@ -310,8 +318,8 @@ details summary{cursor:pointer;font-weight:600}
 <div class="app">
   <nav class="side" id="sidenav"></nav>
   <main><header class="mobile" id="mobilehead"></header><div class="wrap" id="main"></div></main>
-  <nav class="tabs" id="tabnav"></nav>
 </div>
+<nav class="tabs" id="tabnav"></nav>
 <div id="toast" class="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -3115,7 +3123,8 @@ function renderLecciones(){
   el.append(h('div',{class:'small muted',style:'margin-bottom:12px'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]} · kanji/vocab ${paceToday().lessons}/día (techo ${S.settings.goalLessons}) · gramática ${grammarGoalToday()}/día (techo ${S.settings.goalGrammar!=null?S.settings.goalGrammar:2}). Como en WaniKani, cada palabra se desbloquea cuando sus kanji están en Gurú.`));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
-  groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('button',{class:'pill jp '+kind,style:'border:0;cursor:pointer;font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),onclick:()=>itemSheet(it)}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
+  const mobile=window.matchMedia('(max-width:860px)').matches;
+  groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; const done=its.filter(i=>S.items[keyOf(i)]&&S.items[keyOf(i)].s>0).length; const det=h('details',{class:'sec',open:!mobile}, h('summary',{}, label, h('span',{class:'badge soft'},`${done}/${its.length}`))); el.append(det); det.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('button',{class:'pill jp '+kind,style:'border:0;cursor:pointer;font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),onclick:()=>itemSheet(it)}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
   el.append(h('p',{class:'small muted',style:'margin-top:12px'},'Opacos: sin aprender. Con borde verde: en Gurú o superior.'));
 }
 function renderRepasos(){
@@ -3146,8 +3155,8 @@ function renderProgreso(){
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`)));
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Consejos'), h('div',{class:'tips',style:'margin-top:6px'}, tipsFor().map(t=>h('div',{class:'tip'}, h('div',{class:'b'}, h('b',{},t.b), h('p',{},t.p), t.act?h('button',{class:'btn sm',style:'margin-top:6px',onclick:t.act[1]},t.act[0]):null))))));
   const lch=leeches(); if (lch.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('div',{class:'row between'},h('h3',{},'Sanguijuelas'),h('button',{class:'btn sm',onclick:()=>startReviews(true)},'Repasarlas')), h('p',{class:'small muted',style:'margin:4px 0 8px'},'Ítems que fallas una y otra vez.'), h('div',{class:'row'}, lch.slice(0,10).map(it=>h('span',{class:'pill jp '+it.kind}, it.kind==='k'?it.k:it.kind==='v'?it.w:it.t)))));
-  const map=h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Mapa de niveles hasta N1'));
-  TIERS.forEach(t=>{ map.append(h('div',{class:'tier-row'}, h('b',{},t.n), h('span',{class:'small muted'}, t.n==='N5'?'repaso':t.n==='N4'?'contenido completo':'generado al llegar'))); const g=h('div',{class:'levelmap'}); for(let lv=t.from;lv<=t.to;lv++) g.append(h('div',{class:lv<S.level?'done':lv===S.level?'cur':(isGenerated(lv)&&S.gen[lv])?'gen':'',title:'Nivel '+lv},lv)); map.append(g); });
+  const mapDet=h('details',{class:'sec',open:!window.matchMedia('(max-width:860px)').matches}, h('summary',{},'Mapa de niveles hasta N1')); const map=h('div',{class:'card',style:'margin-top:12px'}, mapDet);
+  TIERS.forEach(t=>{ mapDet.append(h('div',{class:'tier-row'}, h('b',{},t.n), h('span',{class:'small muted'}, t.n==='N5'?'repaso':t.n==='N4'?'contenido completo':'generado al llegar'))); const g=h('div',{class:'levelmap'}); for(let lv=t.from;lv<=t.to;lv++) g.append(h('div',{class:lv<S.level?'done':lv===S.level?'cur':(isGenerated(lv)&&S.gen[lv])?'gen':'',title:'Nivel '+lv},lv)); mapDet.append(g); });
   el.append(map);
   const exs=S.exams; if(exs.length){ const avg=Math.round(exs.reduce((a,e)=>a+e.score,0)/exs.length); const secAgg={}; exs.forEach(e=>Object.entries(e.secs||{}).forEach(([s,v])=>{const a=secAgg[s]=secAgg[s]||{ok:0,n:0};a.ok+=v.ok;a.n+=v.n;})); el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},`Exámenes: media ${avg} %`), h('div',{class:'result-grid',style:'margin-top:8px'}, Object.entries(secAgg).map(([s,v])=>h('div',{class:'card'},h('div',{class:'section-tag'},s),h('div',{class:'num'},Math.round(100*v.ok/v.n)+'%'),h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))), h('p',{class:'small muted',style:'margin:8px 0 0'},'La sección más baja es tu prioridad de estudio esta semana.'))); }
 }
@@ -3251,6 +3260,7 @@ function renderAjustes(){
     h('li',{},'Examen semanal obligatorio: si pasa más de un día de la fecha, se bloquean las lecciones. Examen de nivel al 80 % para subir. Los fallos de examen vuelven a la cola de repasos al momento.'),
     h('li',{},'Las lecciones se bloquean con más de 150 repasos pendientes: primero vaciar, luego aprender.'),
     h('li',{},'N5 y N4 van incluidos. N3, N2 y N1 se generan nivel a nivel con Claude cuando llegas a ellos.'))));
+  collapseSettingsOnMobile();
 }
 async function exportBackup(){
   const data=JSON.stringify(S,null,0);
@@ -3361,6 +3371,7 @@ async function syncExternal(){
 }
 // ===================== Arranque =====================
 function renderAjustes2(){ const el=$('#main'); el.innerHTML=''; renderAjustes(); }
+function collapseSettingsOnMobile(){ if(!window.matchMedia('(max-width:860px)').matches) return; const el=$('#main'); [...el.querySelectorAll(':scope > .card')].forEach((card,i)=>{ const h3=card.querySelector(':scope > h3'); if(!h3||i===0) return; const det=h('details',{class:'sec',style:'border:0;padding:0'}, h('summary',{},h3.textContent)); const body=h('div',{class:'stack'}); [...card.childNodes].forEach(n=>{ if(n!==h3) body.append(n); }); h3.remove(); det.append(body); card.append(det); }); }
 function boot(){
   loadLocal(); loadGenLocal(); loadUserReadingsLocal(); updateStreak();
   const hash=location.hash.replace('#',''); if (VIEWS.some(v=>v.id===hash)) VIEW=hash;

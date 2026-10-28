@@ -55,6 +55,7 @@ function renderAjustes(){
     h('li',{},'Examen semanal obligatorio: si pasa más de un día de la fecha, se bloquean las lecciones. Examen de nivel al 80 % para subir. Los fallos de examen vuelven a la cola de repasos al momento.'),
     h('li',{},'Las lecciones se bloquean con más de 150 repasos pendientes: primero vaciar, luego aprender.'),
     h('li',{},'N5 y N4 van incluidos. N3, N2 y N1 se generan nivel a nivel con Claude cuando llegas a ellos.'))));
+  collapseSettingsOnMobile();
 }
 async function exportBackup(){
   const data=JSON.stringify(S,null,0);
@@ -165,6 +166,7 @@ async function syncExternal(){
 }
 // ===================== Arranque =====================
 function renderAjustes2(){ const el=$('#main'); el.innerHTML=''; renderAjustes(); }
+function collapseSettingsOnMobile(){ if(!window.matchMedia('(max-width:860px)').matches) return; const el=$('#main'); [...el.querySelectorAll(':scope > .card')].forEach((card,i)=>{ const h3=card.querySelector(':scope > h3'); if(!h3||i===0) return; const det=h('details',{class:'sec',style:'border:0;padding:0'}, h('summary',{},h3.textContent)); const body=h('div',{class:'stack'}); [...card.childNodes].forEach(n=>{ if(n!==h3) body.append(n); }); h3.remove(); det.append(body); card.append(det); }); }
 function boot(){
   loadLocal(); loadGenLocal(); loadUserReadingsLocal(); updateStreak();
   const hash=location.hash.replace('#',''); if (VIEWS.some(v=>v.id===hash)) VIEW=hash;
