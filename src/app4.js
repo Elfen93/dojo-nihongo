@@ -23,7 +23,7 @@ function paceToday(){
 const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
-function grammarGoalToday(){ const pi=paceInfo(); const base=pi.days? Math.max(1,Math.ceil(pi.perWeek/7)) : 2; const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(1,Math.floor(base/2)); return Math.min(base,5); }
+function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }
 function lessonsAvailable(track){
   const lv=S.level; const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[]});
   if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido generado.','gen');
@@ -32,15 +32,19 @@ function lessonsAvailable(track){
   const pace=paceToday(); if (pace.lessons===0 && pace.mode==='recuperacion') return empty('Modo Recuperación: hoy no hay lecciones nuevas. '+pace.why,'pace');
   const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return empty('Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.','weekly');
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
-  const learnedK=new Set(KANJI_ALL.concat(Object.values(S.gen).flatMap(g=>g.kanji||[])).filter(k=>S.items['k|'+k.k]&&S.items['k|'+k.k].s>0).map(k=>k.k));
-  const kv=all.filter(it=>it.kind!=='g').filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
-  const kvList=(kv.length?kv:all.filter(it=>it.kind!=='g')).sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
+  // Como WaniKani: una palabra se desbloquea cuando todos sus kanji (los que existen en la app) están en Gurú o más
+  const guruK=ch=>{ if(!ITEMS.has('k|'+ch)) return true; const r=S.items['k|'+ch]; return !!(r&&r.s>=5); };
+  const vocabReady=it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(guruK);
+  const kvAll=all.filter(it=>it.kind!=='g');
+  const kv=kvAll.filter(vocabReady);
+  const waiting=kvAll.length-kv.length;
+  const kvList=kv.sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
   const gList=all.filter(it=>it.kind==='g');
   const dd=day(); const kvGoal=pace.lessons, gGoal=grammarGoalToday();
   const kvLeft=Math.max(0,kvGoal-(dd.l||0)), gLeft=Math.max(0,gGoal-(dd.lg||0));
-  const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
+  const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, kvWaiting:waiting, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
   res.items=[...res.kv,...res.g];
-  if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? 'Has completado todas las lecciones de este nivel.' : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
+  if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? (waiting?`${waiting} ${plural(waiting,'palabra')} del nivel esperan a que sus kanji lleguen a Gurú.`:'Has completado todas las lecciones de este nivel.') : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
   return track==='g' ? {...res, items:res.g} : track==='kv' ? {...res, items:res.kv} : res;
 }
 let LESSON=null;

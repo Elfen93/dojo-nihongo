@@ -2278,7 +2278,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
   v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, days:{}, gen:{},
-  settings:{ target:'2026-12-06', goalLessons:10, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
+  settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
   sync:{}, log:[]
 });
 let S = DEFAULT_STATE();
@@ -2609,7 +2609,7 @@ function paceToday(){
 const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
-function grammarGoalToday(){ const pi=paceInfo(); const base=pi.days? Math.max(1,Math.ceil(pi.perWeek/7)) : 2; const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(1,Math.floor(base/2)); return Math.min(base,5); }
+function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }
 function lessonsAvailable(track){
   const lv=S.level; const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[]});
   if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido generado.','gen');
@@ -2618,15 +2618,19 @@ function lessonsAvailable(track){
   const pace=paceToday(); if (pace.lessons===0 && pace.mode==='recuperacion') return empty('Modo Recuperación: hoy no hay lecciones nuevas. '+pace.why,'pace');
   const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return empty('Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.','weekly');
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
-  const learnedK=new Set(KANJI_ALL.concat(Object.values(S.gen).flatMap(g=>g.kanji||[])).filter(k=>S.items['k|'+k.k]&&S.items['k|'+k.k].s>0).map(k=>k.k));
-  const kv=all.filter(it=>it.kind!=='g').filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
-  const kvList=(kv.length?kv:all.filter(it=>it.kind!=='g')).sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
+  // Como WaniKani: una palabra se desbloquea cuando todos sus kanji (los que existen en la app) están en Gurú o más
+  const guruK=ch=>{ if(!ITEMS.has('k|'+ch)) return true; const r=S.items['k|'+ch]; return !!(r&&r.s>=5); };
+  const vocabReady=it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(guruK);
+  const kvAll=all.filter(it=>it.kind!=='g');
+  const kv=kvAll.filter(vocabReady);
+  const waiting=kvAll.length-kv.length;
+  const kvList=kv.sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
   const gList=all.filter(it=>it.kind==='g');
   const dd=day(); const kvGoal=pace.lessons, gGoal=grammarGoalToday();
   const kvLeft=Math.max(0,kvGoal-(dd.l||0)), gLeft=Math.max(0,gGoal-(dd.lg||0));
-  const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
+  const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, kvWaiting:waiting, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
   res.items=[...res.kv,...res.g];
-  if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? 'Has completado todas las lecciones de este nivel.' : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
+  if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? (waiting?`${waiting} ${plural(waiting,'palabra')} del nivel esperan a que sus kanji lleguen a Gurú.`:'Has completado todas las lecciones de este nivel.') : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
   return track==='g' ? {...res, items:res.g} : track==='kv' ? {...res, items:res.kv} : res;
 }
 let LESSON=null;
@@ -2904,10 +2908,10 @@ function renderLecciones(){
   el.append(h('div',{class:'topline'}, h('h1',{},`Nivel ${lv}`), h('span',{class:'pill'},tierOf(lv).n), h('span',{class:'small muted'},`${items.filter(i=>i.kind==='k').length} kanji · ${items.filter(i=>i.kind==='v').length} vocab · ${items.filter(i=>i.kind==='g').length} gramática`)));
   if (isGenerated(lv) && !levelHasContent(lv)) { el.append(generatePanel(lv)); return; }
   el.append(h('div',{class:'grid c2',style:'margin-bottom:12px'},
-    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Kanji y vocabulario'), h('div',{class:'small muted'},`Hoy: ${la.kvDone} de ${la.kvGoal} · quedan ${la.kvTotal} en el nivel`), la.kv.length?h('button',{class:'btn leaf big',onclick:()=>startLessonBatch('kv')},`Lección de ${Math.min(5,la.kv.length)} ítems`):h('div',{class:'push info small'},la.kvTotal?'Objetivo de hoy cumplido.':'Nivel completo.')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Kanji y vocabulario'), h('div',{class:'small muted'},`Hoy: ${la.kvDone} de ${la.kvGoal} · ${la.kvTotal} disponibles`+(la.kvWaiting?` · ${la.kvWaiting} ${plural(la.kvWaiting,'palabra espera','palabras esperan')} a sus kanji (Gurú)`:'')), la.kv.length?h('button',{class:'btn leaf big',onclick:()=>startLessonBatch('kv')},`Lección de ${Math.min(5,la.kv.length)} ítems`):h('div',{class:'push info small'},la.kvTotal?'Objetivo de hoy cumplido.':(la.kvWaiting?'Las palabras se desbloquean cuando sus kanji llegan a Gurú.':'Nivel completo.'))),
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Gramática'), h('div',{class:'small muted'},`Hoy: ${la.gDone} de ${la.gGoal} · quedan ${la.gTotal} en el nivel`), la.g.length?h('button',{class:'btn primary big',onclick:()=>startLessonBatch('g')},`Lección de ${Math.min(3,la.g.length)} ${plural(Math.min(3,la.g.length),'punto')}`):h('div',{class:'push info small'},la.gTotal?'Objetivo de hoy cumplido.':'Nivel completo.'))));
   if (la.reason && !la.items.length) el.append(h('div',{class:'push info',style:'margin-bottom:12px'},la.reason));
-  el.append(h('div',{class:'small muted',style:'margin-bottom:12px'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]} · kanji/vocab ${paceToday().lessons}/día (techo ${S.settings.goalLessons}) · gramática ${grammarGoalToday()}/día según tu fecha objetivo.`));
+  el.append(h('div',{class:'small muted',style:'margin-bottom:12px'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]} · kanji/vocab ${paceToday().lessons}/día (techo ${S.settings.goalLessons}) · gramática ${grammarGoalToday()}/día (techo ${S.settings.goalGrammar!=null?S.settings.goalGrammar:2}). Como en WaniKani, cada palabra se desbloquea cuando sus kanji están en Gurú.`));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
   groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('span',{class:'pill jp '+kind,style:'font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),title:(it.m?it.m.join(', '):it.s||'')+' · '+STAGE_NAMES[st]}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
@@ -2983,14 +2987,15 @@ function renderAjustes(){
   const presets=h('select',{id:'s-preset',onchange:e=>{ if(e.target.value) target.value=e.target.value; }}, h('option',{value:''},'Elegir convocatoria JLPT…'), [['2026-12-06','Diciembre 2026 (6 dic)'],['2027-07-04','Julio 2027 (4 jul)'],['2027-12-05','Diciembre 2027 (5 dic)'],['2028-07-02','Julio 2028 (2 jul)']].map(([v,l])=>h('option',{value:v},l)));
   const tier=h('select',{id:'s-tier'}, ['N4','N3','N2','N1'].map(t=>h('option',{value:t,selected:st.targetTier===t},t)));
   const goal=h('input',{id:'s-goal',type:'number',min:0,max:60,value:st.goalLessons});
+  const goalG=h('input',{id:'s-goalg',type:'number',min:0,max:20,value:st.goalGrammar!=null?st.goalGrammar:2});
   const maxr=h('input',{id:'s-maxr',type:'number',min:10,max:500,value:st.maxReviews||100});
   const strict=h('input',{id:'s-strict',type:'checkbox',checked:!!st.strict});
   const manual=h('input',{id:'s-manual',type:'checkbox',checked:!!st.manualPace});
   const furi=h('input',{id:'s-furi',type:'checkbox',checked:!!st.furigana});
-  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
+  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.goalGrammar=Math.max(0,+goalG.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
-    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
+    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Kanji y vocabulario nuevos por día (techo)',goal,'El ritmo real lo decide la app según tu carga (Recuperación, Suave, Normal, Impulso) sin pasar de este techo. Las palabras se desbloquean cuando sus kanji llegan a Gurú.'), f('Puntos de gramática nuevos por día',goalG,'Se reduce a la mitad en modo Suave y a cero en Recuperación. Con 1 al día llegas a N2 en unos dos años; con 2, en uno.'), f('Máximo de repasos por sesión',maxr)),
     h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)
