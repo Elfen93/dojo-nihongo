@@ -180,6 +180,13 @@ main{min-width:0;padding-block:22px 40px;display:flex;flex-direction:column;padd
 .hero .sub{opacity:.85;font-size:.9rem}
 .hero .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .hero .chip{background:rgba(255,255,255,.16);border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:600}
+/* Consejos */
+.tips{display:flex;flex-direction:column;gap:8px}
+.tip{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--card2)}
+.tip .ic{font-size:1.1rem;flex:none}
+.tip .b{min-width:0;flex:1}
+.tip .b b{display:block}
+.tip .b p{margin:2px 0 0;font-size:.9rem}
 /* Lectura */
 .reader{font-family:var(--f-jp);font-size:1.25rem;line-height:2.3;max-width:62ch}
 .reader .tok{cursor:pointer;border-radius:4px;padding:0 1px}
@@ -217,7 +224,7 @@ th{color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;l
 .stages{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .stages .card{padding:10px;text-align:center}
 .stages .n{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums}
-.stages .l{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.stages .l{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .levelmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:5px}
 .levelmap div{aspect-ratio:1;max-width:100%;display:flex;align-items:center;justify-content:center;border-radius:6px;background:var(--card2);font-size:.8rem;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
 .levelmap div.done{background:var(--ok);color:#fff}
@@ -228,7 +235,13 @@ th{color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;l
 /* Ajustes */
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-size:.85rem;font-weight:600}
-.field input,.field select,.field textarea{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);max-width:100%}
+.field{min-width:0}
+.field input,.field select,.field textarea{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);max-width:100%;width:100%;min-width:0;box-sizing:border-box}
+.field input[type=checkbox]{width:auto}
+.grid > *{min-width:0}
+.card{overflow:hidden}
+th,td{white-space:nowrap}
+td.wrap,th.wrap{white-space:normal}
 .field textarea{font-family:ui-monospace,monospace;font-size:.8rem;min-height:120px}
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:90vw}
 code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em}
@@ -251,8 +264,12 @@ details summary{cursor:pointer;font-weight:600}
   main{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));padding-block-start:0;padding-left:0;padding-right:0}
   main .wrap{padding:14px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));width:100%}
   .grid.c2,.grid.c3{grid-template-columns:1fr}
-  .stages{grid-template-columns:repeat(5,minmax(0,1fr))}
-  .stages .n{font-size:1.1rem}
+  .stages{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .stages .card{padding:8px 2px}
+  .stages .n{font-size:1.05rem}
+  .stages .l{font-size:.58rem;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .result-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .field input[type=range]{padding:0}
   .choices{grid-template-columns:1fr 1fr}
   .reader{font-size:1.15rem}
 }

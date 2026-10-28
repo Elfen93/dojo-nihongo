@@ -53,6 +53,7 @@ function nextCard(){
 }
 function answerCurrent(correct){
   const s=SESSION, c=s.cur, r=s.results[c.k];
+  if (s.mode!=='lesson'){ S.stats=S.stats||{}; const st=S.stats[c.f]=S.stats[c.f]||{c:0,w:0}; if(correct) st.c++; else st.w++; }
   if (correct){
     r.left.delete(c.f);
     if (!r.left.size){ completeItem(c.k); }

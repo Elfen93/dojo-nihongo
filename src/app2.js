@@ -84,6 +84,7 @@ function mergeRemote(remote){
   M.weekly={last:Math.max((L.weekly||{}).last||0,(R.weekly||{}).last||0)};
   M.readings={...(R.readings||{})}; for (const [k,v] of Object.entries(L.readings||{})) if(!M.readings[k]||(v.date||0)>(M.readings[k].date||0)) M.readings[k]=v;
   M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
+  M.stats={...(L.stats||{})}; for (const [f,v] of Object.entries(R.stats||{})){ const l=M.stats[f]||{c:0,w:0}; M.stats[f]={c:Math.max(l.c||0,v.c||0), w:Math.max(l.w||0,v.w||0)}; }
   M.created=Math.min(L.created||now(), R.created||now()); M.gen=L.gen||{}; M.pace=null;
   const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
   S=M; updateStreak(); saveLocal();
