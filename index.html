@@ -2257,7 +2257,7 @@ const normKana = s => kataToHira(String(s||'')).replace(/[\s・。、！？!?]/g
 const stripAcc = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'');
 const NUM_ES={0:'cero',1:'uno',2:'dos',3:'tres',4:'cuatro',5:'cinco',6:'seis',7:'siete',8:'ocho',9:'nueve',10:'diez',11:'once',12:'doce',13:'trece',14:'catorce',15:'quince',16:'dieciseis',17:'diecisiete',18:'dieciocho',19:'diecinueve',20:'veinte',21:'veintiuno',22:'veintidos',23:'veintitres',24:'veinticuatro',25:'veinticinco',26:'veintiseis',27:'veintisiete',28:'veintiocho',29:'veintinueve',30:'treinta',31:'treinta y uno',40:'cuarenta',50:'cincuenta',60:'sesenta',70:'setenta',80:'ochenta',90:'noventa',100:'cien',1000:'mil',10000:'diez mil'};
 function numToEs(s){ return String(s).replace(/\d+/g, d=>NUM_ES[+d]||d); }
-function normEs(s){ s=numToEs(s).replace(/\buno\b/g,'un'); return stripAcc(String(s).toLowerCase()).replace(/\([^)]*\)/g,'').replace(/[¿?¡!.,;:"']/g,'').replace(/\b(el|la|los|las|un|una|unos|unas|de|del|al|a|ser|estar|hacer|algo|alguien)\b/g,' ').replace(/\s+/g,' ').trim(); }
+function normEs(s){ s=numToEs(s).replace(/\buno\b/g,'un'); return stripAcc(String(s).toLowerCase()).replace(/\([^)]*\)/g,'').replace(/[¿?¡!.,;:"']/g,'').replace(/\b(el|la|los|las|un|una|unos|unas|de|del|al|a|ser|estar|hacer|algo|alguien)\b(?=\s+\S)/g,' ').replace(/\s+/g,' ').trim(); }
 function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let prev=[...Array(n+1).keys()], cur=[]; for(let i=1;i<=m;i++){cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur;} return prev[n]; }
 function matchEs(answer, meanings){
   const a=normEs(answer); if(!a) return false;
