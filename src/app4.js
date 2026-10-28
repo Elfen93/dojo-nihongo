@@ -25,7 +25,7 @@ function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.clea
 // ===================== Lecciones =====================
 function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }
 function lessonsAvailable(track){
-  const lv=S.level; const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[]});
+  const lv=S.level; const dd0=day(); const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[],kvTotal:0,gTotal:0,kvWaiting:0,kvGoal:paceToday().lessons,gGoal:grammarGoalToday(),kvDone:dd0.l||0,gDone:dd0.lg||0,locked:true});
   if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido generado.','gen');
   const due=dueItems().length;
   if (due>150) return empty(`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`,'reviews');
