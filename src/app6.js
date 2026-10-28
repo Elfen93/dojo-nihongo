@@ -141,7 +141,9 @@ async function syncExternal(){
   }
   if (st.bpKey){
     toast('Leyendo Bunpro…');
-    try{ const data=await callFunction('bunpro',{key:st.bpKey}); if(data&&data.error) throw new Error(data.error); payload.bunpro=data; S.sync.bpDiag='Bunpro devolvió '+((data&&data.items)||[]).length+' puntos. Ejemplos: '+((data&&data.items)||[]).slice(0,6).map(i=>i.title+' (srs '+i.srs+')').join(' · ')+(data.diag?' · '+data.diag:''); }catch(e){ S.sync.bpDiag='Error de Bunpro: '+e.message; toast('Bunpro no disponible: '+e.message); }
+    let data=null;
+    try{ const r=await fetch('https://bunpro.jp/api/user/'+encodeURIComponent(st.bpKey)+'/all_reviews',{headers:{Accept:'application/json'}}); if(r.ok){ const j=await r.json(); const arr=Array.isArray(j)?j:(j.reviews||j.data||[]); data={items:arr.map(x=>{const gp=x.grammar_point||{}; return {title:gp.title||x.title||'', srs:Number(x.srs_stage??x.streak??1)};}).filter(i=>i.title), diag:'directo desde el navegador: '+arr.length+' elementos'}; } }catch(e){}
+    try{ if(!data) data=await callFunction('bunpro',{key:st.bpKey}); if(data&&data.error) throw new Error(data.error); payload.bunpro=data; S.sync.bpDiag='Bunpro devolvió '+((data&&data.items)||[]).length+' puntos. Ejemplos: '+((data&&data.items)||[]).slice(0,6).map(i=>i.title+' (srs '+i.srs+')').join(' · ')+(data.diag?' · '+data.diag:''); }catch(e){ S.sync.bpDiag='Error de Bunpro: '+e.message; toast('Bunpro no disponible: '+e.message); }
   }
   if (!payload.wanikani && !payload.bunpro) throw new Error('No hay claves guardadas');
   importSync(JSON.stringify(payload));
