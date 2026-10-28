@@ -1,12 +1,14 @@
 // Genera preguntas de examen con frases inéditas a partir de lo que el usuario ha aprendido.
-import { cors, json, requireUser, askClaude, extractJson } from "../_shared.ts";
+import { cors, json, requireUser, askClaude, extractJson, cleanLevel, strList } from "../_shared.ts";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const user = await requireUser(req); if (!user) return json({ error: "sin sesión" }, 401);
-    const { vocab, grammar, kanji, counts, level } = await req.json();
-    if (!Array.isArray(vocab) || !Array.isArray(grammar)) return json({ error: "faltan datos" }, 400);
-    const n = Object.assign({ kr: 6, or: 4, ctx: 5, gr: 6, prod: 6 }, counts || {});
+    const body = await req.json();
+    const vocab = strList(body.vocab, 250, 60), grammar = strList(body.grammar, 120, 60), kanji = strList(body.kanji, 300, 2), level = cleanLevel(body.level);
+    if (vocab.length < 10 || grammar.length < 3) return json({ error: "faltan datos" }, 400);
+    const n: Record<string, number> = { kr: 6, or: 4, ctx: 5, gr: 6, prod: 6 };
+    for (const k of Object.keys(n)) { const v = Number((body.counts || {})[k]); if (Number.isInteger(v)) n[k] = Math.max(0, Math.min(15, v)); }
     const prompt = `Eres examinador del JLPT ${level || "N4"}. Crea preguntas NUEVAS para un hispanohablante usando SOLO este material aprendido (puedes usar además partículas, です/ます, kana básico y palabras muy comunes de N5). No repitas frases de libro de texto; escribe frases naturales, variadas (diálogo, aviso, correo, narración) y de dificultad real de examen.
 Vocabulario aprendido (palabra/lectura): ${vocab.slice(0, 250).join(", ")}
 Kanji aprendidos: ${(kanji || []).slice(0, 300).join("")}

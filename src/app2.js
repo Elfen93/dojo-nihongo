@@ -26,8 +26,10 @@ function registerItems(ks, vs, gs){
   for (const k of ks){ const it={...k,kind:'k'}; ITEMS.set(keyOf(it),it); }
   for (const v of vs){ const it={...v,kind:'v'}; ITEMS.set(keyOf(it),it); }
   for (const g of gs){ const it={...g,kind:'g'}; ITEMS.set(keyOf(it),it); }
+  MEANING_SET=null;
 }
 registerItems(KANJI_ALL, VOCAB_ALL, GRAMMAR_ALL);
+MEANING_SET=null;
 const itemsOfLevel = lv => [...ITEMS.values()].filter(i=>i.lv===lv);
 const KANJI_META = Object.fromEntries(KANJI_ALL.map(k=>[k.k,k]));
 const VOCAB_BY_WORD = {}; for (const v of VOCAB_ALL) (VOCAB_BY_WORD[v.w]=VOCAB_BY_WORD[v.w]||[]).push(v);
@@ -60,9 +62,13 @@ const DEFAULT_STATE = () => ({
   sync:{}, log:[]
 });
 let S = DEFAULT_STATE();
-let sb=null, USER=null, saveT=null, remoteBusy=false, pendingSave=false;
-function loadLocal(){ try{ const raw=localStorage.getItem('dojo.state'); if(raw){ const o=JSON.parse(raw); S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; } }catch(e){} }
-function saveLocal(){ try{ localStorage.setItem('dojo.state', JSON.stringify(S)); }catch(e){} }
+let sb=null, USER=null, saveT=null, remoteBusy=false, pendingSave=false, OFFLINE=false;
+const withTimeout=(p,ms)=>Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('sin respuesta del servidor')),ms))]);
+function loadLocal(){ try{ const raw=localStorage.getItem('dojo.state'); if(raw){ const o=JSON.parse(raw); S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; S.gen={}; } }catch(e){} }
+function saveLocal(){ try{ const {gen,...rest}=S; localStorage.setItem('dojo.state', JSON.stringify(rest)); }catch(e){} }
+// Dueño del estado local: si entra otra cuenta en este dispositivo, no se mezcla con el progreso de la anterior
+function localOwner(){ try{ return localStorage.getItem('dojo.owner')||''; }catch(e){ return ''; } }
+function adoptUser(){ const prev=localOwner(); if(prev && USER && prev!==USER.id){ S=DEFAULT_STATE(); for(const k of Object.keys(USER_READINGS)) delete USER_READINGS[k]; saveLocal(); saveUserReadingsLocal(); } try{ localStorage.setItem('dojo.owner',USER.id); }catch(e){} }
 function save(){ S.updated=now(); saveLocal(); clearTimeout(saveT); saveT=setTimeout(saveRemote, 1000); }
 async function saveRemote(){
   if(!sb||!USER) return; if(remoteBusy){ pendingSave=true; return; }
@@ -73,39 +79,57 @@ async function saveRemote(){
 function mergeRemote(remote){
   if (!remote||typeof remote!=='object') return;
   const L=S, R=remote, M={...DEFAULT_STATE(), ...L};
+  // "Borrar progreso": lo anterior a la fecha de borrado (venga del dispositivo que venga) se descarta; el lado que borró más tarde manda en lo no fusionable
+  const cut=Math.max(L.resetAt||0, R.resetAt||0); const fresh=t=>!cut||(t||0)>=cut; const cutDay=cut?todayKey(new Date(cut)):'';
+  const newer=(R.resetAt||0)>(L.resetAt||0)?R:(L.resetAt||0)>(R.resetAt||0)?L:null;
+  if (cut) M.resetAt=cut;
   // ítems: gana el registro visto más recientemente; a igualdad, el de etapa mayor
-  M.items={...(L.items||{})};
-  for (const [k,r] of Object.entries(R.items||{})){ const l=M.items[k]; if(!l) { M.items[k]=r; continue; } const lt=l.ls||l.lrn||0, rt=r.ls||r.lrn||0; if (rt>lt || (rt===lt && (r.s||0)>(l.s||0))) M.items[k]=r; }
+  M.items={}; for (const [k,r] of Object.entries(L.items||{})) if(r&&fresh(r.ls||r.lrn)) M.items[k]=r;
+  for (const [k,r] of Object.entries(R.items||{})){ if(!r||!fresh(r.ls||r.lrn)) continue; const l=M.items[k]; if(!l) { M.items[k]=r; continue; } const lt=l.ls||l.lrn||0, rt=r.ls||r.lrn||0; if (rt>lt || (rt===lt && (r.s||0)>(l.s||0))) M.items[k]=r; }
   // ajustes: los modificados más recientemente
   M.settings = ((R.settingsAt||0) > (L.settingsAt||0)) ? {...DEFAULT_STATE().settings, ...(R.settings||{})} : {...DEFAULT_STATE().settings, ...(L.settings||{})};
   M.settingsAt = Math.max(R.settingsAt||0, L.settingsAt||0);
   // días: máximo por campo
-  M.days={...(L.days||{})}; for (const [d,v] of Object.entries(R.days||{})){ const l=M.days[d]||{}; const o={...l}; for (const f of Object.keys({...l,...v})) o[f]=Math.max(l[f]||0, v[f]||0); M.days[d]=o; }
+  M.days={}; for (const [d,v] of Object.entries(L.days||{})) if(d>=cutDay) M.days[d]=v;
+  for (const [d,v] of Object.entries(R.days||{})){ if(d<cutDay) continue; const l=M.days[d]||{}; const o={...l}; for (const f of Object.keys({...l,...v})) o[f]=Math.max(l[f]||0, v[f]||0); M.days[d]=o; }
   // exámenes: unión por fecha
-  const ex={}; [...(L.exams||[]),...(R.exams||[])].forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
-  M.level=Math.max(L.level||1, R.level||1); M.levelPass={...(R.levelPass||{}),...(L.levelPass||{})};
-  M.weekly={last:Math.max((L.weekly||{}).last||0,(R.weekly||{}).last||0)};
-  M.readings={...(R.readings||{})}; for (const [k,v] of Object.entries(L.readings||{})) if(!M.readings[k]||(v.date||0)>(M.readings[k].date||0)) M.readings[k]=v;
+  const ex={}; [...(L.exams||[]),...(R.exams||[])].filter(e=>e&&fresh(e.date)).forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
+  if (newer){ M.level=newer.level||1; M.levelPass={...(newer.levelPass||{})}; M.weekly={last:(newer.weekly||{}).last||0}; M.stats={...(newer.stats||{})}; M.created=newer.created||now(); }
+  else {
+    M.level=Math.max(L.level||1, R.level||1); M.levelPass={...(R.levelPass||{}),...(L.levelPass||{})};
+    M.weekly={last:Math.max((L.weekly||{}).last||0,(R.weekly||{}).last||0)};
+    M.stats={...(L.stats||{})}; for (const [f,v] of Object.entries(R.stats||{})){ const l=M.stats[f]||{c:0,w:0}; M.stats[f]={c:Math.max(l.c||0,v.c||0), w:Math.max(l.w||0,v.w||0)}; }
+    M.created=Math.min(L.created||now(), R.created||now());
+  }
+  M.readings={}; for (const [k,v] of Object.entries(R.readings||{})) if(v&&fresh(v.date)) M.readings[k]=v;
+  for (const [k,v] of Object.entries(L.readings||{})) if(v&&fresh(v.date)&&(!M.readings[k]||(v.date||0)>(M.readings[k].date||0))) M.readings[k]=v;
   M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
-  M.stats={...(L.stats||{})}; for (const [f,v] of Object.entries(R.stats||{})){ const l=M.stats[f]||{c:0,w:0}; M.stats[f]={c:Math.max(l.c||0,v.c||0), w:Math.max(l.w||0,v.w||0)}; }
-  M.created=Math.min(L.created||now(), R.created||now()); M.gen=L.gen||{}; M.pace=null;
+  M.gen=L.gen||{}; M.pace=null;
   const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
   S=M; updateStreak(); saveLocal();
   // si lo fusionado difiere de lo remoto, subimos la fusión
-  if (JSON.stringify({i:M.items,s:M.settings,d:M.days,e:M.exams.length}) !== JSON.stringify({i:R.items||{},s:{...DEFAULT_STATE().settings,...(R.settings||{})},d:R.days||{},e:(R.exams||[]).length})) { S.updated=now(); saveRemote(); }
+  const sig=o=>JSON.stringify({i:o.items||{},s:{...DEFAULT_STATE().settings,...(o.settings||{})},d:o.days||{},e:(o.exams||[]).length,l:o.level||1,x:o.resetAt||0});
+  if (sig(M)!==sig(R)) { S.updated=now(); saveRemote(); }
   return changedLocal;
 }
 async function initDb(){
-  if (!window.supabase || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
+  if (!window.supabase){ // no cargó la librería (sin conexión): si este dispositivo ya tenía sesión, se trabaja en local y se sube al volver la red
+    AUTH_PENDING=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); } else setSyncLabel('Sin conexión'); render(); return; }
   try{
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-    const { data:{ session } } = await sb.auth.getSession();
+    let session=null; try{ ({ data:{ session } } = await withTimeout(sb.auth.getSession(), 8000)); }catch(e){ console.warn('getSession', e); }
     USER = session ? session.user : null; AUTH_PENDING=false;
-    if (USER) { await checkAllowed(); }
-    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && USER.id!==was){ checkAllowed().then(ok=>{ if(!ok){ render(); } }); } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
-    if (USER) await pullRemote(); else setSyncLabel('Sin sesión');
-    render();
+    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; const u=sess?sess.user:null; if (u && u.id!==was){ USER=u; AUTH_PENDING=false; setTimeout(onSignedIn,0); } else if (!u && USER && ev==='SIGNED_OUT'){ USER=null; render(); } });
+    if (USER) await onSignedIn(); else { setSyncLabel('Sin sesión'); render(); }
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }
+}
+// Tras entrar: primero la autorización, luego adoptar el estado local y fusionar con la cuenta
+async function onSignedIn(){
+  const ok=await checkAllowed(); if(!ok){ render(); return; }
+  adoptUser(); const wall=document.body.classList.contains('login-mode'); if (wall) document.body.classList.add('leaving');
+  await pullRemote();
+  if (wall) setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560); else render();
 }
 async function pullRemote(){
   if(!sb||!USER) return;
@@ -120,14 +144,17 @@ async function pullRemote(){
 async function saveGen(lv, data){ S.gen[lv]=data; try{ localStorage.setItem('dojo.gen.'+lv, JSON.stringify(data)); }catch(e){} if(sb&&USER){ try{ const {error}=await sb.from('gen_levels').upsert({user_id:USER.id, lv, data}); if(error) throw error; }catch(e){ console.warn(e); toast('El nivel se guardó solo en este dispositivo'); } } registerGenerated(); }
 function loadGenLocal(){ for(let lv=14;lv<=MAX_LEVEL;lv++){ try{ const raw=localStorage.getItem('dojo.gen.'+lv); if(raw) S.gen[lv]=JSON.parse(raw);}catch(e){} } registerGenerated(); }
 function registerGenerated(){ for (const lv of Object.keys(S.gen)){ const g=S.gen[lv]; if(!g) continue; registerItems((g.kanji||[]).map(k=>({...k,lv:+lv})), (g.vocab||[]).map(v=>({...v,lv:+lv})), (g.grammar||[]).map(x=>({...x,lv:+lv}))); } }
-let syncLabel='…'; function setSyncLabel(t){ syncLabel=t; const el=$('#synclabel'); if(el) el.textContent=t; const el2=$('#synclabel2'); if(el2) el2.textContent=t; }
+let syncLabel='…'; function setSyncLabel(t){ syncLabel=t; document.querySelectorAll('.synclabel').forEach(el=>{ el.textContent=t; }); }
 // Autenticación
 async function signInEmail(email){ if(!sb) return toast('Cuenta no configurada'); const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo:location.origin+location.pathname}}); if(error) toast('Error: '+error.message); else toast('Te he enviado un enlace de acceso al correo'); }
-async function signInGoogle(){ if(!sb) return toast('Cuenta no configurada'); const {error}=await sb.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin+location.pathname}}); if(error) toast('Error: '+error.message); }
-async function signOut(){ if(sb){ await sb.auth.signOut(); } USER=null; toast('Sesión cerrada'); render(); }
+async function signInGoogle(){ DENIED_EMAIL=null; DENIED_NET=false; if(!sb) return toast(window.supabase?'Cuenta no configurada':'Sin conexión con el servidor. Comprueba la red y recarga la página.'); const {error}=await sb.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin+location.pathname}}); if(error) toast('Error: '+error.message); }
+async function signOut(){ if(sb){ try{ await sb.auth.signOut(); }catch(e){} } USER=null; OFFLINE=false; toast('Sesión cerrada'); render(); }
 async function callFunction(name, body){
-  if(!sb) throw new Error('Cuenta no configurada');
-  const {data,error}=await sb.functions.invoke(name,{body}); if(error) throw new Error(error.message||'error'); return data;
+  if(!sb) throw new Error(window.supabase?'Cuenta no configurada':'Sin conexión');
+  const {data,error}=await sb.functions.invoke(name,{body});
+  if(error){ let msg=error.message||'error'; try{ if(error.context && typeof error.context.json==='function'){ const j=await error.context.json(); if(j&&j.error) msg=String(j.error); } }catch(e){} throw new Error(msg); }
+  if(data && data.error) throw new Error(String(data.error));
+  return data;
 }
 
 // Registro diario
@@ -150,31 +177,45 @@ async function saveUserReading(r){ USER_READINGS[r.id]=r; saveUserReadingsLocal(
 async function deleteUserReading(id){ delete USER_READINGS[id]; saveUserReadingsLocal(); if(sb&&USER){ try{ await sb.from('user_readings').delete().eq('user_id',USER.id).eq('id',id); }catch(e){} } }
 const allReadings = () => [...READINGS, ...Object.values(USER_READINGS)];
 // Notificaciones push
-async function pushStatus(){ if(!('serviceWorker' in navigator)||!('PushManager' in window)) return 'unsupported'; if(Notification.permission==='denied') return 'denied'; const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); return sub?'on':'off'; }
+const swReady=()=>withTimeout(navigator.serviceWorker.ready, 5000);
+async function pushStatus(){ try{ if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)) return 'unsupported'; if(Notification.permission==='denied') return 'denied'; const reg=await swReady(); const sub=await reg.pushManager.getSubscription(); return sub?'on':'off'; }catch(e){ return 'unsupported'; } }
 function b64ToU8(b){ const p='='.repeat((4-b.length%4)%4); const s=(b+p).replace(/-/g,'+').replace(/_/g,'/'); const r=atob(s); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); }
+const localTz=()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'; }catch(e){ return 'UTC'; } };
 async function enablePush(){
   if(!sb||!USER){ toast('Inicia sesión primero'); return; }
   if(!CONFIG.VAPID_PUBLIC_KEY){ toast('Falta la clave VAPID en config.js'); return; }
-  const perm=await Notification.requestPermission(); if(perm!=='granted'){ toast('Permiso denegado por el navegador'); return; }
-  const reg=await navigator.serviceWorker.ready;
-  const sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToU8(CONFIG.VAPID_PUBLIC_KEY)});
-  const {error}=await sb.from('push_subs').upsert({endpoint:sub.endpoint, user_id:USER.id, sub:sub.toJSON()}); if(error){ toast('No se pudo guardar la suscripción: '+error.message); return; }
-  toast('Notificaciones activadas en este dispositivo');
-}
-async function disablePush(){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }
-
-let ALLOWED=null, IS_ADMIN=false;
-async function checkAllowed(){
   try{
-    const r=await sb.rpc('is_allowed'); if(r.error) throw r.error; ALLOWED=!!r.data;
+    const perm=await Notification.requestPermission(); if(perm!=='granted'){ toast('Permiso denegado por el navegador'); return; }
+    const reg=await swReady();
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToU8(CONFIG.VAPID_PUBLIC_KEY)});
+    let {error}=await sb.from('push_subs').upsert({endpoint:sub.endpoint, user_id:USER.id, sub:sub.toJSON(), tz:localTz()});
+    if(error && /tz/.test(error.message||'')) ({error}=await sb.from('push_subs').upsert({endpoint:sub.endpoint, user_id:USER.id, sub:sub.toJSON()})); // tabla sin la columna tz todavía
+    if(error){ toast('No se pudo guardar la suscripción: '+error.message); return; }
+    toast('Notificaciones activadas en este dispositivo');
+  }catch(e){ toast('No se pudieron activar: '+(e.message||e)); }
+}
+async function disablePush(){ try{ const reg=await swReady(); const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }catch(e){ toast('No se pudieron desactivar: '+(e.message||e)); } }
+
+let ALLOWED=null, IS_ADMIN=false, DENIED_EMAIL=null, DENIED_NET=false;
+async function checkAllowed(){
+  const cacheKey='dojo.allowed'; let cached=''; try{ cached=localStorage.getItem(cacheKey)||''; }catch(e){}
+  DENIED_NET=false;
+  try{
+    const r=await withTimeout(sb.rpc('is_allowed'), 10000); if(r.error) throw r.error; ALLOWED=!!r.data;
     const a=await sb.rpc('is_admin'); IS_ADMIN=!a.error&&!!a.data;
-  }catch(e){ // sin schema3 aún: usar la lista de config como respaldo
-    const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); ALLOWED=!list.length||!!(USER&&USER.email&&list.includes(USER.email.toLowerCase())); IS_ADMIN=false;
+    try{ if(ALLOWED) localStorage.setItem(cacheKey,USER.id); else localStorage.removeItem(cacheKey); }catch(e){}
+  }catch(e){
+    IS_ADMIN=false;
+    const noRpc = !!e && (e.code==='PGRST202' || /is_allowed/.test(e.message||''));
+    if (noRpc){ // sin schema3 aún: usar la lista de config como respaldo
+      const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); ALLOWED=!list.length||!!(USER&&USER.email&&list.includes(USER.email.toLowerCase()));
+    } else { // sin red: vale la última comprobación hecha en este dispositivo; si no la hay, no se puede entrar todavía
+      ALLOWED=!!USER && cached===USER.id; if(!ALLOWED) DENIED_NET=true;
+    }
   }
-  if(!ALLOWED){ DENIED_EMAIL=USER&&USER.email; await sb.auth.signOut(); USER=null; }
+  if(!ALLOWED){ DENIED_EMAIL=DENIED_NET?null:(USER&&USER.email); try{ await sb.auth.signOut(); }catch(e){} USER=null; }
   return ALLOWED;
 }
-let DENIED_EMAIL=null;
 async function adminList(){ const r=await sb.rpc('admin_list_users'); if(r.error) throw r.error; return r.data||[]; }
 async function adminAdd(email,note){ const r=await sb.rpc('admin_add_user',{p_email:email,p_note:note||null}); if(r.error) throw r.error; }
 async function adminRemove(email){ const r=await sb.rpc('admin_remove_user',{p_email:email}); if(r.error) throw r.error; }

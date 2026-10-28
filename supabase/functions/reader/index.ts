@@ -1,10 +1,12 @@
 // Convierte un texto japonés pegado por el usuario en una lectura glosada (furigana, glosario, traducción, preguntas).
-import { cors, json, requireUser, askClaude, extractJson } from "../_shared.ts";
+import { cors, json, requireUser, askClaude, extractJson, cleanLevel } from "../_shared.ts";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const user = await requireUser(req); if (!user) return json({ error: "sin sesión" }, 401);
-    const { text, title, level } = await req.json();
+    const body = await req.json();
+    const text = body.text, level = cleanLevel(body.level);
+    const title = typeof body.title === "string" ? body.title.trim().slice(0, 100) : "";
     if (!text || typeof text !== "string" || text.length > 6000) return json({ error: "texto vacío o demasiado largo (máx. 6000 caracteres)" }, 400);
     const prompt = `Eres profesor de japonés para un hispanohablante de nivel JLPT ${level || "N4"}. Convierte el siguiente texto japonés en material de lectura. Responde SOLO con JSON válido con esta forma:
 {"title":"título corto","sub":"descripción de una línea en español","t":"TEXTO TOKENIZADO","es":"traducción completa al español, natural","q":[{"q":"pregunta de comprensión en japonés sencillo","o":["opción","opción","opción","opción"],"a":0}],"notes":["punto gramatical relevante: explicación de una frase"]}

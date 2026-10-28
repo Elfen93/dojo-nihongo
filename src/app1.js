@@ -24,6 +24,7 @@ const H = 3600e3, D = 24*H;
 const todayKey = (t=new Date()) => t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
 const fmtDate = ts => new Date(ts).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
 const fmtRel = ts => { const d=ts-now(); if (d<=0) return 'ahora'; if (d<H) return Math.ceil(d/6e4)+' min'; if (d<D) return Math.round(d/H)+' h'; return Math.round(d/D)+' d'; };
+const fmtAgo = ts => { const d=now()-ts; if (d<6e4) return 'ahora mismo'; if (d<H) return 'hace '+Math.round(d/6e4)+' min'; if (d<D) return 'hace '+Math.round(d/H)+' h'; return 'hace '+Math.round(d/D)+' d'; };
 const plural = (n,s,p) => n===1?s:(p||s+'s');
 let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2600); }
 const VOICE_PREF=[/Nanami/i,/O-?ren/i,/Kyoko/i,/Google 日本語/i,/Google.*ja/i,/Natural/i,/Online/i,/ja[-_]JP/i,/ja/i];
@@ -56,7 +57,7 @@ const ROMA = {
  ka:'か',ki:'き',ku:'く',ke:'け',ko:'こ',sa:'さ',shi:'し',si:'し',su:'す',se:'せ',so:'そ',
  ta:'た',chi:'ち',ti:'ち',tsu:'つ',tu:'つ',te:'て',to:'と',na:'な',ni:'に',nu:'ぬ',ne:'ね',no:'の',
  ha:'は',hi:'ひ',fu:'ふ',hu:'ふ',he:'へ',ho:'ほ',ma:'ま',mi:'み',mu:'む',me:'め',mo:'も',
- ya:'や',yu:'ゆ',yo:'よ',ra:'ら',ri:'り',ru:'る',re:'れ',ro:'ろ',wa:'わ',wo:'を',nn:'ん',
+ ya:'や',yu:'ゆ',yo:'よ',ra:'ら',ri:'り',ru:'る',re:'れ',ro:'ろ',wa:'わ',wo:'を',
  ga:'が',gi:'ぎ',gu:'ぐ',ge:'げ',go:'ご',za:'ざ',ji:'じ',zi:'じ',zu:'ず',ze:'ぜ',zo:'ぞ',
  da:'だ',di:'ぢ',du:'づ',de:'で',do:'ど',ba:'ば',bi:'び',bu:'ぶ',be:'べ',bo:'ぼ',pa:'ぱ',pi:'ぴ',pu:'ぷ',pe:'ぺ',po:'ぽ',
  kya:'きゃ',kyu:'きゅ',kyo:'きょ',sha:'しゃ',shu:'しゅ',sho:'しょ',sya:'しゃ',syu:'しゅ',syo:'しょ',
@@ -69,18 +70,24 @@ const ROMA = {
  wi:'うぃ',we:'うぇ',she:'しぇ',che:'ちぇ',je:'じぇ',tsa:'つぁ',tse:'つぇ',tso:'つぉ',thi:'てぃ',dhi:'でぃ',dhu:'でゅ',thu:'てゅ',
  '-':'ー','~':'〜'
 };
-// Convierte romaji a hiragana dejando colas sin resolver (como WaniKani). final=true fuerza la n final.
+// Convierte romaji a hiragana dejando colas sin resolver, con las reglas de un IME japonés. final=true fuerza la n final.
 function toKana(input, final=false){
   let s = input.toLowerCase(), out='', i=0;
   while (i<s.length){
-    const c=s[i];
+    const c=s[i], n1=s[i+1], n2=s[i+2];
     if (!/[a-z\-~']/.test(c)) { out+=c; i++; continue; }
     if (c==="'") { i++; continue; }
-    // n + consonante (no vocal, no y) => ん
-    if (c==='n' && i+1<s.length && /[^aeiouyn']/.test(s[i+1]) && /[a-z]/.test(s[i+1])) { out+='ん'; i++; continue; }
-    if (c==='n' && s[i+1]==="'") { out+='ん'; i+=2; continue; }
-    // consonante doble => っ (excepto nn)
-    if (/[bcdfghjklmpqrstvwxz]/.test(c) && s[i+1]===c && c!=='n') { out+='っ'; i++; continue; }
+    if (c==='n'){
+      if (n1==="'") { out+='ん'; i+=2; continue; }
+      // nn: ん, y la segunda n abre la sílaba siguiente si viene una vocal (annai → あんない); ante consonante o al final, solo ん
+      if (n1==='n'){ if (n2===undefined){ if (final){ out+='ん'; i+=2; continue; } out+='nn'; break; } out+='ん'; i+=(/[aeiouy]/.test(n2)?1:2); continue; }
+      // n + consonante (no vocal, no y) => ん
+      if (n1!==undefined && /[a-z]/.test(n1) && !/[aeiouy]/.test(n1)) { out+='ん'; i++; continue; }
+      if (n1===undefined && final) { out+='ん'; i++; continue; }
+    }
+    // tch => っち (matcha → まっちゃ); consonante doble => っ
+    if (c==='t' && n1==='c' && n2==='h') { out+='っ'; i++; continue; }
+    if (/[bcdfghjklmpqrstvwxz]/.test(c) && n1===c) { out+='っ'; i++; continue; }
     let matched=false;
     for (const len of [4,3,2,1]) {
       const seg=s.substr(i,len);
@@ -102,16 +109,23 @@ const stripAcc = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'');
 const NUM_ES={0:'cero',1:'uno',2:'dos',3:'tres',4:'cuatro',5:'cinco',6:'seis',7:'siete',8:'ocho',9:'nueve',10:'diez',11:'once',12:'doce',13:'trece',14:'catorce',15:'quince',16:'dieciseis',17:'diecisiete',18:'dieciocho',19:'diecinueve',20:'veinte',21:'veintiuno',22:'veintidos',23:'veintitres',24:'veinticuatro',25:'veinticinco',26:'veintiseis',27:'veintisiete',28:'veintiocho',29:'veintinueve',30:'treinta',31:'treinta y uno',40:'cuarenta',50:'cincuenta',60:'sesenta',70:'setenta',80:'ochenta',90:'noventa',100:'cien',1000:'mil',10000:'diez mil'};
 function numToEs(s){ return String(s).replace(/\d+/g, d=>NUM_ES[+d]||d); }
 function normEs(s){ s=numToEs(s).replace(/\buno\b/g,'un'); return stripAcc(String(s).toLowerCase()).replace(/\([^)]*\)/g,'').replace(/[¿?¡!.,;:"']/g,'').replace(/\b(el|la|los|las|un|una|unos|unas|de|del|al|a|ser|estar|hacer|algo|alguien)\b(?=\s+\S)/g,' ').replace(/\s+/g,' ').trim(); }
-function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let prev=[...Array(n+1).keys()], cur=[]; for(let i=1;i<=m;i++){cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur;} return prev[n]; }
+// Distancia de edición con transposición de letras vecinas ("comre" → "comer" cuenta como una sola errata)
+function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let pp=null, prev=[...Array(n+1).keys()], cur=[]; for(let i=1;i<=m;i++){cur=[i]; for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); if(pp&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) cur[j]=Math.min(cur[j],pp[j-2]+1); } pp=prev; prev=cur;} return prev[n]; }
+// Todos los significados exactos del catálogo: una errata nunca debe convertir la respuesta en el significado de OTRO ítem
+let MEANING_SET=null;
+function meaningSet(){ if(!MEANING_SET){ MEANING_SET=new Set(); if(typeof ITEMS!=='undefined') for(const it of ITEMS.values()){ for(const m of (it.m||[])){ const mm=normEs(m); if(!mm) continue; MEANING_SET.add(mm); for(const part of mm.split(/\s*\/\s*|\s+o\s+/)) if(part) MEANING_SET.add(part); } } } return MEANING_SET; }
 function matchEs(answer, meanings){
   const a=normEs(answer); if(!a) return false;
-  for (const m of meanings){
-    const mm=normEs(m); if(!mm) continue;
-    if (a===mm) return true;
+  const own=new Set(), norms=[];
+  for (const m of meanings){ const mm=normEs(m); if(!mm) continue; norms.push(mm); own.add(mm); for (const part of mm.split(/\s*\/\s*|\s+o\s+/)) if(part) own.add(part); }
+  if (own.has(a)) return true;
+  for (const mm of own) if (a===mm+'s'||a===mm+'es'||a+'s'===mm||a+'es'===mm) return true; // singular / plural
+  if (meaningSet().has(a)) return false; // es, exactamente, el significado de otra palabra: no vale como errata
+  for (const mm of norms){
     const tol = mm.length>=7?2:(mm.length>=5?1:0);
     if (tol && lev(a,mm)<=tol) return true;
-    // acepta si la respuesta coincide con una de las alternativas separadas por '/'
-    for (const part of mm.split(/\s*\/\s*|\s+o\s+/)) if (part && (a===part || (part.length>=5 && lev(a,part)<=1))) return true;
+    // acepta si la respuesta coincide (con una errata) con una de las alternativas separadas por '/'
+    for (const part of mm.split(/\s*\/\s*|\s+o\s+/)) if (part && part.length>=5 && lev(a,part)<=1) return true;
   }
   return false;
 }

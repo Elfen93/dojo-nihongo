@@ -1,9 +1,12 @@
 // Puente a la API de Bunpro. Sondea versiones y formas de autenticación y devuelve diagnóstico.
+// Solo para usuarios con sesión y autorizados (antes era pública).
+import { requireUser } from "../_shared.ts";
 Deno.serve(async (req) => {
   const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
-  const json = (b: unknown) => new Response(JSON.stringify(b), { headers: { ...cors, "Content-Type": "application/json" } });
+  const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    const user = await requireUser(req); if (!user) return json({ error: "sin sesión" }, 401);
     const { key } = await req.json();
     if (!key || typeof key !== "string" || key.length > 200) return json({ error: "clave no válida" });
     const kk = key.trim();

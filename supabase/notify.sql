@@ -5,9 +5,12 @@ create table if not exists public.push_subs (
   sub jsonb not null,
   last_sent timestamptz,
   last_kind text,
+  tz text,
   created_at timestamptz not null default now()
 );
+alter table public.push_subs add column if not exists tz text;
 alter table public.push_subs enable row level security;
+drop policy if exists "push propio" on public.push_subs;
 create policy "push propio" on public.push_subs for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 

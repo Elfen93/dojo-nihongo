@@ -25,10 +25,14 @@ Con la CLI de Supabase (`npm i -g supabase`):
 supabase login
 supabase link --project-ref TU_REF
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-supabase functions deploy bunpro --no-verify-jwt
+supabase functions deploy bunpro
 supabase functions deploy generate
 ```
 Sin estas funciones la app sigue funcionando: Bunpro no se sincroniza y los niveles N3+ se generan copiando el prompt a mano.
+
+### Al actualizar la app (tras un `git pull`)
+- SQL Editor → vuelve a ejecutar `supabase/schema3.sql` (es idempotente): crea la tabla de notificaciones si faltaba y añade la columna `tz` (zona horaria) para avisar a horas locales.
+- `supabase functions deploy generate exam reader tts notify bunpro`: las funciones validan ahora sus entradas, `bunpro` exige sesión y `notify` usa la hora local de cada dispositivo.
 
 ### 3. Publicación
 - **GitHub Pages**: Settings → Pages → Source: *Deploy from a branch*, rama `main`, carpeta `/ (root)`. `index.html` va construido en el repositorio (`python3 build.py` antes de cada push) y `config.js` lleva la URL y la anon key de Supabase (públicas por diseño).

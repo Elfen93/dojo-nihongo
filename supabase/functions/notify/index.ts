@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
     if (!secret || given !== secret) return json({ error: "no autorizado" }, 401);
     webpush.setVapidDetails("mailto:dojo@example.com", Deno.env.get("VAPID_PUBLIC_KEY")!, Deno.env.get("VAPID_PRIVATE_KEY")!);
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: subs, error } = await admin.from("push_subs").select("user_id, endpoint, sub, last_sent, last_kind");
+    const { data: subs, error } = await admin.from("push_subs").select("user_id, endpoint, sub, last_sent, last_kind, tz");
     if (error) throw error;
     const byUser: Record<string, any[]> = {};
     for (const s of subs || []) (byUser[s.user_id] = byUser[s.user_id] || []).push(s);
@@ -25,18 +25,21 @@ Deno.serve(async (req) => {
       let due = 0; for (const k in items) { const r = items[k]; if (r.s > 0 && r.s < 9 && r.due <= now) due++; }
       const learned = Object.values(items).filter((r: any) => r.s > 0).length;
       const weeklyDue = learned >= 20 ? ((st.weekly?.last || st.created || now) + 7 * D) : Infinity;
-      const todayKey = new Date().toISOString().slice(0, 10);
-      const today = (st.days || {})[todayKey] || {};
-      const hour = new Date().getUTCHours();
-      // Decide el mensaje (uno por tipo y por día como máximo)
-      let kind = "", title = "", body = "";
-      if (now > weeklyDue + D) { kind = "weekly-late"; title = "Examen semanal atrasado"; body = "Las lecciones están bloqueadas hasta que lo hagas. 30 preguntas, 30 minutos."; }
-      else if (now >= weeklyDue) { kind = "weekly"; title = "Tu examen semanal está listo"; body = "Hazlo hoy y mide dónde estás de verdad."; }
-      else if (due >= 100) { kind = "due-high"; title = `${due} repasos esperando`; body = "Cuanto más tardes, más olvidas. Empieza por 30."; }
-      else if (due >= 30) { kind = "due"; title = `${due} repasos pendientes`; body = "Diez minutos ahora te ahorran una hora mañana."; }
-      else if (!today.r && !today.l && hour >= 17) { kind = "idle"; title = "Hoy aún no has estudiado"; body = "Una lección de 5 ítems o tus repasos. Mantén la racha."; }
-      if (!kind) continue;
+      // Hora y día LOCALES del dispositivo (la zona horaria se guarda con la suscripción); sin ella, UTC
+      const localParts = (tz: string) => { try { const p = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false }).formatToParts(new Date()); const g = (t: string) => p.find((x) => x.type === t)?.value || ""; return { day: `${g("year")}-${g("month")}-${g("day")}`, hour: Number(g("hour")) % 24 }; } catch { const d = new Date(); return { day: d.toISOString().slice(0, 10), hour: d.getUTCHours() }; } };
       for (const s of byUser[uid]) {
+        const { day: todayKey, hour } = localParts(s.tz || "UTC");
+        const today = (st.days || {})[todayKey] || {};
+        const studied = (today.r || 0) + (today.l || 0) + (today.lg || 0) + (today.rd || 0) + (today.ex || 0) > 0;
+        if (hour < 8 || hour >= 23) continue; // nunca de noche
+        // Decide el mensaje (uno por tipo y por día como máximo)
+        let kind = "", title = "", body = "";
+        if (now > weeklyDue + D) { kind = "weekly-late"; title = "Examen semanal atrasado"; body = "Las lecciones están bloqueadas hasta que lo hagas. 30 preguntas, 30 minutos."; }
+        else if (now >= weeklyDue) { kind = "weekly"; title = "Tu examen semanal está listo"; body = "Hazlo hoy y mide dónde estás de verdad."; }
+        else if (due >= 100) { kind = "due-high"; title = `${due} repasos esperando`; body = "Cuanto más tardes, más olvidas. Empieza por 30."; }
+        else if (due >= 30) { kind = "due"; title = `${due} repasos pendientes`; body = "Diez minutos ahora te ahorran una hora mañana."; }
+        else if (!studied && hour >= 19) { kind = "idle"; title = "Hoy aún no has estudiado"; body = "Una lección de 5 ítems o tus repasos. Mantén la racha."; }
+        if (!kind) continue;
         const last = s.last_sent ? new Date(s.last_sent).getTime() : 0;
         if (s.last_kind === kind && now - last < 20 * H) continue; // no repetir el mismo aviso el mismo día
         if (now - last < 3 * H) continue; // como mucho un aviso cada 3 horas

@@ -1,7 +1,7 @@
 // ===================== Ajustes, importación y sincronización =====================
 function renderAjustes(){
   const el=$('#main'); const st=S.settings;
-  el.append(h('div',{class:'topline'}, h('h1',{},'Ajustes'), h('span',{class:'small muted',id:'synclabel2'},syncLabel)));
+  el.append(h('div',{class:'topline'}, h('h1',{},'Ajustes'), h('span',{class:'small muted synclabel'},syncLabel)));
   const f=(label,input,help)=>h('div',{class:'field'}, h('label',{for:input.id},label), input, help?h('div',{class:'small muted'},help):null);
   const name=h('input',{id:'s-name',type:'text',value:st.name||'',placeholder:'Tu nombre'});
   const target=h('input',{id:'s-target',type:'date',value:st.target||''});
@@ -15,7 +15,11 @@ function renderAjustes(){
   const furi=h('input',{id:'s-furi',type:'checkbox',checked:!!st.furigana});
   const autoNext=h('input',{id:'s-auto',type:'checkbox',checked:st.autoNext!==false});
   const askR=h('input',{id:'s-askr',type:'checkbox',checked:!!st.askReading});
-  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.goalGrammar=Math.max(0,+goalG.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; st.autoNext=autoNext.checked; st.askReading=askR.checked; S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
+  const clamp=(v,lo,hi,def)=>{ v=Math.round(+v); return isFinite(v)?Math.max(lo,Math.min(hi,v)):def; };
+  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim().slice(0,40); st.target=/^\d{4}-\d{2}-\d{2}$/.test(target.value)?target.value:''; st.targetTier=tier.value; st.goalLessons=clamp(goal.value,0,60,10); st.goalGrammar=clamp(goalG.value,0,20,2); st.maxReviews=clamp(maxr.value,10,500,100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; st.autoNext=autoNext.checked; st.askReading=askR.checked;
+    // también lo que esté escrito en los demás paneles (token de WaniKani, voz), por si se pulsa solo este botón
+    const wkEl=$('#s-wk'), bpEl=$('#s-bp'), vEl=$('#s-voice'), rEl=$('#s-rate'), nEl=$('#s-neural'); if(wkEl) st.wkToken=wkEl.value.trim(); if(bpEl) st.bpKey=bpEl.value.trim(); if(vEl) st.voice=vEl.value; if(rEl) st.voiceRate=+rEl.value||0.9; if(nEl) st.neuralVoice=nEl.checked;
+    S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
     h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Kanji y vocabulario nuevos por día (techo)',goal,'El ritmo real lo decide la app según tu carga (Recuperación, Suave, Normal, Impulso) sin pasar de este techo. Las palabras se desbloquean cuando sus kanji llegan a Gurú.'), f('Puntos de gramática nuevos por día',goalG,'Se reduce a la mitad en modo Suave y a cero en Recuperación. Con 1 al día llegas a N2 en unos dos años; con 2, en uno.'), f('Máximo de repasos por sesión',maxr)),
@@ -26,7 +30,7 @@ function renderAjustes(){
   const bp=h('input',{id:'s-bp',type:'password',value:st.bpKey||'',placeholder:'Clave de API de Bunpro',autocomplete:'off'});
   const syncStatus=h('div',{class:'small muted'}, S.sync&&S.sync.wkDiag?h('div',{},S.sync.wkDiag):null, S.sync&&S.sync.bpDiag?h('div',{style:'margin-bottom:6px'},S.sync.bpDiag):null, S.sync&&S.sync.date? `Última sincronización: ${fmtDate(S.sync.date)} · WaniKani nivel ${S.sync.wkLevel||'—'} · ${S.sync.wkMatched||0} ítems alineados · Bunpro ${S.sync.bpMatched||0} puntos alineados` : 'Sin sincronizar todavía.');
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'WaniKani y Bunpro'),
-    h('p',{class:'small',style:'margin:0'},'WaniKani: guarda tu token y pulsa sincronizar; lo que tengas en Gurú o superior entra con ese nivel SRS. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí. Bunpro: su API pública está fuera de servicio (responde error 500 a todo); usa el panel "Gramática que ya dominas" de abajo para marcar en bloque lo que tienes hecho allí.'),
+    h('p',{class:'small',style:'margin:0'},'WaniKani: guarda tu token y pulsa sincronizar; todo lo que tengas empezado allí (Aprendiz, Gurú, Maestro…) entra aquí con la misma etapa SRS. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí. Bunpro: su API pública está fuera de servicio (responde error 500 a todo); usa el panel "Gramática que ya dominas" de abajo para marcar en bloque lo que tienes hecho allí.'),
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
     h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); S.settingsAt=now(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
@@ -49,8 +53,8 @@ function renderAjustes(){
   // Copia de seguridad
   const ta=h('textarea',{id:'s-backup',placeholder:'Pega aquí una copia de seguridad para restaurarla'});
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Copia de seguridad'),
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:exportBackup},'Descargar copia (.json)'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Copiado al portapapeles')).catch(()=>{ ta.value=JSON.stringify(S); ta.select(); toast('Selecciona y copia el texto'); }); }},'Copiar al portapapeles'), h('span',{class:'sp'}), h('button',{class:'btn warn sm',onclick:()=>confirmBox('Esto borra TODO tu progreso en este dispositivo y en tu cuenta. ¿Seguro?',()=>{ S=DEFAULT_STATE(); save(); go('hoy'); toast('Progreso borrado'); })},'Borrar progreso')),
-    f('Restaurar',ta), h('button',{class:'btn',onclick:()=>{ try{ const o=JSON.parse(ta.value); if(!o.items) throw 0; S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; save(); toast('Copia restaurada'); go('hoy'); }catch(e){ toast('JSON no válido'); } }},'Restaurar desde el texto')));
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:exportBackup},'Descargar copia (.json)'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Copiado al portapapeles')).catch(()=>{ ta.value=JSON.stringify(S); ta.select(); toast('Selecciona y copia el texto'); }); }},'Copiar al portapapeles'), h('span',{class:'sp'}), h('button',{class:'btn warn sm',onclick:()=>confirmBox('Esto borra TODO tu progreso en este dispositivo y en tu cuenta. ¿Seguro?',()=>{ S=DEFAULT_STATE(); S.resetAt=now(); S.settingsAt=now(); loadGenLocal(); save(); go('hoy'); toast('Progreso borrado'); })},'Borrar progreso')),
+    f('Restaurar',ta), h('button',{class:'btn',onclick:()=>{ try{ const o=parseLooseJson(ta.value); if(!o||!o.items) throw 0; S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; S.gen={...(S.gen||{}),...(o.gen||{})}; S.pace=null; S.settingsAt=now(); S.updated=now(); registerGenerated(); updateStreak(); save(); toast('Copia restaurada'); go('hoy'); }catch(e){ toast('JSON no válido'); } }},'Restaurar desde el texto')));
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Cómo funciona'), h('ul',{class:'small',style:'padding-left:18px;margin:8px 0 0'},
     h('li',{},'SRS con 9 etapas (4 h → 8 h → 1 d → 2 d → 1 sem → 2 sem → 1 mes → 4 meses → quemado). Fallar baja una etapa (dos si estabas en Gurú o más).'),
     h('li',{},'El vocabulario se pregunta en tres direcciones; la de español → japonés con elección del kanji es la que entrena tu punto débil.'),
@@ -59,6 +63,8 @@ function renderAjustes(){
     h('li',{},'N5 y N4 van incluidos. N3, N2 y N1 se generan nivel a nivel con Claude cuando llegas a ellos.'))));
   collapseSettingsOnMobile();
 }
+// JSON pegado a mano: admite vallas ```json y texto alrededor
+function parseLooseJson(t){ t=String(t||'').trim().replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,''); const m=t.match(/\{[\s\S]*\}/); return JSON.parse(m?m[0]:t); }
 async function exportBackup(){
   const data=JSON.stringify(S,null,0);
   try{ const blob=new Blob([data],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dojo-backup-'+todayKey()+'.json'; document.body.append(a); a.click(); a.remove(); toast('Copia descargada'); return; }catch(e){}
@@ -66,7 +72,7 @@ async function exportBackup(){
 }
 // Mapea etapas de WaniKani (0-9) a las nuestras (misma escala)
 function importSync(text){
-  let o; try{ o=JSON.parse(text); }catch(e){ toast('JSON no válido'); return; }
+  let o; try{ o=parseLooseJson(text); }catch(e){ toast('JSON no válido'); return; }
   let wkMatched=0, bpMatched=0;
   if (o.wanikani && Array.isArray(o.wanikani.items)){
     for (const it of o.wanikani.items){ // {type:'kanji'|'vocabulary', chars, srs, meanings:[], readings:[]}
@@ -103,9 +109,11 @@ Puntos gramaticales del nivel: ${gs.join(' | ')}`;
 }
 function validateGen(o, lv){
   if (!o||typeof o!=='object') return 'no es un objeto';
-  const ks=Array.isArray(o.kanji)?o.kanji.filter(k=>k&&typeof k.k==='string'&&k.k.length===1&&Array.isArray(k.m)&&k.m.length):[];
-  const vs=Array.isArray(o.vocab)?o.vocab.filter(v=>v&&v.w&&v.r&&Array.isArray(v.m)&&v.m.length):[];
-  const gs=Array.isArray(o.grammar)?o.grammar.filter(g=>g&&g.t&&Array.isArray(g.ex)&&g.ex.some(e=>e&&/\[[^\]]+\]/.test(e.j||''))).map(g=>({...g,id:(g.id||g.t).toString().replace(/[^\w\-一-龯ぁ-んァ-ン〜]/g,'')+'-'+lv,ex:g.ex.filter(e=>e&&/\[[^\]]+\]/.test(e.j||''))})):[];
+  const elsewhere=key=>ITEMS.has(key) && ITEMS.get(key).lv!==lv; // ya existe en otro nivel: no se duplica
+  const seen=new Set(); const once=key=>{ if(seen.has(key)) return false; seen.add(key); return true; };
+  const ks=Array.isArray(o.kanji)?o.kanji.filter(k=>k&&typeof k.k==='string'&&k.k.length===1&&Array.isArray(k.m)&&k.m.length&&!elsewhere('k|'+k.k)&&once('k|'+k.k)):[];
+  const vs=Array.isArray(o.vocab)?o.vocab.filter(v=>v&&typeof v.w==='string'&&typeof v.r==='string'&&Array.isArray(v.m)&&v.m.length&&!elsewhere('v|'+v.w+'|'+v.r)&&once('v|'+v.w+'|'+v.r)):[];
+  const gs=Array.isArray(o.grammar)?o.grammar.filter(g=>g&&g.t&&Array.isArray(g.ex)&&g.ex.some(e=>e&&/\[[^\]]+\]/.test(e.j||''))).map(g=>({...g,id:(g.id||g.t).toString().replace(/[^\w\-一-龯ぁ-んァ-ン〜]/g,'')+'-'+lv,ex:g.ex.filter(e=>e&&/\[[^\]]+\]/.test(e.j||''))})).filter(g=>!elsewhere('g|'+g.id)&&once('g|'+g.id)):[];
   if (!ks.length&&!gs.length) return 'sin kanji ni gramática válidos';
   return {lv, kanji:ks.map(k=>({k:k.k,m:k.m,on:k.on||[],kun:k.kun||[],mn:k.mn||''})), vocab:vs.map(v=>({w:v.w,r:v.r,m:v.m,p:v.p||'n',ex:v.ex||'',es:v.es||''})), grammar:gs.map(g=>({id:g.id,t:g.t,s:g.s||'',e:g.e||'',ex:g.ex.map(e=>({j:e.j,s:e.s||'',h:e.h||'',k:e.k||''}))})), generated:now()};
 }
@@ -120,7 +128,7 @@ function generatePanel(lv){
     h('div',{class:'row'}, gs.map(g=>h('span',{class:'pill g jp'},g))),
     h('div',{class:'row'}, h('button',{class:'btn primary',id:'gen-btn',onclick:()=>generateWithClaude(lv,status)},'Generar con Claude'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(generationPrompt(lv)).then(()=>toast('Prompt copiado: pégalo en Claude y trae el JSON')).catch(()=>{ ta.value=generationPrompt(lv); ta.select(); toast('Copia el texto del cuadro'); }); }},'Copiar prompt para hacerlo a mano')),
     status,
-    h('details',{}, h('summary',{class:'small'},'Pegar JSON generado a mano'), h('div',{class:'field',style:'margin-top:8px'}, ta, h('button',{class:'btn',onclick:()=>{ try{ const o=JSON.parse(ta.value); const v=validateGen(o,lv); if(typeof v==='string') throw new Error(v); saveGen(lv,v).then(()=>{toast('Nivel generado y guardado'); render();}); }catch(e){ toast('JSON no válido: '+e.message); } }},'Importar este nivel'))));
+    h('details',{}, h('summary',{class:'small'},'Pegar JSON generado a mano'), h('div',{class:'field',style:'margin-top:8px'}, ta, h('button',{class:'btn',onclick:()=>{ try{ const o=parseLooseJson(ta.value); const v=validateGen(o,lv); if(typeof v==='string') throw new Error(v); saveGen(lv,v).then(()=>{toast('Nivel generado y guardado'); render();}); }catch(e){ toast('JSON no válido: '+e.message); } }},'Importar este nivel'))));
   return box;
 }
 async function generateWithClaude(lv, status){
@@ -135,7 +143,8 @@ async function generateWithClaude(lv, status){
 }
 function accountCard(){
   if (!CONFIG.SUPABASE_URL) return h('div',{class:'push'},'La cuenta no está configurada todavía (falta config.js). El progreso se guarda solo en este navegador.');
-  if (USER) return h('div',{class:'card stack'}, h('h3',{},'Cuenta'), h('div',{class:'row'}, h('span',{},'Sesión iniciada como ', h('b',{},USER.email||USER.id)), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:signOut},'Cerrar sesión')), h('div',{class:'small muted',id:'synclabel2'},syncLabel));
+  if (USER) return h('div',{class:'card stack'}, h('h3',{},'Cuenta'), h('div',{class:'row'}, h('span',{},'Sesión iniciada como ', h('b',{},USER.email||USER.id)), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:signOut},'Cerrar sesión')), h('div',{class:'small muted synclabel'},syncLabel));
+  if (OFFLINE) return h('div',{class:'card stack'}, h('h3',{},'Cuenta'), h('div',{class:'small'},'Sin conexión con el servidor. Trabajas con la copia local de tu cuenta; se sincroniza sola cuando vuelva la red y recargues.'), h('div',{class:'small muted synclabel'},syncLabel));
   const email=h('input',{id:'s-email',type:'email',placeholder:'tu@correo.com',autocomplete:'email'});
   return h('div',{class:'card stack'}, h('h3',{},'Inicia sesión para guardar tu progreso en todos tus dispositivos'),
     h('div',{class:'row'}, email, h('button',{class:'btn primary',onclick:()=>{ if(email.value.includes('@')) signInEmail(email.value.trim()); }},'Enviar enlace de acceso')),
@@ -175,7 +184,7 @@ function boot(){
   if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
   window.addEventListener('hashchange',()=>{ const id=location.hash.replace('#',''); if(VIEWS.some(v=>v.id===id)&&id!==VIEW) go(id); });
   initDb();
-  if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
+  if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)); }catch(e){} }
   // refresco periódico de contadores (los repasos van venciendo)
   setInterval(()=>{ if(!SESSION&&!LESSON&&!EXAM&&(VIEW==='hoy'||VIEW==='repasos')) render(); }, 6e4);
   try{ speechSynthesis.getVoices(); }catch(e){}
@@ -189,7 +198,7 @@ function masteredGrammarCard(){
     const gs=GRAMMAR_ALL.filter(g=>g.lv>=t.from&&g.lv<=t.to); const done=gs.filter(g=>S.items['g|'+g.id]&&S.items['g|'+g.id].s>=5).length;
     const det=h('details',{}, h('summary',{}, `${t.n}: ${done}/${gs.length} dominados`));
     det.append(h('div',{class:'row',style:'margin:8px 0'}, h('button',{class:'btn sm primary',onclick:()=>applyMany(gs.map(g=>({...g,kind:'g'})))},`Marcar todo ${t.n}`)));
-    for(let lv=t.from;lv<=t.to;lv++){ const lg=gs.filter(g=>g.lv===lv); if(!lg.length) continue; const row=h('div',{class:'row',style:'margin:4px 0;align-items:flex-start'}, h('button',{class:'btn sm',onclick:()=>applyMany(lg.map(g=>({...g,kind:'g'})))},`Nivel ${lv}`)); lg.forEach(g=>{ const rec=S.items['g|'+g.id]; const on=rec&&rec.s>=5; row.append(h('button',{class:'pill g jp',style:'border:0;cursor:pointer;opacity:'+(on?1:.55)+(on?';outline:2px solid var(--leaf)':''),title:on?'Dominado · pulsa para quitar':'Pulsa para marcar como dominado',onclick:()=>{ if(on){ S.items['g|'+g.id]={...rec,s:1,due:now()}; save(); renderAjustes2(); } else applyMany([{...g,kind:'g'}]); }},g.t)); }); det.append(row); }
+    for(let lv=t.from;lv<=t.to;lv++){ const lg=gs.filter(g=>g.lv===lv); if(!lg.length) continue; const row=h('div',{class:'row',style:'margin:4px 0;align-items:flex-start'}, h('button',{class:'btn sm',onclick:()=>applyMany(lg.map(g=>({...g,kind:'g'})))},`Nivel ${lv}`)); lg.forEach(g=>{ const rec=S.items['g|'+g.id]; const on=rec&&rec.s>=5; row.append(h('button',{class:'pill g jp'+(on?' guru':' todo'),title:on?'Dominado · pulsa para quitar':'Pulsa para marcar como dominado',onclick:()=>{ if(on){ S.items['g|'+g.id]={...rec,s:1,due:now(),ls:now()}; save(); renderAjustes2(); } else applyMany([{...g,kind:'g'}]); }},g.t)); }); det.append(row); }
     box.append(det);
   });
   return box;

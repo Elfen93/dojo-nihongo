@@ -25,8 +25,12 @@ export async function askClaude(prompt: string, maxTokens = 16000): Promise<stri
   });
   if (!r.ok) throw new Error("Claude " + r.status + " " + (await r.text()).slice(0, 200));
   const out = await r.json();
+  if (out.stop_reason === "max_tokens") throw new Error("respuesta truncada por longitud; inténtalo otra vez");
   return (out.content || []).map((c: any) => c.text || "").join("");
 }
+export const LEVELS = ["N5", "N4", "N3", "N2", "N1"];
+export const cleanLevel = (l: unknown) => (typeof l === "string" && LEVELS.includes(l)) ? l : "N4";
+export const strList = (a: unknown, max: number, maxLen: number) => Array.isArray(a) ? a.filter((s) => typeof s === "string" && s.length <= maxLen).slice(0, max) : [];
 export function extractJson(text: string) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("respuesta sin JSON");

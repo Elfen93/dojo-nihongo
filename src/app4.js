@@ -54,10 +54,10 @@ function startLessonBatch(track){
   LESSON={batch,i:0,track}; renderLesson();
 }
 function renderLesson(){
-  const L=LESSON, it=L.batch[L.i], el=$('#main'); el.innerHTML='';
+  const L=LESSON, it=L.batch[L.i], el=$('#main'); el.innerHTML=''; document.body.classList.add('focus');
   const dots=h('div',{class:'progress-dots'}, L.batch.map((_,i)=>h('i',{class:i<=L.i?'on':''})));
   const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{LESSON=null;go('lecciones');}},'✕ Salir'), h('span',{class:'sp'}), dots, h('span',{class:'badge soft'},`Lección ${L.i+1}/${L.batch.length}`));
-  const card=h('div',{class:'prompt-card kind-'+it.kind+' lesson-body'});
+  const card=h('div',{class:'prompt-card enter kind-'+it.kind+' lesson-body'});
   if (it.kind==='k'){
     card.append(h('div',{class:'ask k',style:'text-align:center'},'Kanji nuevo'), h('div',{class:'big-jp',lang:'ja',style:'text-align:center'},it.k), h('div',{class:'big-es',style:'text-align:center;font-size:1.4rem'}, it.m.join(', ')),
       h('div',{class:'readings'}, h('div',{}, h('b',{},'On\'yomi'), h('span',{class:'jp'},(it.on||[]).join('・')||'—')), h('div',{}, h('b',{},'Kun\'yomi'), h('span',{class:'jp'},(it.kun||[]).join('・')||'—'))),
@@ -100,10 +100,10 @@ function mutateReading(r){
 }
 const usedBank=new Set();
 function bankSentence(v){ const cands=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=S.level&&x.v.includes(v.w)&&x.j.includes(v.w)); const fresh=cands.filter(x=>!usedBank.has(x.j)); const c=rnd(fresh.length?fresh:cands); if(c) usedBank.add(c.j); return c; }
-function sentFor(v){ const b=bankSentence(v); return b?{text:b.j,es:b.es,fresh:true}:{text:v.ex,es:v.es,fresh:false}; }
-function qKanjiReading(v){ const ds=uniq([...mutateReading(v.r), ...pick(VOCAB_ALL.filter(x=>x.r!==v.r&&Math.abs(x.r.length-v.r.length)<=1).map(x=>x.r),3)]).filter(x=>x!==v.r).slice(0,3); const st=sentFor(v); return {sec:'漢字読み', type:'mc', text:st.text, under:v.w, es:st.es, fresh:st.fresh, prompt:'¿Cómo se lee la palabra subrayada?', options:shuffle([v.r,...ds]), answer:v.r, key:keyOf(v)}; }
-function qOrthography(v){ const ds=kanjiDistractors(v); if(ds.length<3) return null; const st=sentFor(v); return {sec:'表記', type:'mc', text:st.text.replace(v.w,v.r), under:v.r, es:st.es, fresh:st.fresh, prompt:'¿Cómo se escribe la palabra subrayada?', options:shuffle([v.w,...ds]), answer:v.w, key:keyOf(v)}; }
-function qContext(v, pool){ const same=pool.filter(x=>x.kind==='v'&&x!==v&&x.p===v.p&&x.w!==v.w); const ds=pick(same.length>=3?same:VOCAB_ALL.filter(x=>x.w!==v.w&&x.p===v.p), 3).map(x=>x.w); if(ds.length<3) return null; const st=sentFor(v); return {sec:'文脈規定', type:'mc', text:st.text.replace(v.w,'（　　）'), es:st.es, fresh:st.fresh, prompt:'Elige la palabra que encaja en el hueco', options:shuffle([v.w,...ds]), answer:v.w, key:keyOf(v)}; }
+function sentFor(v){ const b=bankSentence(v); if(b) return {text:b.j,es:b.es,fresh:true}; if(v.ex && v.ex.includes(v.w)) return {text:v.ex,es:v.es,fresh:false}; return null; }
+function qKanjiReading(v){ const st=sentFor(v); if(!st) return null; const ds=uniq([...mutateReading(v.r), ...pick(VOCAB_ALL.filter(x=>x.r!==v.r&&Math.abs(x.r.length-v.r.length)<=1).map(x=>x.r),3)]).filter(x=>x!==v.r).slice(0,3); if(ds.length<3) return null; return {sec:'漢字読み', type:'mc', text:st.text, under:v.w, es:st.es, fresh:st.fresh, prompt:'¿Cómo se lee la palabra subrayada?', options:shuffle([v.r,...ds]), answer:v.r, key:keyOf(v)}; }
+function qOrthography(v){ const ds=kanjiDistractors(v); if(ds.length<3) return null; const st=sentFor(v); if(!st) return null; return {sec:'表記', type:'mc', text:st.text.replace(v.w,v.r), under:v.r, es:st.es, fresh:st.fresh, prompt:'¿Cómo se escribe la palabra subrayada?', options:shuffle([v.w,...ds]), answer:v.w, key:keyOf(v)}; }
+function qContext(v, pool){ const same=pool.filter(x=>x.kind==='v'&&x!==v&&x.p===v.p&&x.w!==v.w); const ds=pick(same.length>=3?same:VOCAB_ALL.filter(x=>x.w!==v.w&&x.p===v.p), 3).map(x=>x.w); if(ds.length<3) return null; const st=sentFor(v); if(!st) return null; return {sec:'文脈規定', type:'mc', text:st.text.replace(v.w,'（　　）'), es:st.es, fresh:st.fresh, prompt:'Elige la palabra que encaja en el hueco', options:shuffle([v.w,...ds]), answer:v.w, key:keyOf(v)}; }
 function qGrammar(g, pool){ const bank=(typeof EXAM_GRAMMAR!=='undefined'?EXAM_GRAMMAR:[]).find(x=>x.g===g.id); const ex=bank?{j:bank.j,s:bank.s,h:bank.h}:rnd(g.ex); const c=parseCloze(ex.j); const others=pool.filter(x=>x.kind==='g'&&x!==g).flatMap(x=>x.ex.map(e=>parseCloze(e.j).answers[0])).filter(a=>a&&a!==c.answers[0]); const near=others.filter(a=>Math.abs(a.length-c.answers[0].length)<=3); const ds=uniq(pick(near.length>=3?near:others,6)).slice(0,3); if(ds.length<3) return null; return {sec:'文法形式', type:'mc', text:c.pre+'（　　）'+c.post, es:ex.s, prompt:'Elige la forma correcta', options:shuffle([c.answers[0],...ds]), answer:c.answers[0], key:keyOf(g)}; }
 function qOrder(o){ const star=1+Math.floor(Math.random()*2); return {sec:'並び替え', type:'order', o, star, prompt:'¿Qué parte va en la posición ★?', options:shuffle(o.parts), answer:o.parts[star], es:o.es}; }
 function qProduction(v){ return {sec:'producción', type:'typed', prompt:'Escribe en japonés (kana):', es:v.m.join(', ')+(v.p?' · '+posLabel(v.p):''), check:a=>matchKana(a,[v.r]), answer:v.r+(hasKanji(v.w)?'（'+v.w+'）':''), key:keyOf(v)}; }
@@ -148,9 +148,10 @@ async function startFreshExam(statusEl){
 }
 function startExam(kind){ const ex=buildExam(kind); if(ex.qs.length<8){ toast('Aún no hay suficiente material aprendido para este examen.'); return; } EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
 const fmtTimer = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/6e4), s=Math.floor(ms%6e4/1000); return m+':'+String(s).padStart(2,'0'); };
+function examKeysOff(E){ if(E&&E._kh){ document.removeEventListener('keydown',E._kh); E._kh=null; } }
 function renderExam(){
-  const E=EXAM, q=E.qs[E.i], el=$('#main'); el.innerHTML='';
-  const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Abandonar el examen? No se guardará.',()=>{EXAM=null;clearInterval(examTimer);go('examenes');})},'✕'), h('span',{class:'sp'}), h('span',{class:'num'},`${E.i+1}/${E.qs.length}`), h('span',{class:'timer',id:'timer'},fmtTimer(E.deadline-now())));
+  const E=EXAM, q=E.qs[E.i], el=$('#main'); el.innerHTML=''; document.body.classList.add('focus'); examKeysOff(E);
+  const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Abandonar el examen? No se guardará.',()=>go('examenes'))},'✕ Abandonar'), h('span',{class:'sp'}), h('span',{class:'num'},`${E.i+1}/${E.qs.length}`), h('span',{class:'timer',id:'timer'},fmtTimer(E.deadline-now())));
   const card=h('div',{class:'card stack'});
   card.append(h('div',{class:'row between'}, h('span',{class:'section-tag'}, q.sec), h('span',{class:'small muted'}, E.title)));
   if (q.reading){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].reading!==q.reading}, h('summary',{}, q.reading.title), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2'}, plainReading(q.reading)))); }
@@ -161,26 +162,29 @@ function renderExam(){
   if (q.type==='typed'){
     card.append(h('div',{class:'big-es',style:'font-size:1.4rem'}, q.es));
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
-    const submit=()=>{ const v=input.value.trim(); if(!v) return; recordExam(q, toKana(v,true), q.check(v)); };
+    let sent=false; const submit=()=>{ if(sent||EXAM!==E) return; const v=input.value.trim(); if(!v) return; sent=true; recordExam(q, toKana(v,true), q.check(v)); };
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();submit();} });
-    card.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',onclick:submit},'→'))); setTimeout(()=>input.focus(),0);
+    card.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Responder',onclick:submit},'→'))); setTimeout(()=>input.focus(),0);
   } else {
     const ch=h('div',{class:'choices text'+(q.options.some(o=>o.length>12)?' one':'')});
-    q.options.forEach((o,i)=>ch.append(h('button',{lang:'ja',onclick:()=>recordExam(q,o,o===q.answer)}, h('span',{class:'muted small',style:'margin-right:8px'},(i+1)+'.'), o)));
+    let sent=false; const choose=o=>{ if(sent||EXAM!==E) return; sent=true; [...ch.children].forEach(b=>b.disabled=true); recordExam(q,o,o===q.answer); };
+    q.options.forEach((o,i)=>ch.append(h('button',{lang:'ja',onclick:()=>choose(o)}, h('span',{class:'muted small',style:'margin-right:8px'},(i+1)+'.'), o)));
     card.append(ch);
-    const kh=e=>{ const n=parseInt(e.key); if(n>=1&&n<=q.options.length){ document.removeEventListener('keydown',kh); recordExam(q,q.options[n-1],q.options[n-1]===q.answer);} };
+    const kh=e=>{ if(EXAM!==E||E.qs[E.i]!==q||e.ctrlKey||e.metaKey||e.altKey) return; const n=parseInt(e.key); if(n>=1&&n<=q.options.length){ examKeysOff(E); choose(q.options[n-1]); } };
     document.addEventListener('keydown',kh); E._kh=kh;
   }
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok){ const E=EXAM; if(E._kh) document.removeEventListener('keydown',E._kh); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
-  const E=EXAM; EXAM=null; clearInterval(examTimer);
+  const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
+  // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS
+  for (let i=E.answers.length;i<E.qs.length;i++){ const q=E.qs[i]; E.answers.push({sec:q.sec, ok:false, given:'(sin responder)', answer:q.answer, key:null, es:q.es, text:q.text||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); }
   const total=E.qs.length, ok=E.answers.filter(a=>a.ok).length, pct=Math.round(100*ok/total);
   const secs={}; E.answers.forEach(a=>{ const s=secs[a.sec]=secs[a.sec]||{ok:0,n:0}; s.n++; if(a.ok) s.ok++; });
   // consecuencias: los fallos bajan de nivel SRS y vuelven ya
-  let penal=0; E.answers.filter(a=>!a.ok&&a.key&&S.items[a.key]&&S.items[a.key].s>0).forEach(a=>{ const r=S.items[a.key]; r.s=Math.max(1,r.s-1); r.due=now(); r.w=(r.w||0)+1; penal++; });
+  let penal=0; E.answers.filter(a=>!a.ok&&a.key&&S.items[a.key]&&S.items[a.key].s>0&&S.items[a.key].s<9).forEach(a=>{ const r=S.items[a.key]; r.s=Math.max(1,r.s-1); r.due=now(); r.w=(r.w||0)+1; r.ls=now(); penal++; });
   const rec={kind:E.kind,date:now(),score:pct,ok,total,secs,level:S.level,minutes:Math.round((now()-E.start)/6e4)}; S.exams.push(rec); bump('ex');
   let passed=false, msg='';
   if (E.kind==='weekly'){ S.weekly.last=now(); msg = pct>=80?'Buen examen semanal. Mantén el ritmo.': pct>=60?'Aprobado justo. Los fallos ya están de vuelta en tu cola de repasos.':'Por debajo del 60 %. Esta semana toca repasar más y avanzar menos: los fallos vuelven a la cola ahora.'; }
@@ -188,11 +192,12 @@ function finishExam(){
   if (E.kind==='fresh'){ msg = pct>=70 ? 'Con frases que nunca habías visto. Esto sí mide japonés real.' : 'Frases nuevas: por debajo del 70 %. Las secciones flojas te dicen qué repasar; el vocabulario lo sabes, aplicarlo en contexto nuevo es lo que falta.'; }
   if (E.kind==='mock'){ msg = pct>=60 ? 'Por encima del umbral orientativo de aprobado del JLPT (60 %).' : 'Por debajo del umbral orientativo del JLPT (60 %). Mira las secciones débiles.'; }
   save();
+  const passAt=E.kind==='level'?80:E.kind==='fresh'?70:60;
   const el=$('#main'); el.innerHTML='';
   el.append(h('div',{class:'study stack'},
-    h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},E.title), h('div',{class:'score '+(pct>=(E.kind==='level'?80:60)?'pass':'fail')},pct+'%'), h('div',{class:'muted'},`${ok}/${total} · ${rec.minutes} min`), h('p',{},msg), penal?h('div',{class:'small muted'},`${penal} ${plural(penal,'ítem','ítems')} han bajado de nivel SRS y están pendientes ahora.`):null),
+    h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},E.title), h('div',{class:'score '+(pct>=passAt?'pass':'fail')},pct+'%'), h('div',{class:'muted'},`${ok}/${total} · ${rec.minutes} min`), h('p',{},msg), penal?h('div',{class:'small muted'},`${penal} ${plural(penal,'ítem','ítems')} han bajado de nivel SRS y están pendientes ahora.`):null),
     h('div',{class:'result-grid'}, Object.entries(secs).map(([s,v])=>h('div',{class:'card'}, h('div',{class:'section-tag'},s), h('div',{class:'num',style:'font-weight:700;font-size:1.2rem'},`${v.ok}/${v.n}`), h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))),
-    h('div',{class:'card'}, h('h3',{},'Revisión de fallos'), h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Pregunta'),h('th',{},'Tu respuesta'),h('th',{},'Correcta'))), h('tbody',{}, E.answers.filter(a=>!a.ok).map(a=>h('tr',{}, h('td',{class:'jp'},a.text||a.es||''), h('td',{class:'jp',style:'color:var(--warn)'},a.given), h('td',{class:'jp',style:'color:var(--ok)'},a.answer)))), E.answers.every(a=>a.ok)?h('tr',{},h('td',{colspan:3},'Sin fallos. Impecable.')):null))),
+    h('div',{class:'card'}, h('h3',{},'Revisión de fallos'), h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Pregunta'),h('th',{},'Tu respuesta'),h('th',{},'Correcta'))), h('tbody',{}, E.answers.filter(a=>!a.ok).map(a=>h('tr',{}, h('td',{class:'jp wrap'},a.text||a.es||''), h('td',{class:'jp wrap',style:'color:var(--warn)'},a.given), h('td',{class:'jp wrap',style:'color:var(--ok)'},a.answer)))), E.answers.every(a=>a.ok)?h('tr',{},h('td',{colspan:3},'Sin fallos. Impecable.')):null))),
     h('div',{class:'row'}, penal?h('button',{class:'btn warn',onclick:()=>startReviews()},'Repasar los fallos ahora'):null, h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'))
   ));
   window.scrollTo(0,0);

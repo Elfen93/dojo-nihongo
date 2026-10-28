@@ -2,7 +2,7 @@
 function parseCloze(j){
   const m = j.match(/^(.*?)\[([^\]]+)\](.*)$/s);
   if (!m) return {pre:j, answers:[], post:''};
-  return {pre:m[1], answers:m[2].split('|'), post:m[3]};
+  return {pre:m[1], answers:m[2].split('|'), post:m[3].replace(/\[([^\]|]+)(?:\|[^\]]*)?\]/g,'$1')};
 }
 function kanjiReadings(k){
   const on=(k.on||[]).map(r=>kataToHira(r.split('.')[0]));
@@ -37,10 +37,11 @@ const posLabel = p => POS[p]||p||'';
 let SESSION=null;
 function startSession(mode, items, opts={}){
   const results={}; const its=shuffle(items); const passes=[[],[],[]];
-  for (const it of its){ const k=keyOf(it); const fs=facetsFor(it); results[k]={wrong:0,left:new Set(fs),it}; fs.forEach((f,i)=>passes[i].push({k,f})); }
+  for (const it of its){ const k=keyOf(it); const fs=(opts.facets||facetsFor(it)).filter(f=>facetsFor(it).includes(f)); if(!fs.length) continue; results[k]={wrong:0,left:new Set(fs),it}; fs.forEach((f,i)=>passes[i].push({k,f})); }
   // primera pasada: la faceta principal de cada ítem (español→japonés en vocabulario); luego el resto
   const queue=[...shuffle(passes[0]), ...shuffle(passes[1]), ...shuffle(passes[2])];
-  SESSION={mode, queue, results, total:items.length, done:0, correct:0, cur:null, phase:'ask', opts, startedAt:now(), wrongKeys:new Set()};
+  SESSION={mode, queue, results, total:Object.keys(results).length, done:0, correct:0, cur:null, phase:'ask', opts, startedAt:now(), wrongKeys:new Set()};
+  if (!queue.length){ SESSION=null; toast('No hay nada que repasar'); return; }
   nextCard();
 }
 function nextCard(){
@@ -54,7 +55,7 @@ function nextCard(){
 }
 function snapshotForUndo(){ const s=SESSION, c=s.cur; const rec=S.items[c.k]; s.undo={cur:{...c}, result:{wrong:s.results[c.k].wrong, left:new Set(s.results[c.k].left)}, queue:s.queue.slice(), done:s.done, correct:s.correct, rec:rec?JSON.parse(JSON.stringify(rec)):null, hadRec:!!rec, day:JSON.parse(JSON.stringify(day())), stats:JSON.parse(JSON.stringify(S.stats||{})), wrongHad:s.wrongKeys.has(c.k)}; }
 function undoLast(){ const s=SESSION; if(!s||!s.undo) return; clearTimeout(s.autoT); if(s.enterHandler){ document.removeEventListener('keydown',s.enterHandler); s.enterHandler=null; } const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
-function markAsCorrect(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; undoLast(); SESSION.cur=u.cur; SESSION.cur.answer=u.cur.answer; answerCurrent(true); }
+function markAsCorrect(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; const ans=u.cur.answer; undoLast(); SESSION.cur=u.cur; SESSION.cur.answer=ans; answerCurrent(true); }
 function answerCurrent(correct){
   const s=SESSION, c=s.cur, r=s.results[c.k]; snapshotForUndo();
   if (s.mode!=='lesson'){ S.stats=S.stats||{}; const st=S.stats[c.f]=S.stats[c.f]||{c:0,w:0}; if(correct) st.c++; else st.w++; }
@@ -72,11 +73,12 @@ function completeItem(k){
   const s=SESSION, r=s.results[k]; s.done++;
   const rec = S.items[k] || (S.items[k]={s:0,due:0,c:0,w:0});
   if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump(r.it.kind==='g'?'lg':'l'); }
+  else if (s.mode==='drill'){ const ok=r.wrong===0; if(ok){ rec.c=(rec.c||0)+1; s.correct++; } else { rec.w=(rec.w||0)+r.wrong; if(rec.s>0&&rec.s<9) rec.due=Math.min(rec.due||0, now()); } rec.ls=now(); }
   else { const ok=r.wrong===0; srsAnswer(rec, ok, Math.max(1,r.wrong)); if(ok) s.correct++; bump('r'); if(ok) bump('rc'); }
-  save(); if(s.mode!=='lesson') markClearedIfEmpty();
+  save(); if(s.mode==='review') markClearedIfEmpty();
 }
 function finishSession(){
-  const s=SESSION; SESSION=null; if(s.enterHandler) document.removeEventListener('keydown',s.enterHandler);
+  const s=SESSION; SESSION=null; if(s.enterHandler) document.removeEventListener('keydown',s.enterHandler); clearTimeout(s.autoT); document.body.classList.remove('focus');
   const el=$('#main'); el.innerHTML='';
   const wrong=[...s.wrongKeys].map(k=>ITEMS.get(k)).filter(Boolean);
   const pct = s.total? Math.round(100*(s.total-wrong.length)/s.total):0;
@@ -84,12 +86,12 @@ function finishSession(){
     h('div',{class:'card',style:'text-align:center'},
       h('div',{class:'eyebrow'}, s.mode==='lesson'?'Lección completada':'Sesión de repaso terminada'),
       h('div',{class:'score '+(pct>=80?'pass':'fail')}, pct+'%'),
-      h('p',{class:'muted'}, s.mode==='lesson' ? `${s.total} ${plural(s.total,'ítem','ítems')} nuevos. Primer repaso en 4 horas.` : `${s.total-wrong.length} de ${s.total} correctos. Los fallos vuelven antes.`),
+      h('p',{class:'muted'}, s.mode==='lesson' ? `${s.total} ${plural(s.total,'ítem','ítems')} nuevos. Primer repaso en 4 horas.` : s.mode==='drill' ? `${s.total-wrong.length} de ${s.total} correctos. El refuerzo no cambia la etapa SRS; lo fallado vuelve a la cola de repasos.` : `${s.total-wrong.length} de ${s.total} correctos. Los fallos vuelven antes.`),
       s.mode!=='lesson' && pct<70 ? h('div',{class:'push'}, 'Menos del 70 %. Esto no es mala suerte: son ítems que todavía no están asentados. Repásalos ahora con el botón de abajo y vuelve mañana.') : null
     ),
     wrong.length ? h('div',{class:'card'}, h('h3',{},'Fallados'), h('div',{class:'list',style:'margin-top:8px'}, wrong.map(it=>itemRow(it)))) : null,
     h('div',{class:'row'},
-      wrong.length ? h('button',{class:'btn warn',onclick:()=>startSession('drill',wrong)},'Repetir solo los fallados') : null,
+      wrong.length ? h('button',{class:'btn warn',onclick:()=>startSession('drill',wrong,{facets:s.opts&&s.opts.facets})},'Repetir solo los fallados') : null,
       h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'),
       s.mode==='lesson' && lessonsAvailable(s.opts&&s.opts.track||'kv').items.length ? h('button',{class:'btn leaf',onclick:()=>startLessonBatch(s.opts&&s.opts.track||'kv')},'Siguiente lección') : null
     )
@@ -117,15 +119,15 @@ function kanaInput(input){
   input.addEventListener('compositionend',()=>{imeComposing=false;});
 }
 function renderStudy(){
-  const s=SESSION, c=s.cur, p=c.p, el=$('#main'); el.innerHTML='';
+  const s=SESSION, c=s.cur, p=c.p, el=$('#main'); el.innerHTML=''; document.body.classList.add('focus');
   const remaining=s.queue.length+1;
   const head=h('div',{class:'study-head'},
-    h('button',{class:'btn sm ghost',onclick:()=>{ if(confirmBox('¿Salir de la sesión? Lo respondido ya está guardado.', ()=>{SESSION=null;go('hoy');})) {} }},'✕ Salir'),
+    h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Salir de la sesión? Lo respondido ya está guardado.', ()=>go('hoy'))},'✕ Salir'),
     s.undo&&s.phase==='ask'?h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'):null,
     h('span',{class:'sp'}),
     h('span',{class:'num'}, `${s.done}/${s.total} ítems · ${remaining} ${plural(remaining,'pregunta')}`),
     h('span',{class:'badge soft'}, s.mode==='lesson'?'Lección':s.mode==='drill'?'Refuerzo':'Repaso'));
-  const card=h('div',{class:'prompt-card kind-'+p.kind});
+  const card=h('div',{class:'prompt-card kind-'+p.kind+(s.phase==='ask'?' enter':'')});
   card.append(h('div',{class:'ask '+p.kind}, FACET_LABEL[c.f]));
   if (c.f==='gc'){
     const cl=p.cloze;
@@ -145,10 +147,12 @@ function renderStudy(){
   if (s.phase==='ask'){
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',lang:p.input==='kana'?'ja':'es',placeholder:p.input==='kana'?'romaji → かな':'en español',inputmode:'text'});
     if (p.input==='kana') kanaInput(input);
-    const submit=()=>{ const v=input.value.trim(); if(!v) return; if(p.input==='kana' && /[a-zA-Z]/.test(toKana(v,true).replace(/[^a-zA-Z]/g,'')) && !isKana(toKana(v,true))) { input.value=toKana(v,true); } evaluate(input.value.trim()); };
+    const sendBtn=h('button',{class:'btn primary',title:'Responder'},'→');
+    const submit=()=>{ if(SESSION!==s||s.cur!==c||s.phase!=='ask'||c.answer!==undefined) return; const v=input.value.trim(); if(!v) return; if(p.input==='kana') input.value=toKana(v,true); sendBtn.disabled=true; evaluate(input.value.trim()); };
+    sendBtn.addEventListener('click',submit);
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
-    study.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',onclick:submit},'→')));
-    study.append(h('div',{class:'kbd',style:'margin-top:6px;text-align:center'}, p.input==='kana'?'Escribe en romaji; se convierte a kana. Enter para responder.':'Escribe el significado en español. Enter para responder.'));
+    study.append(h('div',{class:'answer'}, input, sendBtn));
+    study.append(h('div',{class:'kbd',style:'margin-top:6px;text-align:center'}, p.input==='kana'?"Romaji → kana. nn + vocal = んな (annai → あんない); n' separa (sen'en → せんえん). Enter para responder.":'Escribe el significado en español. Enter para responder.'));
     setTimeout(()=>input.focus(),0);
   } else if (s.phase==='pick'){
     study.append(h('div',{class:'muted',style:'margin-top:10px;text-align:center'}, 'Lectura correcta: ', h('b',{class:'jp'},p.it.r), '. Ahora elige cómo se escribe.'));
@@ -160,7 +164,7 @@ function renderStudy(){
   }
 }
 function evaluate(ans){
-  const s=SESSION, c=s.cur, p=c.p; const ok=p.check(ans);
+  const s=SESSION; if(!s||s.phase!=='ask') return; const c=s.cur, p=c.p; if(c.answer!==undefined) return; const ok=p.check(ans);
   c.answer=ans;
   const input=$('#ans'); if(input){ input.classList.add(ok?'right':'wrong'); input.disabled=true; }
   if (ok && p.pick){ s.phase='pick'; setTimeout(renderStudy,250); return; }
@@ -191,8 +195,12 @@ function feedbackPanel(c){
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
   fb.append(next);
-  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:()=>{ clearTimeout(SESSION.autoT); const s=SESSION; const k=c.k; S.items[k]={...(S.items[k]||{}),s:9,due:Infinity,ls:now()}; s.queue=s.queue.filter(q=>q.k!==k); s.results[k].left.clear(); save(); toast('Quemado: no volverá a salir'); nextCard(); }},'Ya lo domino, quemar'):null));
-  const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); nextCard(); } };
+  const burn=()=>{ const s=SESSION; if(!s||s.cur!==c) return; clearTimeout(s.autoT); const k=c.k, r=s.results[k]; const old=S.items[k]||{c:0,w:0};
+    S.items[k]={...old,s:9,due:Infinity,lrn:old.lrn||now(),ls:now()}; s.queue=s.queue.filter(q=>q.k!==k);
+    if (r.left.size){ r.left.clear(); s.done++; s.correct++; if(s.mode==='lesson') bump(r.it.kind==='g'?'lg':'l'); else if(s.mode==='review'){ bump('r'); bump('rc'); } }
+    s.undo=null; save(); if(s.mode==='review') markClearedIfEmpty(); toast('Quemado: no volverá a salir'); nextCard(); };
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
+  const sess=SESSION; const handler=e=>{ if(e.key==='Enter' && SESSION===sess && sess.cur===c && sess.phase==='feedback'){ e.preventDefault(); nextCard(); } };
   if (SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler);
   SESSION.enterHandler=handler; document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
   return fb;

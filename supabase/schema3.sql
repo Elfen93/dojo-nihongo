@@ -63,6 +63,17 @@ create policy "gen propio" on public.gen_levels for all
 drop policy if exists "lecturas propias" on public.user_readings;
 create policy "lecturas propias" on public.user_readings for all
   using (auth.uid() = user_id and public.is_allowed()) with check (auth.uid() = user_id and public.is_allowed());
+-- (la tabla de notificaciones puede no existir aún si no se ejecutó notify.sql)
+create table if not exists public.push_subs (
+  endpoint text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  sub jsonb not null,
+  last_sent timestamptz,
+  last_kind text,
+  created_at timestamptz not null default now()
+);
+alter table public.push_subs add column if not exists tz text; -- zona horaria del dispositivo, para avisar a horas locales
+alter table public.push_subs enable row level security;
 drop policy if exists "push propio" on public.push_subs;
 create policy "push propio" on public.push_subs for all
   using (auth.uid() = user_id and public.is_allowed()) with check (auth.uid() = user_id and public.is_allowed());
