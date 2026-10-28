@@ -20,7 +20,7 @@ function paceToday(){
   const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
   S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; saveLocal(); return S.pace;
 }
-const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
+const PACE_LABEL={recuperacion:'Recuperación',suave:'Ritmo suave',normal:'Ritmo normal',impulso:'Impulso',manual:'Ritmo fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
 function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }

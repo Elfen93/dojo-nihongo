@@ -17,23 +17,23 @@
 /* Layout: barra lateral fija en escritorio, pestañas inferiores en móvil; una vista activa a la vez. */
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 :root{
-  --bg:#f3f4f7; --fg:#1b2230; --muted:#5c667a; --line:#d9dde6; --card:#ffffff; --card2:#eaedf3;
-  --accent:#2f4f8f; --accent-fg:#ffffff; --accent-soft:#dfe7f6; --kanji-c:#c9607a; --kanji-soft:#f6e3e8; --shadow:0 1px 2px rgba(20,30,60,.06),0 8px 24px -12px rgba(20,30,60,.18);
-  --leaf:#5f8f2e; --leaf-soft:#e3eed6;
-  --warn:#c3482c; --warn-soft:#f8e1dc; --ok:#2e7d4f; --ok-soft:#dcefe3; --gold:#b8860b;
+  --bg:#f6f4ef; --fg:#2a2a2e; --muted:#7a7a80; --line:#e4e0d8; --card:#fcfbf8; --card2:#efece5;
+  --accent:#3b5a86; --accent-fg:#ffffff; --accent-soft:#e6ebf2; --kanji-c:#8c5a63; --kanji-soft:#f0e6e6; --shadow:none;
+  --leaf:#5f7f4a; --leaf-soft:#e8ede1;
+  --warn:#a8574a; --warn-soft:#f3e4e0; --ok:#4f7a5c; --ok-soft:#e2ece4; --gold:#9a7b3c;
   --kanji:#1b2230; --radius:10px;
   --f-ui:"Figtree","Noto Sans JP",system-ui,sans-serif;
   --f-jp:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
   --f-jp-display:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#12161f; --fg:#e7eaf1; --muted:#9aa4b8; --line:#2a3242; --card:#1a2030; --card2:#232b3d;
-  --accent:#8fb0f0; --accent-fg:#0f1522; --accent-soft:#223050;
-  --leaf:#9cc96a; --leaf-soft:#243420; --warn:#f08a74; --warn-soft:#432520; --ok:#7fd1a0; --ok-soft:#1f3a2c; --gold:#e0b64a; --kanji:#f2f4f8; --kanji-c:#e28aa0; --kanji-soft:#3a2630; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark } }
+  --bg:#17181b; --fg:#e6e3dc; --muted:#9a978f; --line:#2c2d32; --card:#1e1f23; --card2:#27282d;
+  --accent:#9fb4d6; --accent-fg:#15171c; --accent-soft:#262c38;
+  --leaf:#9fb58a; --leaf-soft:#242a20; --warn:#d49386; --warn-soft:#3a2724; --ok:#8fb59c; --ok-soft:#1f2d24; --gold:#c9a86a; --kanji:#efece5; --kanji-c:#c9a0a6; --kanji-soft:#332a2c; --shadow:none; color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#12161f; --fg:#e7eaf1; --muted:#9aa4b8; --line:#2a3242; --card:#1a2030; --card2:#232b3d;
-  --accent:#8fb0f0; --accent-fg:#0f1522; --accent-soft:#223050;
-  --leaf:#9cc96a; --leaf-soft:#243420; --warn:#f08a74; --warn-soft:#432520; --ok:#7fd1a0; --ok-soft:#1f3a2c; --gold:#e0b64a; --kanji:#f2f4f8; --kanji-c:#e28aa0; --kanji-soft:#3a2630; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6); color-scheme:dark }
+  --bg:#17181b; --fg:#e6e3dc; --muted:#9a978f; --line:#2c2d32; --card:#1e1f23; --card2:#27282d;
+  --accent:#9fb4d6; --accent-fg:#15171c; --accent-soft:#262c38;
+  --leaf:#9fb58a; --leaf-soft:#242a20; --warn:#d49386; --warn-soft:#3a2724; --ok:#8fb59c; --ok-soft:#1f2d24; --gold:#c9a86a; --kanji:#efece5; --kanji-c:#c9a0a6; --kanji-soft:#332a2c; --shadow:none; color-scheme:dark }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -43,9 +43,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
 h1,h2,h3{text-wrap:balance;margin:0;line-height:1.2}
-h1{font-size:1.5rem;font-weight:700}
-h2{font-size:1.15rem;font-weight:700}
-h3{font-size:1rem;font-weight:600}
+h1{font-size:1.5rem;font-weight:500;font-family:var(--f-jp-display),var(--f-ui);letter-spacing:.01em}
+h2{font-size:1.1rem;font-weight:500;font-family:var(--f-jp-display),var(--f-ui)}
+h3{font-size:1rem;font-weight:600;letter-spacing:.01em}
 .muted{color:var(--muted)}
 .small{font-size:.85rem}
 .eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -59,24 +59,24 @@ nav.side{position:sticky;top:0;height:100vh;height:100dvh;padding:calc(18px + en
 .brand span{font-size:.8rem;color:var(--muted)}
 nav.side button,nav.tabs button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:9px 10px;border-radius:8px;text-align:left;width:100%;color:var(--fg)}
 nav.side button .ic{width:22px;text-align:center;font-family:var(--f-jp-display);font-size:1.05rem;color:var(--muted)}
-nav.side button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav.side button.active{background:var(--card2);color:var(--fg);font-weight:600}
 nav.side button.active .ic{color:var(--accent)}
 nav.side button .badge{margin-left:auto}
-.badge{display:inline-block;min-width:1.6em;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--accent-fg);font-size:.75rem;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
-.badge.warn{background:var(--warn);color:#fff}
-.badge.ok{background:var(--ok);color:#fff}
+.badge{display:inline-block;min-width:1.6em;padding:1px 7px;border-radius:999px;background:var(--card2);color:var(--muted);font-size:.72rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.badge.warn{background:var(--card2);color:var(--warn)}
+.badge.ok{background:var(--card2);color:var(--muted)}
 .badge.soft{background:var(--card2);color:var(--muted)}
 nav.side .foot{margin-top:auto;padding:10px;font-size:.78rem;color:var(--muted)}
 nav.tabs{display:none}
 header.mobile{display:none}
-main{min-width:0;padding-block:22px 40px;display:flex;flex-direction:column;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{min-width:0;padding-block:28px 48px;display:flex;flex-direction:column;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:860px;margin:0 auto;min-width:0}
 .view{display:none}
 .view.active{display:block}
 .topline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .topline h1{margin-right:auto}
 
-.grid{display:grid;gap:12px}
+.grid{display:grid;gap:14px}
 .grid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0;box-shadow:var(--shadow)}
@@ -96,27 +96,20 @@ main{min-width:0;padding-block:22px 40px;display:flex;flex-direction:column;padd
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600;min-height:44px}
 .btn:hover{border-color:var(--accent)}
 .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.btn.leaf{background:var(--leaf);color:#fff;border-color:var(--leaf)}
-.btn.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.leaf{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.warn{background:transparent;color:var(--warn);border-color:var(--warn)}
 .btn.ghost{background:transparent}
 .btn.big{padding:14px 18px;font-size:1.05rem;min-height:52px;width:100%}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn.sm{padding:5px 10px;min-height:36px;font-size:.85rem}
 
-.action{display:flex;align-items:center;gap:14px;padding:18px 16px;border-radius:16px;border:1px solid var(--line);background:var(--card);text-align:left;width:100%;box-shadow:var(--shadow);transition:transform .12s,border-color .12s}
+.action{display:flex;align-items:center;gap:14px;padding:18px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);text-align:left;width:100%;transition:border-color .15s}
 .action:active{transform:scale(.985)}
-.action.rev{background:linear-gradient(135deg,var(--accent-soft),var(--card) 60%)}
-.action.les{background:linear-gradient(135deg,var(--leaf-soft),var(--card) 60%)}
-.action.exam{background:linear-gradient(135deg,#f6edd3,var(--card) 60%)}
-:root[data-theme="dark"] .action.exam,:root:not([data-theme="light"]) .action.exam{background:linear-gradient(135deg,#3a3220,var(--card) 60%)}
-@media (prefers-color-scheme:light){ :root:not([data-theme="dark"]) .action.exam{background:linear-gradient(135deg,#f6edd3,var(--card) 60%)} }
-.action .big-n{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums;min-width:2.4em;width:2.4em;text-align:center;font-family:var(--f-ui);line-height:1;display:flex;align-items:center;justify-content:center;height:2.2em;font-family:var(--f-ui),var(--f-jp-display)}
+.action .big-n{font-size:1.9rem;font-weight:500;font-variant-numeric:tabular-nums;min-width:2.4em;width:2.4em;text-align:center;font-family:var(--f-ui);line-height:1;display:flex;align-items:center;justify-content:center;height:2.2em;font-family:var(--f-ui),var(--f-jp-display)}
 .action .t{font-weight:700}
 .action .d{color:var(--muted);font-size:.9rem}
-.action.rev .big-n{color:var(--accent)}
-.action.les .big-n{color:var(--leaf)}
-.action.exam .big-n{color:var(--gold)}
+.action .big-n{color:var(--fg);font-family:var(--f-jp-display),var(--f-ui)}
 .action.locked{opacity:.7}
 .action:hover{border-color:var(--accent)}
 
@@ -124,9 +117,9 @@ main{min-width:0;padding-block:22px 40px;display:flex;flex-direction:column;padd
 .bar > i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
 .bar.leaf > i{background:var(--leaf)}
 .bar.gold > i{background:var(--gold)}
-.push{border-left:4px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:8px}
-.push.ok{border-color:var(--ok);background:var(--ok-soft)}
-.push.info{border-color:var(--accent);background:var(--accent-soft)}
+.push{border-left:2px solid var(--line);background:transparent;padding:4px 14px;color:var(--muted);font-size:.95rem}
+.push.ok,.push.info{border-color:var(--line)}
+.push.warnish{border-color:var(--warn);color:var(--fg)}
 
 .forecast{display:flex;align-items:flex-end;gap:3px;height:70px;margin-top:auto}
 .forecast > div{flex:1;background:var(--accent-soft);border-radius:3px 3px 0 0;position:relative;min-height:2px}
@@ -136,19 +129,15 @@ main{min-width:0;padding-block:22px 40px;display:flex;flex-direction:column;padd
 /* Tarjeta de estudio */
 .study{max-width:720px;margin:0 auto}
 .study-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:.85rem;color:var(--muted);min-height:40px}
-.prompt-card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:28px 20px;text-align:center;min-height:200px;display:flex;flex-direction:column;justify-content:center;gap:10px}
-.prompt-card.kind-k{border-top:5px solid var(--kanji-c)}
-.prompt-card.kind-v{border-top:5px solid var(--accent)}
-.prompt-card.kind-g{border-top:5px solid var(--leaf)}
-.prompt-card.kind-p{border-top:5px solid var(--gold)}
+.prompt-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px 20px;text-align:center;min-height:200px;display:flex;flex-direction:column;justify-content:center;gap:10px}
+
 .big-jp{font-family:var(--f-jp-display);font-size:clamp(2.6rem,10vw,4.8rem);line-height:1.15;color:var(--kanji);font-weight:500}
 .mid-jp{font-family:var(--f-jp);font-size:clamp(1.3rem,4.5vw,1.8rem);line-height:1.6}
 .big-es{font-size:clamp(1.5rem,5vw,2.2rem);font-weight:700;line-height:1.2}
-.ask{font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--muted)}
-.ask.k{color:var(--kanji-c)}.ask.v{color:var(--accent)}.ask.g{color:var(--leaf)}.ask.p{color:var(--gold)}
+.ask{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;font-weight:500;color:var(--muted)}
 .blank{display:inline-block;min-width:4em;border-bottom:2px solid var(--accent);margin:0 2px;vertical-align:bottom}
 .answer{display:flex;gap:8px;margin-top:12px}
-.answer input{flex:1;min-width:0;font-size:1.3rem;padding:12px 14px;border:2px solid var(--line);border-radius:10px;background:var(--card);text-align:center;font-family:var(--f-jp)}
+.answer input{flex:1;min-width:0;font-size:1.3rem;padding:12px 14px;border:1px solid var(--line);border-bottom:2px solid var(--fg);border-radius:10px;background:var(--card);text-align:center;font-family:var(--f-jp)}
 .answer input.right{border-color:var(--ok);background:var(--ok-soft)}
 .answer input.wrong{border-color:var(--warn);background:var(--warn-soft)}
 .feedback{margin-top:12px;border-radius:12px;padding:14px 16px;border:1px solid var(--line);background:var(--card)}
@@ -179,17 +168,17 @@ main{min-width:0;padding-block:22px 40px;display:flex;flex-direction:column;padd
 .progress-dots i.ko{background:var(--warn)}
 
 /* Hero */
-.hero{display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,var(--accent) 0%,#1f3566 100%);color:#fff;border-radius:18px;padding:18px 18px;box-shadow:var(--shadow)}
+.hero{display:flex;gap:18px;align-items:center;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;padding:20px 20px}
 .hero .ring{width:84px;height:84px;flex:none}
 .hero .ring svg{display:block;width:84px;height:84px}
-.hero .ring text{fill:#fff;font-family:var(--f-ui);font-weight:700}
-.hero .lvl{font-size:1.35rem;font-weight:700;line-height:1.2}
-.hero .sub{opacity:.85;font-size:.9rem}
+.hero .ring text{fill:var(--fg);font-family:var(--f-jp-display);font-weight:500}
+.hero .lvl{font-size:1.4rem;font-weight:500;line-height:1.2;font-family:var(--f-jp-display),var(--f-ui)}
+.hero .sub{color:var(--muted);font-size:.9rem}
 .hero .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
-.hero .chip{background:rgba(255,255,255,.16);border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:600;line-height:1.5;display:inline-flex;align-items:center}
+.hero .chip{background:transparent;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.78rem;font-weight:500;line-height:1.5;display:inline-flex;align-items:center;color:var(--muted)}
 /* Consejos */
 .tips{display:flex;flex-direction:column;gap:8px}
-.tip{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--card2)}
+.tip{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
 .tip .ic{font-size:1.1rem;flex:none;line-height:1.5;width:1.4em;text-align:center}
 .tip .b{min-width:0;flex:1}
 .tip .b b{display:block;line-height:1.5}
@@ -250,7 +239,7 @@ th{color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;l
 th,td{white-space:nowrap}
 td.wrap,th.wrap{white-space:normal}
 .field textarea{font-family:ui-monospace,monospace;font-size:.8rem;min-height:120px}
-.toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:90vw}
+.toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--card);color:var(--fg);border:1px solid var(--line);padding:9px 16px;border-radius:999px;font-weight:500;z-index:50;max-width:90vw;font-size:.9rem}
 code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em}
 pre{background:var(--card2);padding:10px;border-radius:8px;overflow-x:auto}
 .kbd{font-size:.75rem;color:var(--muted)}
@@ -266,7 +255,7 @@ details summary{cursor:pointer;font-weight:600}
   nav.tabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
   nav.tabs button{flex-direction:column;gap:2px;padding:6px 2px;font-size:.68rem;justify-content:center;align-items:center;color:var(--muted);position:relative}
   nav.tabs button .ic{font-family:var(--f-jp-display);font-size:1.25rem;color:inherit}
-  nav.tabs button.active{color:var(--accent);background:none}
+  nav.tabs button.active{color:var(--fg);background:none}
   nav.tabs button .badge{position:absolute;top:2px;right:8px;font-size:.65rem;min-width:1.4em;padding:0 5px}
   main{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));padding-block-start:0;padding-left:0;padding-right:0}
   main .wrap{padding:14px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));width:100%}
@@ -2176,7 +2165,7 @@ async function speak(text){
   }
   try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; u.onend=()=>setSpeaking(false); u.onerror=()=>setSpeaking(false); speechSynthesis.cancel(); setSpeaking(true); speechSynthesis.speak(u);}catch(e){ setSpeaking(false); }
 }
-const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
+const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'音');
 
 // ===================== Kana / romaji =====================
 const kataToHira = s => s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60));
@@ -2632,7 +2621,7 @@ function paceToday(){
   const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
   S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; saveLocal(); return S.pace;
 }
-const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
+const PACE_LABEL={recuperacion:'Recuperación',suave:'Ritmo suave',normal:'Ritmo normal',impulso:'Impulso',manual:'Ritmo fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
 function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }
@@ -2845,7 +2834,7 @@ function renderLectura(){
   const qa=h('div',{class:'stack',style:'margin-top:16px'});
   r.q.forEach((q,qi)=>{ const box=h('div',{class:'card'}, h('div',{class:'jp',style:'font-weight:600'},(qi+1)+'. '+q.q)); const ch=h('div',{class:'choices text one'}); q.o.forEach((o,oi)=>ch.append(h('button',{lang:'ja',onclick:()=>{ if(READER.answers[qi]!=null) return; READER.answers[qi]=oi; [...ch.children].forEach((b,i)=>{ b.disabled=true; if(i===q.a) b.classList.add('right'); else if(i===oi) b.classList.add('wrong'); }); checkReadingDone(r); }},o))); box.append(ch); qa.append(box); });
   el.append(h('div',{class:'stack'},
-    h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{READER.id=null;renderLectura();}},'← Lecturas'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>{READER.furi=!READER.furi;reader.classList.toggle('nofuri');}},'Furigana'), h('button',{class:'btn sm',onclick:()=>speak(plainReading(r))},'🔊 Leer / parar'), h('button',{class:'btn sm',onclick:()=>{READER.trans=!READER.trans;$('#trans').hidden=!READER.trans;}},'Traducción')),
+    h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{READER.id=null;renderLectura();}},'← Lecturas'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>{READER.furi=!READER.furi;reader.classList.toggle('nofuri');}},'Furigana'), h('button',{class:'btn sm',onclick:()=>speak(plainReading(r))},'音 Leer / parar'), h('button',{class:'btn sm',onclick:()=>{READER.trans=!READER.trans;$('#trans').hidden=!READER.trans;}},'Traducción')),
     h('h1',{class:'jp'},r.title), h('div',{class:'muted small'},r.sub),
     h('div',{class:'card'}, reader),
     gloss,
@@ -2877,15 +2866,15 @@ function render(){ if (needsLogin()) { renderLoginWall(); return; } renderNav();
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
   const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null; const daysLeft=target?Math.ceil((target-now())/D):null;
-  if (w.overdue && paceToday().mode!=='recuperacion') return {cls:'',t:'Examen semanal atrasado. Las lecciones están bloqueadas hasta que lo hagas. Son 30 preguntas, 30 minutos. Hazlo ahora.'};
-  if (missed>=2) return {cls:'',t:`Llevas ${missed} días sin estudiar. Tienes ${due} repasos acumulados. El SRS solo funciona si vuelves cada día: empieza por 30 repasos ahora, no por todos.`};
-  if (due>150) return {cls:'',t:`${due} repasos pendientes. Las lecciones se bloquean por encima de 150: hoy toca vaciar la cola, no aprender cosas nuevas.`};
-  if (due>=40) return {cls:'info',t:`Tienes ${due} repasos esperando. Cuanto más tardes, más olvidas y más fallos tendrás. Empieza ya.`};
-  if (d.r===0 && due>0) return {cls:'info',t:`${due} repasos listos. Primero los repasos, luego las lecciones.`};
+  if (w.overdue && paceToday().mode!=='recuperacion') return {cls:'warnish',t:'El examen semanal espera. Las lecciones se abren después.'};
+  if (missed>=2) return {cls:'',t:`Vuelves tras ${missed} días. Hoy basta con una sesión corta de repasos.`};
+  if (due>150) return {cls:'',t:`${due} repasos esperan. Hoy, solo repasar.`};
+  if (due>=40) return {cls:'info',t:`${due} repasos listos.`};
+  if (d.r===0 && due>0) return {cls:'info',t:`${due} repasos listos. Primero repasar, luego aprender.`};
   if ((d.l<paceToday().lessons || (d.lg||0)<grammarGoalToday()) && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} ítems de kanji/vocab y ${d.lg||0} de ${grammarGoalToday()} de gramática. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
-  if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'Tu examen semanal está disponible. Hazlo hoy y mide dónde estás de verdad.'};
-  const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Has aprendido todo el nivel. Haz el examen de nivel para subir.'};
-  return {cls:'ok',t:'Vas al día. Si te sobra tiempo: una lectura o un repaso de sanguijuelas.'};
+  if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'El examen semanal está disponible.'};
+  const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Nivel aprendido. El examen de nivel te espera cuando quieras.'};
+  return {cls:'ok',t:'Al día. Si quieres algo más, una lectura.'};
 }
 function paceInfo(){
   const tier=tierByName(S.settings.targetTier||'N4')||tierOf(S.level); const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null;
@@ -2897,48 +2886,44 @@ function paceInfo(){
 function renderHoy(){
   const el=$('#main'); const due=dueItems().length, la=lessonsAvailable(), w=weeklyStatus(), le=levelExamStatus(), d=day(), pm=pushMessage(), pace=paceInfo();
   updateStreak();
-  const hello=S.settings.name?`Hola, ${S.settings.name}.`:'Hoy';
+  const hello=S.settings.name?S.settings.name:'今日';
   const lvItems=itemsOfLevel(S.level), lvDone=lvItems.filter(it=>S.items[keyOf(it)]&&S.items[keyOf(it)].s>0).length, lvPct=lvItems.length?Math.round(100*lvDone/lvItems.length):0;
-  const R=34, C=2*Math.PI*R; const ring=h('div',{class:'ring',html:`<svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="${R}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="8"/><circle cx="42" cy="42" r="${R}" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-lvPct/100)}" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="20">${S.level}</text></svg>`});
-  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`🔥 ${S.streak||0} ${plural(S.streak||0,'día')}`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):null, h('span',{class:'chip'},`${pace.total-pace.remaining}/${pace.total} gramática ${S.settings.targetTier||'N4'}`)))));
+  const R=34, C=2*Math.PI*R; const ring=h('div',{class:'ring',html:`<svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="${R}" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="42" cy="42" r="${R}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-lvPct/100)}" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="20">${S.level}</text></svg>`});
+  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`${S.streak||0} ${plural(S.streak||0,'día seguido','días seguidos')}`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):null, h('span',{class:'chip'},`${pace.total-pace.remaining}/${pace.total} gramática ${S.settings.targetTier||'N4'}`)))));
   if (CONFIG.SUPABASE_URL && !USER) el.append(h('div',{class:'push info',style:'margin-bottom:10px'}, 'No has iniciado sesión: el progreso se guarda solo en este navegador. ', h('a',{href:'#ajustes',onclick:e=>{e.preventDefault();go('ajustes');}},'Inicia sesión'), ' para tenerlo en todos tus dispositivos.'));
   el.append(h('div',{class:'push '+pm.cls,style:'margin-bottom:14px'}, pm.t));
   const actions=h('div',{class:'grid c3'},
     h('button',{class:'action rev',onclick:()=>startReviews()}, h('div',{class:'big-n'},due), h('div',{}, h('div',{class:'t'},'Repasos'), h('div',{class:'d'}, due?`Más antiguo: ${fmtRel(Math.min(...dueItems().map(i=>S.items[keyOf(i)].due)))}`:'Nada pendiente'))),
-    h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:()=>go('lecciones'),disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?la.items.length:'🔒'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.kv.length} kanji/vocab · ${la.g.length} gramática hoy`:la.reason))),
+    h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:()=>go('lecciones'),disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?la.items.length:'—'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.kv.length} kanji/vocab · ${la.g.length} gramática hoy`:la.reason))),
     h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Semanal atrasado':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
   );
   el.append(actions);
   const pc=paceToday(); const goalL=pc.lessons, dueStart=(d.r||0)+due;
-  el.append(h('div',{class:'card',style:'margin-top:12px;border-left:4px solid '+({recuperacion:'var(--warn)',suave:'var(--gold)',normal:'var(--accent)',impulso:'var(--leaf)',manual:'var(--muted)'}[pc.mode])}, h('div',{class:'row between'}, h('div',{}, h('span',{class:'eyebrow'},'Ritmo de hoy'), h('div',{style:'font-weight:700;font-size:1.05rem'}, PACE_LABEL[pc.mode]+' · '+goalL+' '+plural(goalL,'lección','lecciones')+' · sesiones de '+pc.maxReviews)), h('span',{class:'pill'},`${pc.appr} en Aprendiz`)), h('div',{class:'small muted',style:'margin-top:4px'}, pc.why)));
-  el.append(h('div',{class:'grid c2',style:'margin-top:12px'},
-    h('div',{class:'card stack'}, h('div',{class:'row between'},h('h3',{},'Objetivo de hoy'),h('span',{class:'small muted'},todayKey())),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Kanji y vocabulario'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Gramática'),h('span',{class:'num'},`${d.lg||0} / ${grammarGoalToday()}`)), h('div',{class:'bar gold'},h('i',{style:'width:'+(grammarGoalToday()?Math.min(100,Math.round(100*(d.lg||0)/grammarGoalToday())):100)+'%'}))),
-      h('div',{class:'small muted'}, `Precisión hoy: ${d.r?Math.round(100*(d.rc||0)/d.r):0} % · ${d.rd||0} ${plural(d.rd||0,'lectura')} · ${d.ex||0} ${plural(d.ex||0,'examen','exámenes')}`),
-      pace.days?h('div',{class:'small'}, `Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`), `. Para el ${fmtDate(new Date(S.settings.target+'T09:00:00'))} hacen falta `, h('b',{},`${pace.perWeek} puntos/semana`), '.'):h('div',{class:'small'},`Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`))),
-    h('div',{class:'card stack'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`))
-  ));
-  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{style:'margin-bottom:8px'},'Consejos según tu progreso'), h('div',{class:'tips'}, tipsFor().map(t=>h('div',{class:'tip'}, h('span',{class:'ic'},t.ic), h('div',{class:'b'}, h('b',{},t.b), h('p',{},t.p), t.act?h('button',{class:'btn sm',style:'margin-top:6px',onclick:t.act[1]},t.act[0]):null))))));
-  const lch=leeches(); if (lch.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('div',{class:'row between'},h('h3',{},'Sanguijuelas'),h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Machacarlas ahora')), h('p',{class:'small muted',style:'margin:4px 0 8px'},'Ítems que fallas una y otra vez. Un repaso extra hoy evita que te hundan el examen.'), h('div',{class:'row'}, lch.slice(0,8).map(it=>h('span',{class:'pill jp '+it.kind}, it.kind==='k'?it.k:it.kind==='v'?it.w:it.t)))));
+
+  el.append(h('div',{class:'card stack',style:'margin-top:14px'},
+    h('div',{class:'row between'}, h('h3',{},'Hoy'), h('span',{class:'small muted'},`${PACE_LABEL[pc.mode]} · ${pc.why}`)),
+    h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num muted'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
+    h('div',{}, h('div',{class:'row between small'},h('span',{},'Kanji y vocabulario'),h('span',{class:'num muted'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
+    h('div',{}, h('div',{class:'row between small'},h('span',{},'Gramática'),h('span',{class:'num muted'},`${d.lg||0} / ${grammarGoalToday()}`)), h('div',{class:'bar'},h('i',{style:'width:'+(grammarGoalToday()?Math.min(100,Math.round(100*(d.lg||0)/grammarGoalToday())):100)+'%'}))),
+    pace.days?h('div',{class:'small muted'}, `Gramática hasta ${S.settings.targetTier||'N4'}: ${pace.total-pace.remaining} de ${pace.total}. Ritmo para el ${fmtDate(new Date(S.settings.target+'T09:00:00'))}: ${pace.perWeek} puntos por semana.`):null));
+  const tip=tipsFor()[0]; if (tip && tip.b!=='Todo en orden') el.append(h('div',{class:'card',style:'margin-top:14px'}, h('div',{class:'eyebrow'},'Un consejo'), h('div',{style:'margin-top:4px;font-weight:600'},tip.b), h('p',{class:'small muted',style:'margin:2px 0 0'},tip.p), tip.act?h('button',{class:'btn sm',style:'margin-top:8px',onclick:tip.act[1]},tip.act[0]):null));
   if (isGenerated(S.level) && !levelHasContent(S.level)) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},`Nivel ${S.level} (${tierOf(S.level).n}) sin contenido todavía`), h('p',{class:'small muted'},'Los niveles N3 a N1 se generan cuando llegas a ellos.'), h('button',{class:'btn primary',onclick:()=>go('lecciones')},'Generar el nivel')));
 }
 function tipsFor(){
   const tips=[]; const st=S.stats||{}; const acc=f=>{ const x=st[f]; return x&&(x.c+x.w)>=15 ? x.c/(x.c+x.w) : null; };
   const pv=acc('vp'), rv=acc('vr'), mv=acc('vm'), kr=acc('kr'), km=acc('km'), gc=acc('gc');
   const s7=stats7(), due=dueItems().length, appr=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>=1&&r.s<=4).length, lch=leeches();
-  if (pv!=null && rv!=null && rv-pv>=0.15) tips.push({ic:'🎯',b:'Tu punto débil sigue siendo español → japonés',p:`Aciertas el ${Math.round(rv*100)} % leyendo pero solo el ${Math.round(pv*100)} % produciendo. Diez minutos de "Entrenar producción" al día cierran esa brecha más rápido que más lecciones.`,act:['Entrenar producción',()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); startSession('drill',pick(its,20)); }]});
-  if (kr!=null && kr<0.75) tips.push({ic:'読',b:'Las lecturas de kanji se te resisten',p:'Los kanji aislados se olvidan; dentro de palabras se quedan. En cada fallo mira la lista "Palabras" del panel y di la palabra en voz alta. Las lecturas on se aprenden por los compuestos, no de memoria.'});
-  if (km!=null && km<0.75) tips.push({ic:'💡',b:'Significados de kanji flojos',p:'Cuando falles uno, inventa tu propia mnemotecnia en el momento (la de la app es solo una semilla). Lo que te inventas tú se recuerda el doble.'});
-  if (gc!=null && gc<0.7) tips.push({ic:'文',b:'Gramática por debajo del 70 %',p:'En las lecciones de gramática lee los tres ejemplos en voz alta y tapa la parte entre corchetes antes de pasar. Y haz una lectura por semana: la gramática en contexto es la que se fija.'});
-  const exs=S.exams.slice(-3); if (exs.length){ const agg={}; exs.forEach(e=>Object.entries(e.secs||{}).forEach(([k,v])=>{ const a=agg[k]=agg[k]||{ok:0,n:0}; a.ok+=v.ok; a.n+=v.n; })); const worst=Object.entries(agg).filter(([k,v])=>v.n>=6).sort((a,b)=>(a[1].ok/a[1].n)-(b[1].ok/b[1].n))[0]; if (worst && worst[1].ok/worst[1].n<0.65){ const map={'漢字読み':'En el examen fallas lecturas de kanji: al repasar vocabulario, lee siempre la frase de ejemplo completa.','表記':'Fallas la escritura (表記): en la pregunta de producción, antes de elegir el kanji, intenta visualizarlo con los ojos cerrados.','文脈規定':'Fallas vocabulario en contexto: las lecturas son el mejor entrenamiento. Una cada dos días.','文法形式':'Fallas formas gramaticales: repasa los puntos del nivel en Lecciones (pulsa cada pastilla verde) y vuelve a leer la estructura.','並び替え':'Fallas el ordenar frases (★): lee frases largas en voz alta y fíjate en qué partícula cierra cada bloque.','読解':'El 読解 es tu sección débil y vale un tercio del examen: una lectura completa cada dos días, sin furigana.','producción':'La producción escrita es tu sección débil: usa "Entrenar producción" y escribe tú mismo una frase por cada palabra nueva.'}; tips.push({ic:'試',b:`Sección más floja en tus últimos exámenes: ${worst[0]} (${Math.round(100*worst[1].ok/worst[1].n)} %)`,p:map[worst[0]]||''}); } }
-  if (lch.length>=5) tips.push({ic:'🩸',b:`${lch.length} sanguijuelas`,p:'Son pocas palabras pero se llevan la mitad de tus fallos. Un repaso dedicado de 3 minutos al día las desactiva en una semana.',act:['Machacarlas',()=>startReviews(true)]});
-  const lastRead=Math.max(0,...Object.values(S.readings||{}).map(r=>r.date||0)); if (learnedKeys().length>=40 && now()-lastRead>7*D) tips.push({ic:'📖',b:'Llevas más de una semana sin leer',p:'Las lecciones enseñan piezas; la lectura enseña a usarlas. Una lectura corta hoy, sin furigana, y responde las preguntas en japonés.',act:['Ir a Lectura',()=>go('lectura')]});
-  if (s7.active>=1 && s7.active<=3 && daysMissed()>=1) tips.push({ic:'📅',b:'Más vale 10 minutos diarios que 2 horas el domingo',p:'El SRS castiga los huecos: cada día que saltas, los intervalos se te vienen encima juntos. Fija una hora (la misma siempre) y haz solo los repasos si no hay más.'});
-  if (appr>90) tips.push({ic:'⚖️',b:`${appr} ítems en Aprendiz`,p:'Es lo que de verdad pesa en tu día a día. Hasta que baje de 70, cada lección nueva te añade carga para una semana. La app ya frena por ti; no fuerces el techo.'});
-  if (s7.acc!=null && s7.acc>=0.92 && appr<50 && due<20 && s7.active>=5) tips.push({ic:'🚀',b:'Vas sobrado',p:`${Math.round(s7.acc*100)} % de acierto, poca carga y constancia. Puedes subir el techo de lecciones en Ajustes, o mejor: añade una lectura y un examen de frases nuevas, que es donde se nota el nivel real.`});
-  const prodAll=(st.vp||{c:0,w:0}); if (!tips.length) tips.push({ic:'🌊',b:'Todo en orden',p:'Sigue el ritmo que marca la app y vuelve mañana. Los consejos aparecerán cuando los datos digan algo claro.'});
+  if (pv!=null && rv!=null && rv-pv>=0.15) tips.push({ic:'',b:'Tu punto débil sigue siendo español → japonés',p:`Aciertas el ${Math.round(rv*100)} % leyendo pero solo el ${Math.round(pv*100)} % produciendo. Diez minutos de "Entrenar producción" al día cierran esa brecha más rápido que más lecciones.`,act:['Entrenar producción',()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); startSession('drill',pick(its,20)); }]});
+  if (kr!=null && kr<0.75) tips.push({ic:'',b:'Las lecturas de kanji se te resisten',p:'Los kanji aislados se olvidan; dentro de palabras se quedan. En cada fallo mira la lista "Palabras" del panel y di la palabra en voz alta. Las lecturas on se aprenden por los compuestos, no de memoria.'});
+  if (km!=null && km<0.75) tips.push({ic:'',b:'Significados de kanji flojos',p:'Cuando falles uno, inventa tu propia mnemotecnia en el momento (la de la app es solo una semilla). Lo que te inventas tú se recuerda el doble.'});
+  if (gc!=null && gc<0.7) tips.push({ic:'',b:'Gramática por debajo del 70 %',p:'En las lecciones de gramática lee los tres ejemplos en voz alta y tapa la parte entre corchetes antes de pasar. Y haz una lectura por semana: la gramática en contexto es la que se fija.'});
+  const exs=S.exams.slice(-3); if (exs.length){ const agg={}; exs.forEach(e=>Object.entries(e.secs||{}).forEach(([k,v])=>{ const a=agg[k]=agg[k]||{ok:0,n:0}; a.ok+=v.ok; a.n+=v.n; })); const worst=Object.entries(agg).filter(([k,v])=>v.n>=6).sort((a,b)=>(a[1].ok/a[1].n)-(b[1].ok/b[1].n))[0]; if (worst && worst[1].ok/worst[1].n<0.65){ const map={'漢字読み':'En el examen fallas lecturas de kanji: al repasar vocabulario, lee siempre la frase de ejemplo completa.','表記':'Fallas la escritura (表記): en la pregunta de producción, antes de elegir el kanji, intenta visualizarlo con los ojos cerrados.','文脈規定':'Fallas vocabulario en contexto: las lecturas son el mejor entrenamiento. Una cada dos días.','文法形式':'Fallas formas gramaticales: repasa los puntos del nivel en Lecciones (pulsa cada pastilla verde) y vuelve a leer la estructura.','並び替え':'Fallas el ordenar frases (★): lee frases largas en voz alta y fíjate en qué partícula cierra cada bloque.','読解':'El 読解 es tu sección débil y vale un tercio del examen: una lectura completa cada dos días, sin furigana.','producción':'La producción escrita es tu sección débil: usa "Entrenar producción" y escribe tú mismo una frase por cada palabra nueva.'}; tips.push({ic:'',b:`Sección más floja en tus últimos exámenes: ${worst[0]} (${Math.round(100*worst[1].ok/worst[1].n)} %)`,p:map[worst[0]]||''}); } }
+  if (lch.length>=5) tips.push({ic:'',b:`${lch.length} sanguijuelas`,p:'Son pocas palabras pero se llevan la mitad de tus fallos. Un repaso dedicado de 3 minutos al día las desactiva en una semana.',act:['Machacarlas',()=>startReviews(true)]});
+  const lastRead=Math.max(0,...Object.values(S.readings||{}).map(r=>r.date||0)); if (learnedKeys().length>=40 && now()-lastRead>7*D) tips.push({ic:'',b:'Llevas más de una semana sin leer',p:'Las lecciones enseñan piezas; la lectura enseña a usarlas. Una lectura corta hoy, sin furigana, y responde las preguntas en japonés.',act:['Ir a Lectura',()=>go('lectura')]});
+  if (s7.active>=1 && s7.active<=3 && daysMissed()>=1) tips.push({ic:'',b:'Más vale 10 minutos diarios que 2 horas el domingo',p:'El SRS castiga los huecos: cada día que saltas, los intervalos se te vienen encima juntos. Fija una hora (la misma siempre) y haz solo los repasos si no hay más.'});
+  if (appr>90) tips.push({ic:'',b:`${appr} ítems en Aprendiz`,p:'Es lo que de verdad pesa en tu día a día. Hasta que baje de 70, cada lección nueva te añade carga para una semana. La app ya frena por ti; no fuerces el techo.'});
+  if (s7.acc!=null && s7.acc>=0.92 && appr<50 && due<20 && s7.active>=5) tips.push({ic:'',b:'Vas sobrado',p:`${Math.round(s7.acc*100)} % de acierto, poca carga y constancia. Puedes subir el techo de lecciones en Ajustes, o mejor: añade una lectura y un examen de frases nuevas, que es donde se nota el nivel real.`});
+  const prodAll=(st.vp||{c:0,w:0}); if (!tips.length) tips.push({ic:'',b:'Todo en orden',p:'Sigue el ritmo que marca la app y vuelve mañana. Los consejos aparecerán cuando los datos digan algo claro.'});
   return tips.slice(0,3);
 }
 function forecastChart(){
@@ -2986,6 +2971,9 @@ function renderProgreso(){
   el.append(h('div',{class:'stages'}, Object.entries(counts).map(([k,n])=>h('div',{class:'card'},h('div',{class:'n'},n),h('div',{class:'l'},k)))));
   const days=Object.keys(S.days).sort().slice(-14);
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Últimas dos semanas'), h('div',{class:'tscroll'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Día'),h('th',{},'Repasos'),h('th',{},'Precisión'),h('th',{},'Lecciones'),h('th',{},'Lecturas'),h('th',{},'Exámenes'))), h('tbody',{}, days.length?days.map(k=>{const d=S.days[k];return h('tr',{},h('td',{},k),h('td',{class:'num'},d.r||0),h('td',{class:'num'},d.r?Math.round(100*(d.rc||0)/d.r)+'%':'—'),h('td',{class:'num'},d.l||0),h('td',{class:'num'},d.rd||0),h('td',{class:'num'},d.ex||0));}):h('tr',{},h('td',{colspan:6},'Aún no hay actividad.')))))));
+  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`)));
+  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Consejos'), h('div',{class:'tips',style:'margin-top:6px'}, tipsFor().map(t=>h('div',{class:'tip'}, h('div',{class:'b'}, h('b',{},t.b), h('p',{},t.p), t.act?h('button',{class:'btn sm',style:'margin-top:6px',onclick:t.act[1]},t.act[0]):null))))));
+  const lch=leeches(); if (lch.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('div',{class:'row between'},h('h3',{},'Sanguijuelas'),h('button',{class:'btn sm',onclick:()=>startReviews(true)},'Repasarlas')), h('p',{class:'small muted',style:'margin:4px 0 8px'},'Ítems que fallas una y otra vez.'), h('div',{class:'row'}, lch.slice(0,10).map(it=>h('span',{class:'pill jp '+it.kind}, it.kind==='k'?it.k:it.kind==='v'?it.w:it.t)))));
   const map=h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Mapa de niveles hasta N1'));
   TIERS.forEach(t=>{ map.append(h('div',{class:'tier-row'}, h('b',{},t.n), h('span',{class:'small muted'}, t.n==='N5'?'repaso':t.n==='N4'?'contenido completo':'generado al llegar'))); const g=h('div',{class:'levelmap'}); for(let lv=t.from;lv<=t.to;lv++) g.append(h('div',{class:lv<S.level?'done':lv===S.level?'cur':(isGenerated(lv)&&S.gen[lv])?'gen':'',title:'Nivel '+lv},lv)); map.append(g); });
   el.append(map);

@@ -44,7 +44,7 @@ async function speak(text){
   }
   try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; u.onend=()=>setSpeaking(false); u.onerror=()=>setSpeaking(false); speechSynthesis.cancel(); setSpeaking(true); speechSynthesis.speak(u);}catch(e){ setSpeaking(false); }
 }
-const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
+const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'音');
 
 // ===================== Kana / romaji =====================
 const kataToHira = s => s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60));
