@@ -44,7 +44,8 @@ function startSession(mode, items, opts={}){
   nextCard();
 }
 function nextCard(){
-  const s=SESSION; if(!s) return; clearTimeout(s.autoT);
+  const s=SESSION; if(!s) return; clearTimeout(s.autoT); if(s.enterHandler){ document.removeEventListener('keydown',s.enterHandler); s.enterHandler=null; }
+  if (!s.queue.length){ for (const [k,r] of Object.entries(s.results)) for (const f of r.left) s.queue.push({k,f}); }
   if (!s.queue.length){ finishSession(); return; }
   // evita repetir la misma palabra dos veces seguidas si hay alternativa
   if (s.cur && s.queue.length>1 && s.queue[0].k===s.cur.k){ const i=s.queue.findIndex(q=>q.k!==s.cur.k); if(i>0){ const [q]=s.queue.splice(i,1); s.queue.unshift(q);} }
@@ -52,7 +53,7 @@ function nextCard(){
   s.cur={k:q.k,f:q.f,p:buildPrompt(it,q.f),wrong:false}; s.phase='ask'; renderStudy();
 }
 function snapshotForUndo(){ const s=SESSION, c=s.cur; const rec=S.items[c.k]; s.undo={cur:{...c}, result:{wrong:s.results[c.k].wrong, left:new Set(s.results[c.k].left)}, queue:s.queue.slice(), done:s.done, correct:s.correct, rec:rec?JSON.parse(JSON.stringify(rec)):null, hadRec:!!rec, day:JSON.parse(JSON.stringify(day())), stats:JSON.parse(JSON.stringify(S.stats||{})), wrongHad:s.wrongKeys.has(c.k)}; }
-function undoLast(){ const s=SESSION; if(!s||!s.undo) return; clearTimeout(s.autoT); const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
+function undoLast(){ const s=SESSION; if(!s||!s.undo) return; clearTimeout(s.autoT); if(s.enterHandler){ document.removeEventListener('keydown',s.enterHandler); s.enterHandler=null; } const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
 function markAsCorrect(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; undoLast(); SESSION.cur=u.cur; SESSION.cur.answer=u.cur.answer; answerCurrent(true); }
 function answerCurrent(correct){
   const s=SESSION, c=s.cur, r=s.results[c.k]; snapshotForUndo();
@@ -75,7 +76,7 @@ function completeItem(k){
   save(); if(s.mode!=='lesson') markClearedIfEmpty();
 }
 function finishSession(){
-  const s=SESSION; SESSION=null;
+  const s=SESSION; SESSION=null; if(s.enterHandler) document.removeEventListener('keydown',s.enterHandler);
   const el=$('#main'); el.innerHTML='';
   const wrong=[...s.wrongKeys].map(k=>ITEMS.get(k)).filter(Boolean);
   const pct = s.total? Math.round(100*(s.total-wrong.length)/s.total):0;
@@ -191,8 +192,9 @@ function feedbackPanel(c){
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
   fb.append(next);
   fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:()=>{ clearTimeout(SESSION.autoT); const s=SESSION; const k=c.k; S.items[k]={...(S.items[k]||{}),s:9,due:Infinity,ls:now()}; s.queue=s.queue.filter(q=>q.k!==k); s.results[k].left.clear(); save(); toast('Quemado: no volverá a salir'); nextCard(); }},'Ya lo domino, quemar'):null));
-  const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); document.removeEventListener('keydown',handler); nextCard(); } };
-  document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
+  const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); nextCard(); } };
+  if (SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler);
+  SESSION.enterHandler=handler; document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
   return fb;
 }
 // Confirmación dentro de la página (no hay confirm())

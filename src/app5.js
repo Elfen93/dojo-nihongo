@@ -46,7 +46,7 @@ function addReadingVocab(r){ let n=0; const re=/\[([^|\]]+)\|/g; let m; while((m
 // ===================== Vistas =====================
 const VIEWS=[{id:'hoy',t:'Hoy',ic:'今'},{id:'lecciones',t:'Lecciones',ic:'学'},{id:'repasos',t:'Repasos',ic:'復'},{id:'lectura',t:'Lectura',ic:'読'},{id:'examenes',t:'Exámenes',ic:'試'},{id:'progreso',t:'Progreso',ic:'進'},{id:'ajustes',t:'Ajustes',ic:'設'}];
 let VIEW='hoy';
-function go(id){ stopSpeak(); VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
+function go(id){ stopSpeak(); if(SESSION&&SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler); VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
 function renderNav(){
   const due=dueItems().length, la=lessonsAvailable();
   const mk=v=>h('button',{class:VIEW===v.id?'active':'',onclick:()=>go(v.id)}, h('span',{class:'ic'},v.ic), h('span',{},v.t), v.id==='repasos'&&due?h('span',{class:'badge'+(due>100?' warn':'')},due):null, v.id==='lecciones'&&la.items.length?h('span',{class:'badge ok'},Math.min(la.items.length,99)):null);
