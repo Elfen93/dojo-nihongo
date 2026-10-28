@@ -21,10 +21,12 @@ function renderAjustes(){
   const bp=h('input',{id:'s-bp',type:'password',value:st.bpKey||'',placeholder:'Clave de API de Bunpro',autocomplete:'off'});
   const syncStatus=h('div',{class:'small muted'}, S.sync&&S.sync.wkDiag?h('div',{},S.sync.wkDiag):null, S.sync&&S.sync.bpDiag?h('div',{style:'margin-bottom:6px'},S.sync.bpDiag):null, S.sync&&S.sync.date? `Última sincronización: ${fmtDate(S.sync.date)} · WaniKani nivel ${S.sync.wkLevel||'—'} · ${S.sync.wkMatched||0} ítems alineados · Bunpro ${S.sync.bpMatched||0} puntos alineados` : 'Sin sincronizar todavía.');
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'WaniKani y Bunpro'),
-    h('p',{class:'small',style:'margin:0'},'Guarda tus claves (solo en tu cuenta) y pulsa sincronizar. Lo que tengas en Gurú o superior en WaniKani entra con ese nivel SRS; los puntos de Bunpro que dominas se marcan como aprendidos. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí.'),
+    h('p',{class:'small',style:'margin:0'},'WaniKani: guarda tu token y pulsa sincronizar; lo que tengas en Gurú o superior entra con ese nivel SRS. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí. Bunpro: su API pública está fuera de servicio (responde error 500 a todo); usa el panel "Gramática que ya dominas" de abajo para marcar en bloque lo que tienes hecho allí.'),
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
     h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
+  // Gramática ya dominada (sustituye a la sincronización con Bunpro)
+  el.append(masteredGrammarCard());
   // Notificaciones
   const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
   const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);
@@ -162,3 +164,16 @@ function boot(){
   try{ speechSynthesis.getVoices(); }catch(e){}
 }
 boot();
+
+function masteredGrammarCard(){
+  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Gramática que ya dominas'), h('p',{class:'small muted',style:'margin:0'},'Marca lo que ya tienes hecho en Bunpro (u otro sitio). Entra como Gurú I: no se enseña de cero, pero sigue en repasos espaciados. Lo que ya esté a un nivel igual o superior no cambia.'));
+  const applyMany=(items)=>{ let n=0; for(const it of items){ const k=keyOf(it); const cur=S.items[k]; if(!cur||cur.s<5){ S.items[k]={...(cur||{c:0,w:0}), s:5, due:now()+STAGE_HOURS[5]*H*Math.random(), lrn:cur&&cur.lrn||now(), ls:now()}; n++; } } save(); toast(n?`${n} puntos marcados como dominados`:'Nada que cambiar'); renderAjustes2(); };
+  TIERS.filter(t=>t.n==='N5'||t.n==='N4').forEach(t=>{
+    const gs=GRAMMAR_ALL.filter(g=>g.lv>=t.from&&g.lv<=t.to); const done=gs.filter(g=>S.items['g|'+g.id]&&S.items['g|'+g.id].s>=5).length;
+    const det=h('details',{}, h('summary',{}, `${t.n}: ${done}/${gs.length} dominados`));
+    det.append(h('div',{class:'row',style:'margin:8px 0'}, h('button',{class:'btn sm primary',onclick:()=>applyMany(gs.map(g=>({...g,kind:'g'})))},`Marcar todo ${t.n}`)));
+    for(let lv=t.from;lv<=t.to;lv++){ const lg=gs.filter(g=>g.lv===lv); if(!lg.length) continue; const row=h('div',{class:'row',style:'margin:4px 0;align-items:flex-start'}, h('button',{class:'btn sm',onclick:()=>applyMany(lg.map(g=>({...g,kind:'g'})))},`Nivel ${lv}`)); lg.forEach(g=>{ const rec=S.items['g|'+g.id]; const on=rec&&rec.s>=5; row.append(h('button',{class:'pill g jp',style:'border:0;cursor:pointer;opacity:'+(on?1:.55)+(on?';outline:2px solid var(--leaf)':''),title:on?'Dominado · pulsa para quitar':'Pulsa para marcar como dominado',onclick:()=>{ if(on){ S.items['g|'+g.id]={...rec,s:1,due:now()}; save(); renderAjustes2(); } else applyMany([{...g,kind:'g'}]); }},g.t)); }); det.append(row); }
+    box.append(det);
+  });
+  return box;
+}
