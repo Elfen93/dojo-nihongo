@@ -9,7 +9,7 @@ function kanjiReadings(k){
   const kun=(k.kun||[]).map(r=>r.split('.')[0]).filter(Boolean);
   return uniq([...on,...kun]);
 }
-function facetsFor(it){ return it.kind==='k'?['kr','km'] : it.kind==='v'?['vp','vr','vm'] : ['gc']; }
+function facetsFor(it){ return it.kind==='k'?['kr','km'] : it.kind==='v'?(S.settings.askReading?['vp','vr','vm']:['vp','vm']) : ['gc']; }
 const FACET_LABEL = {km:'Significado del kanji', kr:'Lectura del kanji', vm:'Significado', vr:'Lectura', vp:'Producción: del español al japonés', gc:'Gramática: completa la frase'};
 function kanjiDistractors(v){
   const word=v.w; const chars=[...word].filter(c=>hasKanji(c));
@@ -44,7 +44,7 @@ function startSession(mode, items, opts={}){
   nextCard();
 }
 function nextCard(){
-  const s=SESSION; if(!s) return;
+  const s=SESSION; if(!s) return; clearTimeout(s.autoT);
   if (!s.queue.length){ finishSession(); return; }
   // evita repetir la misma palabra dos veces seguidas si hay alternativa
   if (s.cur && s.queue.length>1 && s.queue[0].k===s.cur.k){ const i=s.queue.findIndex(q=>q.k!==s.cur.k); if(i>0){ const [q]=s.queue.splice(i,1); s.queue.unshift(q);} }
@@ -52,7 +52,7 @@ function nextCard(){
   s.cur={k:q.k,f:q.f,p:buildPrompt(it,q.f),wrong:false}; s.phase='ask'; renderStudy();
 }
 function snapshotForUndo(){ const s=SESSION, c=s.cur; const rec=S.items[c.k]; s.undo={cur:{...c}, result:{wrong:s.results[c.k].wrong, left:new Set(s.results[c.k].left)}, queue:s.queue.slice(), done:s.done, correct:s.correct, rec:rec?JSON.parse(JSON.stringify(rec)):null, hadRec:!!rec, day:JSON.parse(JSON.stringify(day())), stats:JSON.parse(JSON.stringify(S.stats||{})), wrongHad:s.wrongKeys.has(c.k)}; }
-function undoLast(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
+function undoLast(){ const s=SESSION; if(!s||!s.undo) return; clearTimeout(s.autoT); const u=s.undo; s.cur=u.cur; s.results[u.cur.k].wrong=u.result.wrong; s.results[u.cur.k].left=u.result.left; s.queue=u.queue; s.done=u.done; s.correct=u.correct; if(u.hadRec) S.items[u.cur.k]=u.rec; else delete S.items[u.cur.k]; S.days[todayKey()]=u.day; S.stats=u.stats; if(!u.wrongHad) s.wrongKeys.delete(u.cur.k); s.undo=null; s.phase='ask'; s.cur.ok=undefined; s.cur.answer=undefined; save(); renderStudy(); }
 function markAsCorrect(){ const s=SESSION; if(!s||!s.undo) return; const u=s.undo; undoLast(); SESSION.cur=u.cur; SESSION.cur.answer=u.cur.answer; answerCurrent(true); }
 function answerCurrent(correct){
   const s=SESSION, c=s.cur, r=s.results[c.k]; snapshotForUndo();
@@ -65,6 +65,7 @@ function answerCurrent(correct){
     const pos=Math.min(s.queue.length, 2+Math.floor(Math.random()*5)); s.queue.splice(pos,0,{k:c.k,f:c.f});
   }
   s.phase='feedback'; c.ok=correct; renderStudy();
+  if (correct && S.settings.autoNext!==false){ const token=s.cur; s.autoT=setTimeout(()=>{ if(SESSION===s && s.cur===token && s.phase==='feedback') nextCard(); }, s.mode==='lesson'?900:700); }
 }
 function completeItem(k){
   const s=SESSION, r=s.results[k]; s.done++;
@@ -119,6 +120,7 @@ function renderStudy(){
   const remaining=s.queue.length+1;
   const head=h('div',{class:'study-head'},
     h('button',{class:'btn sm ghost',onclick:()=>{ if(confirmBox('¿Salir de la sesión? Lo respondido ya está guardado.', ()=>{SESSION=null;go('hoy');})) {} }},'✕ Salir'),
+    s.undo&&s.phase==='ask'?h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'):null,
     h('span',{class:'sp'}),
     h('span',{class:'num'}, `${s.done}/${s.total} ítems · ${remaining} ${plural(remaining,'pregunta')}`),
     h('span',{class:'badge soft'}, s.mode==='lesson'?'Lección':s.mode==='drill'?'Refuerzo':'Repaso'));
@@ -186,7 +188,7 @@ function feedbackPanel(c){
   }
   fb.append(dl);
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
-  const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},'Siguiente (Enter)');
+  const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
   fb.append(next);
   fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:markAsCorrect},'Era una errata, estaba bien'):null));
   const handler=e=>{ if(e.key==='Enter'){ e.preventDefault(); document.removeEventListener('keydown',handler); nextCard(); } };
