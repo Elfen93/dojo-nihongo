@@ -1,0 +1,86 @@
+// Lecturas: t: texto con tokens [palabra|lectura|glosa]; es: traducción; g: gramática usada; q: preguntas (en japonés) con opciones y respuesta correcta
+const READINGS = [
+{id:"r1",lv:1,title:"私の一日",sub:"Mi día (N5)",t:
+"[私|わたし|yo]は[毎朝|まいあさ|cada mañana][六時|ろくじ|las seis]に[起きます|おきます|levantarse]。[朝ご飯|あさごはん|desayuno]は[パン|パン|pan]と[コーヒー|コーヒー|café]です。[七時半|しちじはん|siete y media]に[家|いえ|casa]を[出て|でて|salir]、[電車|でんしゃ|tren]で[会社|かいしゃ|empresa]に[行きます|いきます|ir]。[会社|かいしゃ|empresa]は[駅|えき|estación]の[近く|ちかく|cerca]にあります。[仕事|しごと|trabajo]は[九時|くじ|las nueve]から[五時|ごじ|las cinco]までです。[昼|ひる|mediodía]は[同僚|どうりょう|compañero de trabajo]と[食堂|しょくどう|comedor]で[食べます|たべます|comer]。[夜|よる|noche]は[家|いえ|casa]で[日本語|にほんご|japonés]を[勉強します|べんきょうします|estudiar]。[少し|すこし|un poco][難しい|むずかしい|difícil]ですが、[楽しい|たのしい|divertido]です。",
+es:"Me levanto cada mañana a las seis. El desayuno es pan y café. A las siete y media salgo de casa y voy a la empresa en tren. La empresa está cerca de la estación. El trabajo es de nueve a cinco. Al mediodía como con compañeros en el comedor. Por la noche estudio japonés en casa. Es un poco difícil, pero divertido.",
+g:["ni-time","de-place","kara-made","ga-but"],
+q:[{q:"この人は何で会社に行きますか。",o:["車","電車","バス","自転車"],a:1},
+   {q:"仕事は何時までですか。",o:["六時","七時半","五時","九時"],a:2},
+   {q:"夜、この人は何をしますか。",o:["仕事をします","日本語を勉強します","テレビを見ます","同僚と食べます"],a:1}]},
+{id:"r2",lv:2,title:"週末の買い物",sub:"Compras del fin de semana (N5)",t:
+"[土曜日|どようび|sábado]に[母|はは|madre]と[デパート|デパート|grandes almacenes]へ[買い物|かいもの|compras]に[行きました|いきました|ir (pasado)]。[母|はは|madre]は[新しい|あたらしい|nuevo][かばん|かばん|bolso]を[買いたい|かいたい|querer comprar]と[言いました|いいました|decir (pasado)]。[赤い|あかい|rojo]かばんと[黒い|くろい|negro]かばんがありました。[赤い|あかい|rojo]かばんは[一万円|いちまんえん|diez mil yenes]で、[黒い|くろい|negro]かばんは[六千円|ろくせんえん|seis mil yenes]でした。[母|はは|madre]は「[赤い|あかい|rojo]のは[高い|たかい|caro]ね」と[言って|いって|decir]、[黒い|くろい|negro]かばんを[買いました|かいました|comprar (pasado)]。[私|わたし|yo]は[何も|なにも|nada][買いませんでした|かいませんでした|no compré]。[でも|でも|pero]、[喫茶店|きっさてん|cafetería]で[おいしい|おいしい|delicioso][ケーキ|ケーキ|pastel]を[食べました|たべました|comer (pasado)]。",
+es:"El sábado fui de compras con mi madre a los grandes almacenes. Mi madre dijo que quería comprar un bolso nuevo. Había un bolso rojo y uno negro. El rojo costaba diez mil yenes y el negro seis mil. Mi madre dijo «el rojo es caro» y compró el negro. Yo no compré nada. Pero comí un pastel delicioso en una cafetería.",
+g:["tai","to-iu","masu","ne-yo"],
+q:[{q:"母はどのかばんを買いましたか。",o:["赤いかばん","黒いかばん","両方","買いませんでした"],a:1},
+   {q:"黒いかばんはいくらでしたか。",o:["一万円","六千円","千円","六万円"],a:1},
+   {q:"「私」は何をしましたか。",o:["かばんを買いました","何も食べませんでした","ケーキを食べました","家にいました"],a:2}]},
+{id:"r3",lv:3,title:"友だちへのメール",sub:"Correo a un amigo (N5)",t:
+"[けんじ|けんじ|Kenji (nombre)]さんへ\n[元気|げんき|bien de salud]ですか。[私|わたし|yo]は[先週|せんしゅう|la semana pasada]から[京都|きょうと|Kioto]に[住んでいます|すんでいます|vivir (estado)]。[京都|きょうと|Kioto]は[古い|ふるい|antiguo][町|まち|ciudad]で、[お寺|おてら|templo]がたくさんあります。[昨日|きのう|ayer]は[有名|ゆうめい|famoso]な[お寺|おてら|templo]を[見に|みに|a ver][行きました|いきました|fui]。[人|ひと|gente]がとても[多かった|おおかった|mucho (pasado)]です。[来月|らいげつ|el mes que viene]、[時間|じかん|tiempo]があったら、[京都|きょうと|Kioto]に[来ませんか|きませんか|¿no vienes?]。[一緒に|いっしょに|juntos][おいしい|おいしい|delicioso][物|もの|cosa]を[食べましょう|たべましょう|comamos]。[返事|へんじ|respuesta]を[待っています|まっています|esperar (estado)]。\n[まり|まり|Mari (nombre)]",
+es:"Para Kenji: ¿Qué tal? Desde la semana pasada vivo en Kioto. Kioto es una ciudad antigua y tiene muchos templos. Ayer fui a ver un templo famoso. Había muchísima gente. El mes que viene, si tienes tiempo, ¿no vienes a Kioto? Comamos cosas ricas juntos. Espero tu respuesta. Mari",
+g:["te-iru","ni-iku","mashou","tara"],
+q:[{q:"まりさんは今どこに住んでいますか。",o:["東京","京都","大阪","分かりません"],a:1},
+   {q:"まりさんは昨日何をしましたか。",o:["けんじさんに会いました","お寺を見に行きました","引っ越しました","おいしい物を食べました"],a:1},
+   {q:"まりさんはけんじさんに何をしてほしいですか。",o:["京都に来てほしい","お寺を作ってほしい","電話してほしい","お金を送ってほしい"],a:0}]},
+{id:"r4",lv:5,title:"日本の電車",sub:"Los trenes de Japón (N4)",t:
+"[日本|にほん|Japón]の[電車|でんしゃ|tren]は[時間|じかん|tiempo]に[正確|せいかく|puntual]だと[言われています|いわれています|se dice]。[朝|あさ|mañana]の[七時|しちじ|las siete]から[九時|くじ|las nueve]までは[通勤|つうきん|ir al trabajo]の[時間|じかん|hora]で、[駅|えき|estación]も[電車|でんしゃ|tren]もとても[込んでいます|こんでいます|estar lleno]。[乗る|のる|subir]ことが[できない|できない|no poder]ほど[人|ひと|gente]が[多い|おおい|mucho]ときもあります。[でも|でも|pero]、[電車|でんしゃ|tren]の[中|なか|dentro]はとても[静か|しずか|silencioso]です。[電話|でんわ|teléfono]で[話して|はなして|hablar]はいけませんし、[大きい|おおきい|grande][声|こえ|voz]で[話す|はなす|hablar][人|ひと|persona]も[少ない|すくない|poco]です。[外国人|がいこくじん|extranjero]は[最初|さいしょ|al principio]は[びっくりします|びっくりします|sorprenderse]が、[すぐに|すぐに|enseguida][慣れる|なれる|acostumbrarse]そうです。[電車|でんしゃ|tren]が[遅れた|おくれた|retrasarse (pasado)]ときは、[駅|えき|estación]で「[遅延|ちえん|retraso][証明書|しょうめいしょ|certificado]」を[もらう|もらう|recibir]ことができます。[会社|かいしゃ|empresa]に[見せる|みせる|mostrar]ためのものです。",
+es:"Se dice que los trenes de Japón son puntuales. De siete a nueve de la mañana es la hora de ir al trabajo, y tanto las estaciones como los trenes van muy llenos. A veces hay tanta gente que no se puede subir. Pero dentro del tren hay mucho silencio. No se puede hablar por teléfono, y poca gente habla en voz alta. Dicen que los extranjeros al principio se sorprenden, pero enseguida se acostumbran. Cuando el tren se retrasa, en la estación se puede recibir un «certificado de retraso». Es para enseñárselo a la empresa.",
+g:["passive","te-wa-ikemasen","shi","sou-desu-hearsay","tame-ni","koto-ga-dekiru"],
+q:[{q:"朝の七時から九時まで、電車はどうですか。",o:["静かで、人が少ないです","とても込んでいます","遅れます","止まります"],a:1},
+   {q:"電車の中でしてはいけないことは何ですか。",o:["本を読むこと","寝ること","電話で話すこと","音楽を聞くこと"],a:2},
+   {q:"「遅延証明書」は何のためのものですか。",o:["電車に乗るため","会社に見せるため","お金をもらうため","駅で買い物するため"],a:1}]},
+{id:"r5",lv:7,title:"初めてのアルバイト",sub:"Mi primer trabajo a tiempo parcial (N4)",t:
+"[大学|だいがく|universidad]に[入って|はいって|entrar]から、[コンビニ|コンビニ|tienda 24h]で[アルバイト|アルバイト|trabajo parcial]を[始めました|はじめました|empezar (pasado)]。[最初|さいしょ|al principio]の[日|ひ|día]は[とても|とても|muy][緊張して|きんちょうして|ponerse nervioso]、[店長|てんちょう|encargado]に[何度も|なんども|muchas veces][同じ|おなじ|mismo]ことを[聞いて|きいて|preguntar]しまいました。[レジ|レジ|caja registradora]の[使い方|つかいかた|modo de uso]も[覚えなければ|おぼえなければ|si no memorizo]なりませんでしたし、[お客さん|おきゃくさん|cliente]に[敬語|けいご|lenguaje cortés]で[話さなければ|はなさなければ|si no hablo]なりませんでした。[店長|てんちょう|encargado]は[厳しい|きびしい|estricto]ですが、[分からない|わからない|no entender]ことがあったら、[いつでも|いつでも|en cualquier momento][聞いて|きいて|preguntar]もいいと[言って|いって|decir]くれました。[一か月|いっかげつ|un mes]たって、[今|いま|ahora]は[一人|ひとり|solo]でも[仕事|しごと|trabajo]が[できる|できる|poder]ようになりました。[給料|きゅうりょう|sueldo]は[高くない|たかくない|no es alto]ですが、[働く|はたらく|trabajar]のは[楽しい|たのしい|divertido]です。",
+es:"Desde que entré en la universidad empecé a trabajar en una tienda 24 horas. El primer día estaba muy nervioso y acabé preguntando al encargado lo mismo muchas veces. Tenía que memorizar cómo usar la caja y tenía que hablar a los clientes con lenguaje cortés. El encargado es estricto, pero me dijo que si había algo que no entendiera podía preguntar en cualquier momento. Pasó un mes y ahora he llegado a poder hacer el trabajo solo. El sueldo no es alto, pero trabajar es divertido.",
+g:["te-shimau","nakereba-naranai","te-ageru","te-mo-ii","you-ni-suru","tara"],
+q:[{q:"この人は最初の日、どうでしたか。",o:["一人で仕事ができました","とても緊張しました","店長と話しませんでした","楽しかったです"],a:1},
+   {q:"店長はどんな人ですか。",o:["厳しいが、親切な人","優しくて、何も言わない人","いつも怒っている人","新しい人"],a:0},
+   {q:"一か月たって、この人はどうなりましたか。",o:["アルバイトをやめました","店長になりました","一人で仕事ができるようになりました","給料が高くなりました"],a:2}]},
+{id:"r6",lv:9,title:"お花見の約束",sub:"Una cita para ver los cerezos (N4)",t:
+"[先週|せんしゅう|la semana pasada]、[山田|やまだ|Yamada]さんから「[日曜日|にちようび|domingo]に[お花見|おはなみ|ver los cerezos]に[行きませんか|いきませんか|¿no vamos?]」という[メール|メール|correo]が[来ました|きました|llegar (pasado)]。[私|わたし|yo]は[日本|にほん|Japón]に[来て|きて|venir]から[まだ|まだ|todavía][一度も|いちども|ni una vez][お花見|おはなみ|ver los cerezos]をしたことがなかったので、[とても|とても|muy][楽しみ|たのしみ|ilusión]にしていました。[ところが|ところが|sin embargo]、[日曜日|にちようび|domingo]の[朝|あさ|mañana]、[窓|まど|ventana]を[開ける|あける|abrir]と、[強い|つよい|fuerte][雨|あめ|lluvia]が[降っていました|ふっていました|estaba lloviendo]。[天気予報|てんきよほう|pronóstico del tiempo]によると、[午後|ごご|tarde]も[やみそうにない|やみそうにない|no parece que pare]ということでした。[がっかりして|がっかりして|decepcionarse]いると、[山田|やまだ|Yamada]さんから[電話|でんわ|teléfono]がありました。「[雨|あめ|lluvia]なら、[うちで|うちで|en mi casa][お花見|おはなみ|ver cerezos][パーティー|パーティー|fiesta]をしよう」と[言って|いって|decir]くれたのです。[桜|さくら|cerezo]の[写真|しゃしん|foto]を[見ながら|みながら|mientras miraba]、[みんなで|みんなで|todos juntos][お弁当|おべんとう|bento]を[食べました|たべました|comer (pasado)]。[本当|ほんとう|de verdad]の[桜|さくら|cerezo]は[見られません|みられません|no pude ver]でしたが、[忘れられない|わすれられない|inolvidable][一日|いちにち|un día]になりました。",
+es:"La semana pasada me llegó un correo de Yamada que decía: «¿No vamos a ver los cerezos el domingo?». Como desde que vine a Japón todavía no había ido ni una vez, me hacía mucha ilusión. Sin embargo, el domingo por la mañana, al abrir la ventana, llovía con fuerza. Según el pronóstico, tampoco parecía que fuera a parar por la tarde. Mientras estaba decepcionado, me llamó Yamada. Me dijo: «Si llueve, hagamos la fiesta de los cerezos en mi casa». Mirando fotos de cerezos, comimos bento todos juntos. No pude ver los cerezos de verdad, pero fue un día inolvidable.",
+g:["to-iu-noun","ta-koto-ga-aru","to-conditional","sou-ni-nai","nara","nagara","potential"],
+q:[{q:"この人はどうしてお花見を楽しみにしていましたか。",o:["桜が好きだから","日本でお花見をしたことがなかったから","山田さんが好きだから","天気がよかったから"],a:1},
+   {q:"日曜日の天気はどうでしたか。",o:["晴れでした","午後から晴れました","一日中雨でした","雪が降りました"],a:2},
+   {q:"結局、二人は何をしましたか。",o:["公園で桜を見ました","家でお花見パーティーをしました","お花見をやめて寝ました","写真を撮りに行きました"],a:1}]},
+{id:"r7",lv:11,title:"便利すぎる生活",sub:"Una vida demasiado cómoda (N4)",t:
+"[最近|さいきん|últimamente]、[スマートフォン|スマートフォン|smartphone]が[なければ|なければ|si no hay][何も|なにも|nada][できない|できない|no poder][人|ひと|persona]が[増えている|ふえている|estar aumentando]そうです。[道|みち|camino]を[調べる|しらべる|consultar]のも、[買い物|かいもの|compras]をするのも、[友だち|ともだち|amigo]と[連絡|れんらく|contacto]を[取る|とる|tomar]のも、[全部|ぜんぶ|todo][スマートフォン|スマートフォン|smartphone]です。[確かに|たしかに|ciertamente][便利|べんり|cómodo]ですが、[使いすぎる|つかいすぎる|usar demasiado]のは[体|からだ|cuerpo]にも[心|こころ|mente]にも[よくない|よくない|no es bueno]と[医者|いしゃ|médico]は[言っています|いっています|dice]。[私|わたし|yo]も[夜|よる|noche][寝る|ねる|dormir][前|まえ|antes]に[スマートフォン|スマートフォン|smartphone]を[見てしまって|みてしまって|acabar mirando]、[なかなか|なかなか|no fácilmente][眠れない|ねむれない|no poder dormir]ことがあります。[そこで|そこで|por eso]、[寝る|ねる|dormir][一時間|いちじかん|una hora][前|まえ|antes]からは[スマートフォン|スマートフォン|smartphone]を[使わない|つかわない|no usar]ようにしました。[代わりに|かわりに|en su lugar][本|ほん|libro]を[読む|よむ|leer]ことにしたのです。[まだ|まだ|todavía][一週間|いっしゅうかん|una semana]しかたっていませんが、[前|まえ|antes]より[よく|よく|bien][眠れる|ねむれる|poder dormir]ようになった[気|き|sensación]がします。[便利|べんり|cómodo]な[物|もの|cosa]は、[上手に|じょうずに|hábilmente][使えば|つかえば|si se usa][使うほど|つかうほど|cuanto más se usa][生活|せいかつ|vida]が[よくなる|よくなる|mejorar]のだと[思います|おもいます|pienso]。",
+es:"Dicen que últimamente aumenta la gente que no puede hacer nada sin el smartphone. Consultar el camino, hacer compras, contactar con los amigos: todo con el smartphone. Ciertamente es cómodo, pero los médicos dicen que usarlo demasiado no es bueno ni para el cuerpo ni para la mente. A mí también me pasa que antes de dormir acabo mirando el móvil y no consigo dormirme. Por eso decidí no usar el móvil desde una hora antes de acostarme. En su lugar, decidí leer libros. Solo ha pasado una semana, pero tengo la sensación de que ahora duermo mejor que antes. Creo que cuanto mejor se usan las cosas cómodas, más mejora la vida.",
+g:["ba-conditional","sou-desu-hearsay","sugiru","te-shimau","you-ni-suru","ni-suru","dake-shika","no-ni-kuraberu"],
+q:[{q:"医者は何と言っていますか。",o:["スマートフォンは便利だ","スマートフォンを使いすぎるのはよくない","スマートフォンを使わないほうがいい","本を読むほうがいい"],a:1},
+   {q:"この人は何をすることにしましたか。",o:["スマートフォンを捨てる","寝る一時間前からスマートフォンを使わない","毎日一時間本を読む","医者に行く"],a:1},
+   {q:"この人が一番言いたいことは何ですか。",o:["スマートフォンは体に悪い","本を読むのは楽しい","便利な物は上手に使うことが大切だ","一週間で生活が変わった"],a:2}]},
+{id:"r8",lv:13,title:"日本語を学ぶということ",sub:"Lo que significa aprender japonés (N4+)",t:
+"[日本語|にほんご|japonés]を[勉強し|べんきょうし|estudiar][始めた|はじめた|empezar (pasado)]ころ、[私|わたし|yo]は[漢字|かんじ|kanji]が[大嫌い|だいきらい|odiar]でした。[一つ|ひとつ|uno][覚えて|おぼえて|memorizar]も、[次|つぎ|siguiente]の[日|ひ|día]には[忘れてしまう|わすれてしまう|acabar olvidando]からです。[先生|せんせい|profesor]に[相談した|そうだんした|consultar (pasado)]ところ、「[漢字|かんじ|kanji]は[一つずつ|ひとつずつ|uno a uno][覚える|おぼえる|memorizar]ものではなく、[言葉|ことば|palabra]の[中|なか|dentro]で[覚える|おぼえる|memorizar]ものだ」と[教えて|おしえて|enseñar]くださいました。[それ|それ|eso]からは、[読める|よめる|poder leer]ように[なりたい|なりたい|querer volverse][文章|ぶんしょう|texto]を[毎日|まいにち|cada día][少しずつ|すこしずつ|poco a poco][読む|よむ|leer]ことにしました。[分からない|わからない|no entender][言葉|ことば|palabra]があっても、[辞書|じしょ|diccionario]を[引かずに|ひかずに|sin consultar][最後|さいご|final]まで[読んで|よんで|leer]から[調べる|しらべる|buscar]ようにしました。[不思議|ふしぎ|extraño]なことに、[同じ|おなじ|mismo][漢字|かんじ|kanji]に[何度も|なんども|muchas veces][出会う|であう|encontrarse]うちに、[自然に|しぜんに|naturalmente][覚えられる|おぼえられる|poder memorizar]ようになったのです。[今|いま|ahora]では[新聞|しんぶん|periódico]も[少し|すこし|un poco][読める|よめる|poder leer]ようになりました。[語学|ごがく|aprendizaje de idiomas]は[才能|さいのう|talento]ではなく、[続ける|つづける|continuar]ことだと[思います|おもいます|pienso]。[どんなに|どんなに|por mucho que][忙しくても|いそがしくても|aunque esté ocupado]、[一日|いちにち|un día][十分|じゅっぷん|diez minutos]でもいいから[続けてください|つづけてください|siga, por favor]。[続ければ|つづければ|si continúas][続けるほど|つづけるほど|cuanto más continúes]、[日本語|にほんご|japonés]は[あなた|あなた|tú]のものになります。",
+es:"Cuando empecé a estudiar japonés, odiaba los kanji. Porque aunque memorizara uno, al día siguiente se me olvidaba. Al consultarlo con el profesor, me enseñó que «los kanji no se memorizan uno a uno, sino dentro de las palabras». Desde entonces decidí leer cada día, poco a poco, textos que quería llegar a poder leer. Aunque hubiera palabras que no entendía, procuraba leer hasta el final sin consultar el diccionario y buscarlas después. Curiosamente, mientras me encontraba con los mismos kanji una y otra vez, llegué a memorizarlos de forma natural. Ahora incluso puedo leer un poco el periódico. Creo que aprender un idioma no es cuestión de talento, sino de continuar. Por muy ocupado que estés, aunque sean diez minutos al día, sigue. Cuanto más continúes, más tuyo será el japonés.",
+g:["te-shimau","you-ni-suru","zu-ni","uchi-ni","no-ni-kuraberu","te-ageru","ni-suru"],
+q:[{q:"この人は初め、どうして漢字が嫌いでしたか。",o:["書くのが難しかったから","すぐ忘れてしまったから","先生が厳しかったから","新聞が読めなかったから"],a:1},
+   {q:"先生は何と教えてくれましたか。",o:["漢字は一つずつ覚えたほうがいい","辞書をたくさん引いたほうがいい","漢字は言葉の中で覚えるものだ","新聞を読んだほうがいい"],a:2},
+   {q:"この人が一番言いたいことは何ですか。",o:["語学には才能が必要だ","漢字は難しい","続けることが大切だ","先生に相談したほうがいい"],a:2}]}
+];
+// Preguntas de ordenar (★) para exámenes: pre + partes (orden correcto) + post
+const ORDER_QS = [
+ {lv:2,pre:"私は",parts:["毎朝","七時に","起きて","会社に行きます"],post:"。",es:"Yo me levanto cada mañana a las siete y voy a la empresa."},
+ {lv:2,pre:"",parts:["友だちと","映画を","見に","行きました"],post:"。",es:"Fui a ver una película con un amigo."},
+ {lv:3,pre:"",parts:["日本に","行った","ことが","あります"],post:"。",es:"He estado en Japón."},
+ {lv:3,pre:"時間が",parts:["ない","から","タクシーで","行きましょう"],post:"。",es:"Como no hay tiempo, vayamos en taxi."},
+ {lv:4,pre:"来年",parts:["日本に","留学","しようと","思っています"],post:"。",es:"Pienso ir a estudiar a Japón el año que viene."},
+ {lv:4,pre:"友だちが",parts:["駅まで","車で","送って","くれました"],post:"。",es:"Un amigo me llevó en coche a la estación."},
+ {lv:5,pre:"",parts:["急が","なければ","電車に","間に合いません"],post:"。",es:"Si no te das prisa, no llegarás al tren."},
+ {lv:5,pre:"駅に",parts:["着いたら","電話","して","ください"],post:"。",es:"Cuando llegues a la estación, llámame."},
+ {lv:6,pre:"たくさん",parts:["勉強した","のに","試験に","落ちました"],post:"。",es:"A pesar de estudiar mucho, suspendí."},
+ {lv:6,pre:"天気予報に",parts:["よると","明日は","雪が","降るそうです"],post:"。",es:"Según el pronóstico, mañana nevará."},
+ {lv:7,pre:"電車の中で",parts:["知らない","人に","足を","踏まれました"],post:"。",es:"En el tren un desconocido me pisó."},
+ {lv:7,pre:"この靴は",parts:["私には","少し","大き","すぎます"],post:"。",es:"Estos zapatos me quedan un poco grandes."},
+ {lv:8,pre:"",parts:["音楽を","聞き","ながら","宿題をします"],post:"。",es:"Hago los deberes escuchando música."},
+ {lv:8,pre:"",parts:["温かい","うちに","食べて","ください"],post:"。",es:"Cómelo mientras está caliente."},
+ {lv:9,pre:"果物の",parts:["中で","りんごが","一番","好きです"],post:"。",es:"De las frutas, la manzana es mi favorita."},
+ {lv:9,pre:"今日は",parts:["昨日","ほど","寒く","ないです"],post:"。",es:"Hoy no hace tanto frío como ayer."},
+ {lv:10,pre:"",parts:["忘れない","ように","メモして","おきます"],post:"。",es:"Lo apunto para no olvidarlo."},
+ {lv:10,pre:"日本で",parts:["働く","ために","日本語を","勉強しています"],post:"。",es:"Estudio japonés para trabajar en Japón."},
+ {lv:11,pre:"道が",parts:["分からない","んですが","教えて","いただけませんか"],post:"。",es:"No sé el camino, ¿podría indicármelo?"},
+ {lv:11,pre:"",parts:["電気を","つけた","まま","寝てしまった"],post:"。",es:"Me dormí con la luz encendida."},
+ {lv:12,pre:"今",parts:["ご飯を","作って","いる","ところです"],post:"。",es:"Ahora estoy preparando la comida."},
+ {lv:12,pre:"弟は",parts:["ゲームを","して","ばかり","います"],post:"。",es:"Mi hermano menor no hace más que jugar a videojuegos."},
+ {lv:13,pre:"",parts:["練習すれば","する","ほど","上手になります"],post:"。",es:"Cuanto más practicas, mejor te vuelves."},
+ {lv:13,pre:"朝ご飯を",parts:["食べ","ずに","家を","出ました"],post:"。",es:"Salí de casa sin desayunar."}
+];
