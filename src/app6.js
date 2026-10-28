@@ -121,7 +121,7 @@ function accountCard(){
   const email=h('input',{id:'s-email',type:'email',placeholder:'tu@correo.com',autocomplete:'email'});
   return h('div',{class:'card stack'}, h('h3',{},'Inicia sesión para guardar tu progreso en todos tus dispositivos'),
     h('div',{class:'row'}, email, h('button',{class:'btn primary',onclick:()=>{ if(email.value.includes('@')) signInEmail(email.value.trim()); }},'Enviar enlace de acceso')),
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:signInGoogle},'Entrar con Google')),
+    CONFIG.GOOGLE_LOGIN ? h('div',{class:'row'}, h('button',{class:'btn',onclick:signInGoogle},'Entrar con Google')) : null,
     h('div',{class:'small muted'},'Sin sesión, el progreso se queda en este navegador. Al iniciar sesión se fusiona con lo que tengas en la cuenta (gana lo más reciente).'));
 }
 // ===================== Sincronización directa con WaniKani y Bunpro =====================
