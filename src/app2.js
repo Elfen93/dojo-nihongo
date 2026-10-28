@@ -12,7 +12,7 @@ const GRAMMAR_ALL = [...GRAMMAR_N5, ...GRAMMAR_N4A, ...GRAMMAR_N4B, ...(typeof G
 (function assignRoadmap(){
   for (const t of ['N3','N2','N1']){
     const tier=tierByName(t), nlv=tier.to-tier.from+1;
-    const normT=s=>String(s).replace(/[〜～\s()（）・、。\-ー]/g,'').replace(/\(N[1-5]\)/g,'').toLowerCase();
+    const normT=s=>String(s).replace(/（[^）]*）|\([^)]*\)/g,'').replace(/[〜～\s()（）・、。\-ー]/g,'').toLowerCase();
     const hand=new Set(GRAMMAR_ALL.flatMap(g=>g.t.split(/\s*\/\s*/).map(normT)));
     const ks=ROADMAP_KANJI[t]||[], gs=(ROADMAP[t].grammar||[]).filter(x=>!hand.has(normT(x))&&!hand.has(normT(x.replace(/\s*\(.*\)$/,''))));
     ROADMAP[t].kanjiByLevel={}; ROADMAP[t].grammarByLevel={};
