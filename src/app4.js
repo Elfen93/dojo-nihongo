@@ -35,7 +35,7 @@ function lessonsAvailable(track){
   // Como WaniKani: una palabra se desbloquea cuando todos sus kanji (los que existen en la app) están en Gurú o más
   const guruK=ch=>{ if(!ITEMS.has('k|'+ch)) return true; const r=S.items['k|'+ch]; return !!(r&&r.s>=5); };
   const vocabReady=it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(guruK);
-  const kvAll=all.filter(it=>it.kind!=='g');
+  const kvAll=levelNeedsGen(lv)?[]:all.filter(it=>it.kind!=='g');
   const kv=kvAll.filter(vocabReady);
   const waiting=kvAll.length-kv.length;
   const kvList=kv.sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
@@ -43,7 +43,7 @@ function lessonsAvailable(track){
   const dd=day(); const kvGoal=pace.lessons, gGoal=grammarGoalToday();
   const kvLeft=Math.max(0,kvGoal-(dd.l||0)), gLeft=Math.max(0,gGoal-(dd.lg||0));
   const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, kvWaiting:waiting, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
-  res.items=[...res.kv,...res.g];
+  res.items=[...res.kv,...res.g]; if(levelNeedsGen(lv)) res.kvNeedsGen=true;
   if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? (waiting?`${waiting} ${plural(waiting,'palabra')} del nivel esperan a que sus kanji lleguen a Gurú.`:'Has completado todas las lecciones de este nivel.') : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
   return track==='g' ? {...res, items:res.g} : track==='kv' ? {...res, items:res.kv} : res;
 }
