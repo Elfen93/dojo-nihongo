@@ -88,6 +88,7 @@ async function pullRemote(){
     const {data,error}=await sb.from('progress').select('state').eq('user_id',USER.id).maybeSingle(); if(error) throw error;
     if (data && data.state) mergeRemote(data.state); else saveRemote();
     const g=await sb.from('gen_levels').select('lv,data').eq('user_id',USER.id); if(!g.error && g.data) for(const row of g.data){ S.gen[row.lv]=row.data; } registerGenerated();
+    const ur=await sb.from('user_readings').select('id,data').eq('user_id',USER.id); if(!ur.error && ur.data){ for(const row of ur.data) USER_READINGS[row.id]=row.data; saveUserReadingsLocal(); }
     setSyncLabel('Sincronizado con tu cuenta');
   }catch(e){ console.warn(e); setSyncLabel('Sin conexión: guardado solo aquí'); }
 }
@@ -115,3 +116,24 @@ function updateStreak(){
   S.streak=n;
 }
 function daysMissed(){ let m=0; const t=new Date(); t.setHours(0,0,0,0); for(let i=1;i<=30;i++){ const k=todayKey(new Date(t.getTime()-i*D)); if(S.days[k]&&dayCounts(S.days[k])) break; if(new Date(t.getTime()-i*D).getTime()<S.created) break; m++; } return m; }
+
+// Lecturas importadas por el usuario
+const USER_READINGS = {};
+function loadUserReadingsLocal(){ try{ Object.assign(USER_READINGS, JSON.parse(localStorage.getItem('dojo.readings')||'{}')); }catch(e){} }
+function saveUserReadingsLocal(){ try{ localStorage.setItem('dojo.readings', JSON.stringify(USER_READINGS)); }catch(e){} }
+async function saveUserReading(r){ USER_READINGS[r.id]=r; saveUserReadingsLocal(); if(sb&&USER){ try{ const {error}=await sb.from('user_readings').upsert({user_id:USER.id,id:r.id,data:r}); if(error) throw error; }catch(e){ console.warn(e); toast('La lectura se guardó solo en este dispositivo'); } } }
+async function deleteUserReading(id){ delete USER_READINGS[id]; saveUserReadingsLocal(); if(sb&&USER){ try{ await sb.from('user_readings').delete().eq('user_id',USER.id).eq('id',id); }catch(e){} } }
+const allReadings = () => [...READINGS, ...Object.values(USER_READINGS)];
+// Notificaciones push
+async function pushStatus(){ if(!('serviceWorker' in navigator)||!('PushManager' in window)) return 'unsupported'; if(Notification.permission==='denied') return 'denied'; const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); return sub?'on':'off'; }
+function b64ToU8(b){ const p='='.repeat((4-b.length%4)%4); const s=(b+p).replace(/-/g,'+').replace(/_/g,'/'); const r=atob(s); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); }
+async function enablePush(){
+  if(!sb||!USER){ toast('Inicia sesión primero'); return; }
+  if(!CONFIG.VAPID_PUBLIC_KEY){ toast('Falta la clave VAPID en config.js'); return; }
+  const perm=await Notification.requestPermission(); if(perm!=='granted'){ toast('Permiso denegado por el navegador'); return; }
+  const reg=await navigator.serviceWorker.ready;
+  const sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToU8(CONFIG.VAPID_PUBLIC_KEY)});
+  const {error}=await sb.from('push_subs').upsert({endpoint:sub.endpoint, user_id:USER.id, sub:sub.toJSON()}); if(error){ toast('No se pudo guardar la suscripción: '+error.message); return; }
+  toast('Notificaciones activadas en este dispositivo');
+}
+async function disablePush(){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }

@@ -5,12 +5,14 @@ function renderLectura(){
   if (!READER.id){
     el.append(h('div',{class:'topline'}, h('h1',{},'Lectura'), h('span',{class:'muted small'},'Al estilo Satori Reader: toca una palabra para verla.')));
     const list=h('div',{class:'list'});
-    READINGS.forEach(r=>{ const unlocked=r.lv<=S.level; const done=S.readings[r.id]; list.append(h('button',{class:'item'+(done?' done':'')+(unlocked?'':' locked'),disabled:!unlocked,onclick:()=>{READER={id:r.id,sel:null,furi:S.settings.furigana,trans:false,answers:{}};renderLectura();}}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t jp'},r.title), h('div',{class:'small muted'}, r.sub+' · nivel '+r.lv+(unlocked?'':' · se desbloquea en el nivel '+r.lv))), done?h('span',{class:'badge ok'},done.score+'%'):unlocked?h('span',{class:'badge soft'},'Nueva'):h('span',{class:'badge soft'},'🔒'))); });
+    allReadings().forEach(r=>{ const unlocked=(r.lv||1)<=S.level; const done=S.readings[r.id]; list.append(h('button',{class:'item'+(done?' done':'')+(unlocked?'':' locked'),disabled:!unlocked,onclick:()=>{READER={id:r.id,sel:null,furi:S.settings.furigana,trans:false,answers:{}};renderLectura();}}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t jp'},r.title), h('div',{class:'small muted'}, r.sub+' · nivel '+r.lv+(unlocked?'':' · se desbloquea en el nivel '+r.lv))), done?h('span',{class:'badge ok'},done.score+'%'):unlocked?h('span',{class:'badge soft'},r.user?'Importada':'Nueva'):h('span',{class:'badge soft'},'🔒'))); });
     el.append(list);
+    el.append(importReadingCard());
+    el.append(h('div',{class:'card soft',style:'margin-top:12px'}, h('h3',{},'Lectura graduada gratuita fuera de la app'), h('p',{class:'small',style:'margin:6px 0 0'},'Los libros de ', h('a',{href:'https://tadoku.org/japanese/en/free-books-en/',target:'_blank',rel:'noopener'},'Tadoku'), ' (niveles 0 a 5) y ', h('a',{href:'https://www3.nhk.or.jp/news/easy/',target:'_blank',rel:'noopener'},'NHK News Web Easy'), ' son gratis. Copia el texto y pégalo arriba en "Importar texto" para leerlo aquí con glosario y preguntas.')));
     el.append(h('p',{class:'small muted',style:'margin-top:14px'},'Lee sin furigana primero (ajuste por defecto). Solo cuando te atasques, toca la palabra. Después responde en japonés: así es el 読解 del JLPT.'));
     return;
   }
-  const r=READINGS.find(x=>x.id===READER.id);
+  const r=allReadings().find(x=>x.id===READER.id); if(!r){ READER.id=null; return renderLectura(); }
   const reader=h('div',{class:'reader'+(READER.furi?'':' nofuri'),lang:'ja'});
   const re=/\[([^|\]]+)\|([^|\]]*)\|([^\]]*)\]/g; let last=0, m;
   const addPlain=t=>{ t.split('\n').forEach((part,i)=>{ if(i) reader.append(h('br')); if(part) reader.append(part); }); };
@@ -27,7 +29,8 @@ function renderLectura(){
     h('div',{id:'trans',class:'card soft',hidden:true}, r.es),
     r.g&&r.g.length ? h('div',{class:'small muted'}, 'Gramática que aparece: ', r.g.map(id=>ITEMS.get('g|'+id)).filter(Boolean).map(g=>h('span',{class:'pill g jp',style:'margin:2px'},g.t))) : null,
     h('h2',{},'Preguntas'), qa,
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>addReadingVocab(r)},'Añadir palabras nuevas a mis repasos'))
+    r.notes&&r.notes.length ? h('div',{class:'card soft'}, h('div',{class:'eyebrow'},'Notas'), h('ul',{class:'small',style:'margin:6px 0 0;padding-left:18px'}, r.notes.map(n=>h('li',{},n)))) : null,
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>addReadingVocab(r)},'Añadir palabras nuevas a mis repasos'), r.user?h('button',{class:'btn sm warn ghost',onclick:()=>confirmBox('¿Borrar esta lectura importada?',()=>{deleteUserReading(r.id);READER.id=null;renderLectura();})},'Borrar'):null)
   ));
   window.scrollTo(0,0);
 }
@@ -117,10 +120,11 @@ function renderRepasos(){
 }
 function renderExamenes(){
   const el=$('#main'); const w=weeklyStatus(), le=levelExamStatus();
-  el.append(h('div',{class:'topline'}, h('h1',{},'Exámenes'), h('span',{class:'small muted'},'Formato JLPT: lectura de kanji, ortografía, contexto, gramática, ★ y 読解, más producción escrita.')));
-  el.append(h('div',{class:'grid c3'},
+  el.append(h('div',{class:'topline'}, h('h1',{},'Exámenes'), h('span',{class:'small muted'},'Formato JLPT. Las frases de los exámenes salen de un banco aparte que no aparece en las lecciones.')));
+  el.append(h('div',{class:'grid c2'},
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Semanal · obligatorio'), h('p',{class:'small',style:'margin:0'},'30 preguntas, 30 min, sobre todo lo aprendido. Si lo dejas pasar, se bloquean las lecciones.'), h('div',{class:'small muted'},w.text), h('button',{class:'btn primary',disabled:!w.available,onclick:()=>startExam('weekly')},'Hacer examen semanal')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},`Nivel ${S.level}`), h('p',{class:'small',style:'margin:0'},'22 preguntas sobre el nivel actual. Hace falta un 80 % para subir.'), h('div',{class:'small muted'},le.text), h('button',{class:'btn primary',disabled:!le.ready,onclick:()=>startExam('level')},'Hacer examen de nivel')),
+    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Frases nuevas · Claude'), h('p',{class:'small',style:'margin:0'},'27 preguntas escritas en el momento con tu vocabulario y gramática aprendidos, en frases que no has visto nunca. El reto real.'), h('div',{class:'small muted',id:'fresh-status'},learnedKeys().length<40?'Se activa con 30 palabras y 8 puntos gramaticales':'Disponible'), h('button',{class:'btn primary',disabled:learnedKeys().length<40,onclick:()=>startFreshExam($('#fresh-status'))},'Generar examen nuevo')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Simulacro JLPT'), h('p',{class:'small',style:'margin:0'},'Unas 60 preguntas, 60 min, sin ayudas. Para medirte antes del examen real.'), h('div',{class:'small muted'},learnedKeys().length<60?'Se activa con 60 ítems aprendidos':'Disponible'), h('button',{class:'btn',disabled:learnedKeys().length<60,onclick:()=>startExam('mock')},'Hacer simulacro'))));
   const ex=S.exams.slice().reverse();
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Historial'), ex.length?h('div',{class:'tscroll'},h('table',{}, h('thead',{},h('tr',{},h('th',{},'Fecha'),h('th',{},'Tipo'),h('th',{},'Nivel'),h('th',{},'Nota'),h('th',{},'Secciones'))), h('tbody',{}, ex.slice(0,20).map(e=>h('tr',{}, h('td',{},fmtDate(e.date)), h('td',{},{weekly:'Semanal',level:'Nivel',mock:'Simulacro'}[e.kind]), h('td',{class:'num'},e.level), h('td',{},h('b',{style:'color:'+(e.score>=80?'var(--ok)':e.score>=60?'var(--gold)':'var(--warn)')},e.score+'%')), h('td',{class:'small'}, Object.entries(e.secs||{}).map(([s,v])=>`${s} ${v.ok}/${v.n}`).join(' · '))))))):h('p',{class:'small muted'},'Todavía no has hecho ningún examen.')));
@@ -135,4 +139,20 @@ function renderProgreso(){
   TIERS.forEach(t=>{ map.append(h('div',{class:'tier-row'}, h('b',{},t.n), h('span',{class:'small muted'}, t.n==='N5'?'repaso':t.n==='N4'?'contenido completo':'generado al llegar'))); const g=h('div',{class:'levelmap'}); for(let lv=t.from;lv<=t.to;lv++) g.append(h('div',{class:lv<S.level?'done':lv===S.level?'cur':(isGenerated(lv)&&S.gen[lv])?'gen':'',title:'Nivel '+lv},lv)); map.append(g); });
   el.append(map);
   const exs=S.exams; if(exs.length){ const avg=Math.round(exs.reduce((a,e)=>a+e.score,0)/exs.length); const secAgg={}; exs.forEach(e=>Object.entries(e.secs||{}).forEach(([s,v])=>{const a=secAgg[s]=secAgg[s]||{ok:0,n:0};a.ok+=v.ok;a.n+=v.n;})); el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},`Exámenes: media ${avg} %`), h('div',{class:'result-grid',style:'margin-top:8px'}, Object.entries(secAgg).map(([s,v])=>h('div',{class:'card'},h('div',{class:'section-tag'},s),h('div',{class:'num'},Math.round(100*v.ok/v.n)+'%'),h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))), h('p',{class:'small muted',style:'margin:8px 0 0'},'La sección más baja es tu prioridad de estudio esta semana.'))); }
+}
+
+function importReadingCard(){
+  const ta=h('textarea',{id:'imp-text',placeholder:'Pega aquí un texto en japonés (hasta 6000 caracteres): un libro de Tadoku, una noticia de NHK Easy, un correo…',style:'min-height:120px'});
+  const title=h('input',{id:'imp-title',type:'text',placeholder:'Título (opcional)'});
+  const status=h('div',{class:'small muted'});
+  const btn=h('button',{class:'btn primary',onclick:async()=>{
+    const text=ta.value.trim(); if(text.length<20){ toast('Pega un texto más largo'); return; }
+    if(!sb||!USER){ status.textContent='Inicia sesión para importar textos (usa la función de Claude de tu cuenta).'; return; }
+    btn.disabled=true; status.textContent='Analizando el texto con Claude (30 a 60 segundos)…';
+    try{ const r=await callFunction('reader',{text, title:title.value.trim(), level:tierOf(S.level).n}); if(!r||!r.t) throw new Error(r&&r.error||'respuesta vacía');
+      const id='u'+now().toString(36); const reading={id, lv:1, user:true, title:r.title||title.value||'Texto importado', sub:(r.sub||'')+' · importada '+fmtDate(now()), t:r.t, es:r.es||'', q:Array.isArray(r.q)?r.q.filter(q=>q&&q.q&&Array.isArray(q.o)&&q.o.length>=2).map(q=>({q:q.q,o:q.o,a:Math.max(0,Math.min(q.o.length-1,q.a|0))})):[], notes:Array.isArray(r.notes)?r.notes:[], g:[]};
+      await saveUserReading(reading); toast('Lectura importada'); READER={id,sel:null,furi:S.settings.furigana,trans:false,answers:{}}; renderLectura();
+    }catch(e){ status.textContent='No se pudo importar: '+(e.message||e); btn.disabled=false; }
+  }},'Importar texto');
+  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Importar texto'), h('p',{class:'small muted',style:'margin:0'},'Cualquier texto japonés se convierte en una lectura con furigana, glosario al tocar, traducción y preguntas. Se guarda en tu cuenta.'), title, ta, h('div',{class:'row'}, btn, h('span',{class:'sp'})), status);
 }

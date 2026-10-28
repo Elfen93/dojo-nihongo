@@ -25,6 +25,10 @@ function renderAjustes(){
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
     h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
+  // Notificaciones
+  const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
+  const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);
+  pushStatus().then(stt=>{ pstatus.textContent={unsupported:'Este navegador no admite notificaciones push.',denied:'Has bloqueado las notificaciones en el navegador; actívalas en los ajustes del sitio.',on:'Activadas en este dispositivo.',off:'Desactivadas en este dispositivo.'}[stt]; if(stt==='on') prow.append(h('button',{class:'btn sm',onclick:()=>disablePush().then(()=>renderAjustes2())},'Desactivar aquí')); if(stt==='off') prow.append(h('button',{class:'btn primary',onclick:()=>enablePush().then(()=>renderAjustes2())},'Activar notificaciones')); });
   // Copia de seguridad
   const ta=h('textarea',{id:'s-backup',placeholder:'Pega aquí una copia de seguridad para restaurarla'});
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Copia de seguridad'),
@@ -142,8 +146,9 @@ async function syncExternal(){
   importSync(JSON.stringify(payload));
 }
 // ===================== Arranque =====================
+function renderAjustes2(){ const el=$('#main'); el.innerHTML=''; renderAjustes(); }
 function boot(){
-  loadLocal(); loadGenLocal(); updateStreak();
+  loadLocal(); loadGenLocal(); loadUserReadingsLocal(); updateStreak();
   const hash=location.hash.replace('#',''); if (VIEWS.some(v=>v.id===hash)) VIEW=hash;
   render();
   window.addEventListener('hashchange',()=>{ const id=location.hash.replace('#',''); if(VIEWS.some(v=>v.id===id)&&id!==VIEW) go(id); });
