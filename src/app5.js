@@ -54,12 +54,12 @@ function render(){ renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:rend
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
   const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null; const daysLeft=target?Math.ceil((target-now())/D):null;
-  if (w.overdue) return {cls:'',t:'Examen semanal atrasado. Las lecciones están bloqueadas hasta que lo hagas. Son 30 preguntas, 30 minutos. Hazlo ahora.'};
+  if (w.overdue && paceToday().mode!=='recuperacion') return {cls:'',t:'Examen semanal atrasado. Las lecciones están bloqueadas hasta que lo hagas. Son 30 preguntas, 30 minutos. Hazlo ahora.'};
   if (missed>=2) return {cls:'',t:`Llevas ${missed} días sin estudiar. Tienes ${due} repasos acumulados. El SRS solo funciona si vuelves cada día: empieza por 30 repasos ahora, no por todos.`};
   if (due>150) return {cls:'',t:`${due} repasos pendientes. Las lecciones se bloquean por encima de 150: hoy toca vaciar la cola, no aprender cosas nuevas.`};
   if (due>=40) return {cls:'info',t:`Tienes ${due} repasos esperando. Cuanto más tardes, más olvidas y más fallos tendrás. Empieza ya.`};
   if (d.r===0 && due>0) return {cls:'info',t:`${due} repasos listos. Primero los repasos, luego las lecciones.`};
-  if (d.l<S.settings.goalLessons && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${S.settings.goalLessons} lecciones. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
+  if (d.l<paceToday().lessons && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} lecciones. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
   if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'Tu examen semanal está disponible. Hazlo hoy y mide dónde estás de verdad.'};
   const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Has aprendido todo el nivel. Haz el examen de nivel para subir.'};
   return {cls:'ok',t:'Vas al día. Si te sobra tiempo: una lectura o un repaso de sanguijuelas.'};
@@ -85,11 +85,12 @@ function renderHoy(){
     h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Semanal atrasado':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
   );
   el.append(actions);
-  const goalL=S.settings.goalLessons, dueStart=(d.r||0)+due;
+  const pc=paceToday(); const goalL=pc.lessons, dueStart=(d.r||0)+due;
+  el.append(h('div',{class:'card',style:'margin-top:12px;border-left:4px solid '+({recuperacion:'var(--warn)',suave:'var(--gold)',normal:'var(--accent)',impulso:'var(--leaf)',manual:'var(--muted)'}[pc.mode])}, h('div',{class:'row between'}, h('div',{}, h('span',{class:'eyebrow'},'Ritmo de hoy'), h('div',{style:'font-weight:700;font-size:1.05rem'}, PACE_LABEL[pc.mode]+' · '+goalL+' '+plural(goalL,'lección','lecciones')+' · sesiones de '+pc.maxReviews)), h('span',{class:'pill'},`${pc.appr} en Aprendiz`)), h('div',{class:'small muted',style:'margin-top:4px'}, pc.why)));
   el.append(h('div',{class:'grid c2',style:'margin-top:12px'},
     h('div',{class:'card stack'}, h('div',{class:'row between'},h('h3',{},'Objetivo de hoy'),h('span',{class:'small muted'},todayKey())),
       h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+Math.min(100,Math.round(100*(d.l||0)/goalL))+'%'}))),
+      h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
       h('div',{class:'small muted'}, `Precisión hoy: ${d.r?Math.round(100*(d.rc||0)/d.r):0} % · ${d.rd||0} ${plural(d.rd||0,'lectura')} · ${d.ex||0} ${plural(d.ex||0,'examen','exámenes')}`),
       pace.days?h('div',{class:'small'}, `Ritmo necesario para ${S.settings.targetTier||'N4'} el ${fmtDate(new Date(S.settings.target+'T09:00:00'))}: `, h('b',{},`${pace.perDay} ${plural(pace.perDay,'ítem nuevo','ítems nuevos')}/día`), ` (quedan ${pace.remaining}).`):null),
     h('div',{class:'card stack'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`))
@@ -107,7 +108,7 @@ function renderLecciones(){
   const el=$('#main'); const la=lessonsAvailable(); const lv=S.level, items=itemsOfLevel(lv);
   el.append(h('div',{class:'topline'}, h('h1',{},`Nivel ${lv}`), h('span',{class:'pill'},tierOf(lv).n), h('span',{class:'small muted'},`${items.filter(i=>i.kind==='k').length} kanji · ${items.filter(i=>i.kind==='v').length} vocab · ${items.filter(i=>i.kind==='g').length} gramática`)));
   if (isGenerated(lv) && !levelHasContent(lv)) { el.append(generatePanel(lv)); return; }
-  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, la.items.length?h('button',{class:'btn leaf big',onclick:startLessonBatch},`Empezar lección (${Math.min(5,la.items.length)} ítems · quedan ${la.items.length})`):h('div',{class:'push info'},la.reason), h('div',{class:'small muted'},`Objetivo diario: ${S.settings.goalLessons} ítems nuevos. Hoy: ${day().l||0}. Cada lección = 5 ítems (kanji → vocabulario → gramática) con test al final.`)));
+  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, la.items.length?h('button',{class:'btn leaf big',onclick:startLessonBatch},`Empezar lección (${Math.min(5,la.items.length)} ítems · hoy quedan ${la.items.length} de ${la.total||la.items.length} del nivel)`):h('div',{class:'push info'},la.reason), h('div',{class:'small muted'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]}, ${paceToday().lessons} ítems nuevos (techo: ${S.settings.goalLessons}). Hoy: ${day().l||0}. Cada lección = 5 ítems (kanji → vocabulario → gramática) con test al final.`)));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
   groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('span',{class:'pill jp '+kind,style:'font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),title:(it.m?it.m.join(', '):it.s||'')+' · '+STAGE_NAMES[st]}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
@@ -116,7 +117,7 @@ function renderLecciones(){
 function renderRepasos(){
   const el=$('#main'); const due=dueItems(); const soon=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>0&&r.s<9&&r.due>now()&&r.due<now()+D).length;
   el.append(h('div',{class:'topline'}, h('h1',{},'Repasos'), h('span',{class:'pill'},`${due.length} pendientes`), h('span',{class:'small muted'},`${soon} más en las próximas 24 h`)));
-  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, due.length?h('button',{class:'btn primary big',onclick:()=>startReviews()},`Repasar ${Math.min(due.length,S.settings.maxReviews)} ahora`):h('div',{class:'push ok'},'Sin repasos pendientes. Vuelve más tarde o haz una lección.'),
+  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, due.length?h('button',{class:'btn primary big',onclick:()=>startReviews()},`Repasar ${Math.min(due.length,paceToday().maxReviews)} ahora`):h('div',{class:'push ok'},'Sin repasos pendientes. Vuelve más tarde o haz una lección.'),
     h('div',{class:'small muted'},'Cada ítem tiene varias preguntas: kanji (significado + lectura), vocabulario (significado, lectura y español→japonés con elección del kanji) y gramática (frase con hueco). Un fallo en cualquiera cuenta como fallo del ítem.'),
     h('div',{class:'row'}, h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Solo sanguijuelas'), h('button',{class:'btn sm',onclick:()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); if(!its.length){toast('Nada aprendido aún');return;} startSession('drill',pick(its,20)); }},'Entrenar producción (20 palabras)'))));
   if (due.length) el.append(h('div',{class:'card'}, h('h3',{},'En la cola'), h('div',{class:'list',style:'margin-top:8px'}, due.slice(0,30).map(itemRow)), due.length>30?h('div',{class:'small muted',style:'margin-top:8px'},`… y ${due.length-30} más`):null));

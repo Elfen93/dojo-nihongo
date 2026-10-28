@@ -65,7 +65,7 @@ function completeItem(k){
   const rec = S.items[k] || (S.items[k]={s:0,due:0,c:0,w:0});
   if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump('l'); }
   else { const ok=r.wrong===0; srsAnswer(rec, ok, Math.max(1,r.wrong)); if(ok) s.correct++; bump('r'); if(ok) bump('rc'); }
-  save();
+  save(); if(s.mode!=='lesson') markClearedIfEmpty();
 }
 function finishSession(){
   const s=SESSION; SESSION=null;

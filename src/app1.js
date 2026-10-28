@@ -26,7 +26,21 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('es-ES',{weekday:'short',d
 const fmtRel = ts => { const d=ts-now(); if (d<=0) return 'ahora'; if (d<H) return Math.ceil(d/6e4)+' min'; if (d<D) return Math.round(d/H)+' h'; return Math.round(d/D)+' d'; };
 const plural = (n,s,p) => n===1?s:(p||s+'s');
 let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2600); }
-function speak(text){ try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=.9; const v=speechSynthesis.getVoices().find(v=>v.lang.startsWith('ja')); if(v) u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){} }
+const VOICE_PREF=[/Nanami/i,/O-?ren/i,/Kyoko/i,/Google 日本語/i,/Google.*ja/i,/Natural/i,/Online/i,/ja[-_]JP/i,/ja/i];
+function jaVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang)); }catch(e){ return []; } }
+function bestVoice(){ const vs=jaVoices(); if(!vs.length) return null; const want=S&&S.settings&&S.settings.voice; if(want){ const v=vs.find(x=>x.name===want); if(v) return v; } for(const re of VOICE_PREF){ const v=vs.find(x=>re.test(x.name)); if(v) return v; } return vs[0]; }
+const TTS_CACHE=new Map(); let ttsAudio=null;
+async function speak(text){
+  try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){}
+  if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
+    try{
+      let url=TTS_CACHE.get(text);
+      if(!url){ const r=await callFunction('tts',{text}); if(!r||!r.audio) throw new Error(r&&r.error||'sin audio'); const bin=atob(r.audio); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); url=URL.createObjectURL(new Blob([u8],{type:'audio/mpeg'})); if(TTS_CACHE.size>300){ const k=TTS_CACHE.keys().next().value; URL.revokeObjectURL(TTS_CACHE.get(k)); TTS_CACHE.delete(k); } TTS_CACHE.set(text,url); }
+      ttsAudio=new Audio(url); await ttsAudio.play(); return;
+    }catch(e){ console.warn('tts',e); if(!speak._warned){ speak._warned=true; toast('Voz neuronal no disponible; uso la voz del navegador'); } }
+  }
+  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){}
+}
 const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
 
 // ===================== Kana / romaji =====================

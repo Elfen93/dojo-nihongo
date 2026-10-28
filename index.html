@@ -1905,7 +1905,21 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('es-ES',{weekday:'short',d
 const fmtRel = ts => { const d=ts-now(); if (d<=0) return 'ahora'; if (d<H) return Math.ceil(d/6e4)+' min'; if (d<D) return Math.round(d/H)+' h'; return Math.round(d/D)+' d'; };
 const plural = (n,s,p) => n===1?s:(p||s+'s');
 let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2600); }
-function speak(text){ try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=.9; const v=speechSynthesis.getVoices().find(v=>v.lang.startsWith('ja')); if(v) u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){} }
+const VOICE_PREF=[/Nanami/i,/O-?ren/i,/Kyoko/i,/Google 日本語/i,/Google.*ja/i,/Natural/i,/Online/i,/ja[-_]JP/i,/ja/i];
+function jaVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang)); }catch(e){ return []; } }
+function bestVoice(){ const vs=jaVoices(); if(!vs.length) return null; const want=S&&S.settings&&S.settings.voice; if(want){ const v=vs.find(x=>x.name===want); if(v) return v; } for(const re of VOICE_PREF){ const v=vs.find(x=>re.test(x.name)); if(v) return v; } return vs[0]; }
+const TTS_CACHE=new Map(); let ttsAudio=null;
+async function speak(text){
+  try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){}
+  if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
+    try{
+      let url=TTS_CACHE.get(text);
+      if(!url){ const r=await callFunction('tts',{text}); if(!r||!r.audio) throw new Error(r&&r.error||'sin audio'); const bin=atob(r.audio); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); url=URL.createObjectURL(new Blob([u8],{type:'audio/mpeg'})); if(TTS_CACHE.size>300){ const k=TTS_CACHE.keys().next().value; URL.revokeObjectURL(TTS_CACHE.get(k)); TTS_CACHE.delete(k); } TTS_CACHE.set(text,url); }
+      ttsAudio=new Audio(url); await ttsAudio.play(); return;
+    }catch(e){ console.warn('tts',e); if(!speak._warned){ speak._warned=true; toast('Voz neuronal no disponible; uso la voz del navegador'); } }
+  }
+  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){}
+}
 const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
 
 // ===================== Kana / romaji =====================
@@ -2184,7 +2198,7 @@ function completeItem(k){
   const rec = S.items[k] || (S.items[k]={s:0,due:0,c:0,w:0});
   if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump('l'); }
   else { const ok=r.wrong===0; srsAnswer(rec, ok, Math.max(1,r.wrong)); if(ok) s.correct++; bump('r'); if(ok) bump('rc'); }
-  save();
+  save(); if(s.mode!=='lesson') markClearedIfEmpty();
 }
 function finishSession(){
   const s=SESSION; SESSION=null;
@@ -2313,21 +2327,47 @@ function confirmBox(msg, onYes){
   document.body.append(box); return true;
 }
 
+// ===================== Ritmo adaptativo =====================
+function stats7(){ const t=new Date(); t.setHours(0,0,0,0); let r=0,rc=0,l=0,active=0; for(let i=0;i<7;i++){ const d=S.days[todayKey(new Date(t.getTime()-i*D))]; if(!d) continue; r+=d.r||0; rc+=d.rc||0; l+=d.l||0; if(dayCounts(d)) active++; } return {r,rc,l,active,acc:r?rc/r:null}; }
+function clearedStreak(){ // días seguidos (antes de hoy) con la cola vaciada y buena precisión
+  let n=0; const t=new Date(); t.setHours(0,0,0,0); for(let i=1;i<=7;i++){ const d=S.days[todayKey(new Date(t.getTime()-i*D))]; if(!d||!d.cleared||!(d.r>=10)||(d.rc/d.r)<0.9) break; n++; } return n; }
+function paceToday(){
+  const k=todayKey(); S.pace=S.pace||{goal:null,day:null,mode:'normal'};
+  if (S.pace.day===k && S.pace.lessons!=null) return S.pace;
+  const ceiling=Math.max(0,S.settings.goalLessons||10); const manual=!!S.settings.manualPace;
+  const due=dueItems().length, appr=Object.entries(S.items).filter(([key,r])=>ITEMS.has(key)&&r.s>=1&&r.s<=4).length, missed=daysMissed(), st=stats7(), lch=leeches().length;
+  let prev=S.pace.goal!=null?S.pace.goal:Math.min(ceiling,10); let goal=prev, mode='normal', why='';
+  if (manual){ goal=ceiling; mode='manual'; why='Ritmo fijo: has desactivado la adaptación.'; }
+  else if (due>100){ goal=0; mode='recuperacion'; why=`${due} repasos pendientes. Hoy solo repasar, en sesiones cortas.`; }
+  else if (appr>120){ goal=0; mode='recuperacion'; why=`${appr} ítems en fase Aprendiz: demasiada carga nueva a la vez. Deja que se asienten.`; }
+  else if (missed>=2){ goal=0; mode='recuperacion'; why=`Vuelves tras ${missed} días. Hoy solo repasos, sin prisa. Mañana retomamos lecciones.`; }
+  else if (st.acc!=null && st.r>=30 && st.acc<0.75){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why=`Precisión del ${Math.round(st.acc*100)} % esta semana. Menos material nuevo hasta que suba.`; }
+  else if (lch>=8){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why=`${lch} sanguijuelas. Antes de añadir, machaca las que fallas siempre.`; }
+  else if (due>60 || appr>90){ goal=Math.max(2,Math.min(prev,ceiling)-2); mode='suave'; why=due>60?`${due} repasos esperando: bajo el ritmo un poco.`:`${appr} en Aprendiz: bajo el ritmo un poco.`; }
+  else { const cs=clearedStreak(); if (cs>=3 && (st.acc==null||st.acc>=0.9) && appr<70 && due<30){ goal=Math.min(ceiling,prev+2); mode=goal>prev?'impulso':'normal'; why=goal>prev?`${cs} días seguidos con la cola vacía y más del 90 %: subo a ${goal}.`:`Vas bien y al techo que fijaste (${ceiling}).`; } else { goal=Math.min(ceiling,Math.max(prev,Math.min(ceiling,prev+ (prev<ceiling&&st.active>=3?1:0)))); mode='normal'; why=`Carga equilibrada: ${goal} ${plural(goal,'lección','lecciones')} hoy.`; } }
+  goal=Math.max(0,Math.min(ceiling,goal));
+  const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
+  S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; save(); return S.pace;
+}
+const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
+function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
 function lessonsAvailable(){
   const lv=S.level;
   if (!levelHasContent(lv)) return {items:[], reason:'Este nivel aún no tiene contenido generado.', lock:'gen'};
   const due=dueItems().length;
   if (due>150) return {items:[], reason:`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`, lock:'reviews'};
-  const w=weeklyStatus(); if (w.overdue) return {items:[], reason:'Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.', lock:'weekly'};
+  const pace=paceToday(); if (pace.lessons===0) return {items:[], reason:'Modo '+PACE_LABEL[pace.mode]+': hoy no hay lecciones nuevas. '+pace.why, lock:'pace'};
+  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return {items:[], reason:'Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.', lock:'weekly'};
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
   const order={k:0,v:1,g:2}; all.sort((a,b)=>order[a.kind]-order[b.kind]);
   // vocabulario solo después de sus kanji
   const learnedK=new Set(KANJI_ALL.concat(Object.values(S.gen).flatMap(g=>g.kanji||[])).filter(k=>S.items['k|'+k.k]&&S.items['k|'+k.k].s>0).map(k=>k.k));
   const ready=all.filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
   const list = ready.length?ready:all;
-  const todayL=day().l, goal=S.settings.goalLessons;
-  return {items:list, reason: list.length?'':'Has completado todas las lecciones de este nivel.', todayLeft:Math.max(0,goal-todayL)};
+  const todayL=day().l, goal=pace.lessons;
+  if (todayL>=goal) return {items:[], reason:`Objetivo de hoy cumplido (${goal}). Mañana, según cómo vaya la carga, habrá más.`, lock:'goal', done:true};
+  return {items:list.slice(0,Math.max(0,goal-todayL)), reason: list.length?'':'Has completado todas las lecciones de este nivel.', todayLeft:Math.max(0,goal-todayL), total:list.length};
 }
 let LESSON=null;
 function startLessonBatch(){
@@ -2487,7 +2527,7 @@ function startReviews(onlyLeeches=false){
   if (onlyLeeches){ due=leeches(); if(!due.length){toast('No tienes sanguijuelas ahora mismo.');return;} startSession('drill',due); return; }
   if (!due.length){ toast('No hay repasos pendientes'); return; }
   due.sort((a,b)=>S.items[keyOf(a)].due-S.items[keyOf(b)].due);
-  startSession('review', due.slice(0,S.settings.maxReviews||100));
+  startSession('review', due.slice(0,paceToday().maxReviews||100));
 }
 function leeches(){ return Object.entries(S.items).filter(([k,r])=>r.s>0&&r.s<9&&ITEMS.has(k)&&(r.w||0)>=3&&leechScore(r)>=1).sort((a,b)=>leechScore(b[1])-leechScore(a[1])).slice(0,10).map(([k])=>ITEMS.get(k)); }
 
@@ -2547,12 +2587,12 @@ function render(){ renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:rend
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
   const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null; const daysLeft=target?Math.ceil((target-now())/D):null;
-  if (w.overdue) return {cls:'',t:'Examen semanal atrasado. Las lecciones están bloqueadas hasta que lo hagas. Son 30 preguntas, 30 minutos. Hazlo ahora.'};
+  if (w.overdue && paceToday().mode!=='recuperacion') return {cls:'',t:'Examen semanal atrasado. Las lecciones están bloqueadas hasta que lo hagas. Son 30 preguntas, 30 minutos. Hazlo ahora.'};
   if (missed>=2) return {cls:'',t:`Llevas ${missed} días sin estudiar. Tienes ${due} repasos acumulados. El SRS solo funciona si vuelves cada día: empieza por 30 repasos ahora, no por todos.`};
   if (due>150) return {cls:'',t:`${due} repasos pendientes. Las lecciones se bloquean por encima de 150: hoy toca vaciar la cola, no aprender cosas nuevas.`};
   if (due>=40) return {cls:'info',t:`Tienes ${due} repasos esperando. Cuanto más tardes, más olvidas y más fallos tendrás. Empieza ya.`};
   if (d.r===0 && due>0) return {cls:'info',t:`${due} repasos listos. Primero los repasos, luego las lecciones.`};
-  if (d.l<S.settings.goalLessons && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${S.settings.goalLessons} lecciones. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
+  if (d.l<paceToday().lessons && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} lecciones. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
   if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'Tu examen semanal está disponible. Hazlo hoy y mide dónde estás de verdad.'};
   const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Has aprendido todo el nivel. Haz el examen de nivel para subir.'};
   return {cls:'ok',t:'Vas al día. Si te sobra tiempo: una lectura o un repaso de sanguijuelas.'};
@@ -2578,11 +2618,12 @@ function renderHoy(){
     h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Semanal atrasado':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
   );
   el.append(actions);
-  const goalL=S.settings.goalLessons, dueStart=(d.r||0)+due;
+  const pc=paceToday(); const goalL=pc.lessons, dueStart=(d.r||0)+due;
+  el.append(h('div',{class:'card',style:'margin-top:12px;border-left:4px solid '+({recuperacion:'var(--warn)',suave:'var(--gold)',normal:'var(--accent)',impulso:'var(--leaf)',manual:'var(--muted)'}[pc.mode])}, h('div',{class:'row between'}, h('div',{}, h('span',{class:'eyebrow'},'Ritmo de hoy'), h('div',{style:'font-weight:700;font-size:1.05rem'}, PACE_LABEL[pc.mode]+' · '+goalL+' '+plural(goalL,'lección','lecciones')+' · sesiones de '+pc.maxReviews)), h('span',{class:'pill'},`${pc.appr} en Aprendiz`)), h('div',{class:'small muted',style:'margin-top:4px'}, pc.why)));
   el.append(h('div',{class:'grid c2',style:'margin-top:12px'},
     h('div',{class:'card stack'}, h('div',{class:'row between'},h('h3',{},'Objetivo de hoy'),h('span',{class:'small muted'},todayKey())),
       h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+Math.min(100,Math.round(100*(d.l||0)/goalL))+'%'}))),
+      h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
       h('div',{class:'small muted'}, `Precisión hoy: ${d.r?Math.round(100*(d.rc||0)/d.r):0} % · ${d.rd||0} ${plural(d.rd||0,'lectura')} · ${d.ex||0} ${plural(d.ex||0,'examen','exámenes')}`),
       pace.days?h('div',{class:'small'}, `Ritmo necesario para ${S.settings.targetTier||'N4'} el ${fmtDate(new Date(S.settings.target+'T09:00:00'))}: `, h('b',{},`${pace.perDay} ${plural(pace.perDay,'ítem nuevo','ítems nuevos')}/día`), ` (quedan ${pace.remaining}).`):null),
     h('div',{class:'card stack'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`))
@@ -2600,7 +2641,7 @@ function renderLecciones(){
   const el=$('#main'); const la=lessonsAvailable(); const lv=S.level, items=itemsOfLevel(lv);
   el.append(h('div',{class:'topline'}, h('h1',{},`Nivel ${lv}`), h('span',{class:'pill'},tierOf(lv).n), h('span',{class:'small muted'},`${items.filter(i=>i.kind==='k').length} kanji · ${items.filter(i=>i.kind==='v').length} vocab · ${items.filter(i=>i.kind==='g').length} gramática`)));
   if (isGenerated(lv) && !levelHasContent(lv)) { el.append(generatePanel(lv)); return; }
-  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, la.items.length?h('button',{class:'btn leaf big',onclick:startLessonBatch},`Empezar lección (${Math.min(5,la.items.length)} ítems · quedan ${la.items.length})`):h('div',{class:'push info'},la.reason), h('div',{class:'small muted'},`Objetivo diario: ${S.settings.goalLessons} ítems nuevos. Hoy: ${day().l||0}. Cada lección = 5 ítems (kanji → vocabulario → gramática) con test al final.`)));
+  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, la.items.length?h('button',{class:'btn leaf big',onclick:startLessonBatch},`Empezar lección (${Math.min(5,la.items.length)} ítems · hoy quedan ${la.items.length} de ${la.total||la.items.length} del nivel)`):h('div',{class:'push info'},la.reason), h('div',{class:'small muted'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]}, ${paceToday().lessons} ítems nuevos (techo: ${S.settings.goalLessons}). Hoy: ${day().l||0}. Cada lección = 5 ítems (kanji → vocabulario → gramática) con test al final.`)));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
   groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('span',{class:'pill jp '+kind,style:'font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),title:(it.m?it.m.join(', '):it.s||'')+' · '+STAGE_NAMES[st]}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
@@ -2609,7 +2650,7 @@ function renderLecciones(){
 function renderRepasos(){
   const el=$('#main'); const due=dueItems(); const soon=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>0&&r.s<9&&r.due>now()&&r.due<now()+D).length;
   el.append(h('div',{class:'topline'}, h('h1',{},'Repasos'), h('span',{class:'pill'},`${due.length} pendientes`), h('span',{class:'small muted'},`${soon} más en las próximas 24 h`)));
-  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, due.length?h('button',{class:'btn primary big',onclick:()=>startReviews()},`Repasar ${Math.min(due.length,S.settings.maxReviews)} ahora`):h('div',{class:'push ok'},'Sin repasos pendientes. Vuelve más tarde o haz una lección.'),
+  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, due.length?h('button',{class:'btn primary big',onclick:()=>startReviews()},`Repasar ${Math.min(due.length,paceToday().maxReviews)} ahora`):h('div',{class:'push ok'},'Sin repasos pendientes. Vuelve más tarde o haz una lección.'),
     h('div',{class:'small muted'},'Cada ítem tiene varias preguntas: kanji (significado + lectura), vocabulario (significado, lectura y español→japonés con elección del kanji) y gramática (frase con hueco). Un fallo en cualquiera cuenta como fallo del ítem.'),
     h('div',{class:'row'}, h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Solo sanguijuelas'), h('button',{class:'btn sm',onclick:()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); if(!its.length){toast('Nada aprendido aún');return;} startSession('drill',pick(its,20)); }},'Entrenar producción (20 palabras)'))));
   if (due.length) el.append(h('div',{class:'card'}, h('h3',{},'En la cola'), h('div',{class:'list',style:'margin-top:8px'}, due.slice(0,30).map(itemRow)), due.length>30?h('div',{class:'small muted',style:'margin-top:8px'},`… y ${due.length-30} más`):null));
@@ -2664,12 +2705,13 @@ function renderAjustes(){
   const goal=h('input',{id:'s-goal',type:'number',min:0,max:60,value:st.goalLessons});
   const maxr=h('input',{id:'s-maxr',type:'number',min:10,max:500,value:st.maxReviews||100});
   const strict=h('input',{id:'s-strict',type:'checkbox',checked:!!st.strict});
+  const manual=h('input',{id:'s-manual',type:'checkbox',checked:!!st.manualPace});
   const furi=h('input',{id:'s-furi',type:'checkbox',checked:!!st.furigana});
-  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.furigana=furi.checked; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
+  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
-    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',target,'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Lecciones nuevas por día',goal,'10/día = N4 completo en unas 7 semanas desde cero.'), f('Máximo de repasos por sesión',maxr)),
-    h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú'), ), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
+    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',target,'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
+    h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)
   const wk=h('input',{id:'s-wk',type:'password',value:st.wkToken||'',placeholder:'Token de API v2 de WaniKani',autocomplete:'off'});
@@ -2682,6 +2724,15 @@ function renderAjustes(){
     syncStatus));
   // Gramática ya dominada (sustituye a la sincronización con Bunpro)
   el.append(masteredGrammarCard());
+  // Voz
+  const vsel=h('select',{id:'s-voice'}); const fillVoices=()=>{ vsel.innerHTML=''; vsel.append(h('option',{value:''},'Automática (la mejor disponible)')); jaVoices().forEach(v=>vsel.append(h('option',{value:v.name,selected:st.voice===v.name},v.name+(v.localService?'':' (en línea)')))); if(jaVoices().length===0) vsel.append(h('option',{value:'',disabled:true},'Este navegador no tiene voces japonesas instaladas')); }; fillVoices(); try{ speechSynthesis.onvoiceschanged=fillVoices; }catch(e){}
+  const rate=h('input',{id:'s-rate',type:'range',min:'0.6',max:'1.2',step:'0.05',value:st.voiceRate||0.9});
+  const neural=h('input',{id:'s-neural',type:'checkbox',checked:!!st.neuralVoice});
+  el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Voz'),
+    h('p',{class:'small muted',style:'margin:0'},'La voz del navegador depende del sistema: en Edge (Windows), Safari (iPhone/Mac) y Chrome en Android hay voces japonesas naturales gratuitas; Chrome en Windows solo tiene la robótica. La voz neuronal de Google suena como una persona y requiere configurar una clave en el servidor (función tts).'),
+    h('div',{class:'grid c2'}, f('Voz del navegador',vsel), f('Velocidad',rate)),
+    h('div',{class:'row'}, h('label',{class:'row small'},neural,' Usar voz neuronal de Google cuando esté disponible')),
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
   // Notificaciones
   const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
   const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);

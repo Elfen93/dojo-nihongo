@@ -9,12 +9,13 @@ function renderAjustes(){
   const goal=h('input',{id:'s-goal',type:'number',min:0,max:60,value:st.goalLessons});
   const maxr=h('input',{id:'s-maxr',type:'number',min:10,max:500,value:st.maxReviews||100});
   const strict=h('input',{id:'s-strict',type:'checkbox',checked:!!st.strict});
+  const manual=h('input',{id:'s-manual',type:'checkbox',checked:!!st.manualPace});
   const furi=h('input',{id:'s-furi',type:'checkbox',checked:!!st.furigana});
-  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.furigana=furi.checked; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
+  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
-    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',target,'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Lecciones nuevas por día',goal,'10/día = N4 completo en unas 7 semanas desde cero.'), f('Máximo de repasos por sesión',maxr)),
-    h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú'), ), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
+    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',target,'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
+    h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)
   const wk=h('input',{id:'s-wk',type:'password',value:st.wkToken||'',placeholder:'Token de API v2 de WaniKani',autocomplete:'off'});
@@ -27,6 +28,15 @@ function renderAjustes(){
     syncStatus));
   // Gramática ya dominada (sustituye a la sincronización con Bunpro)
   el.append(masteredGrammarCard());
+  // Voz
+  const vsel=h('select',{id:'s-voice'}); const fillVoices=()=>{ vsel.innerHTML=''; vsel.append(h('option',{value:''},'Automática (la mejor disponible)')); jaVoices().forEach(v=>vsel.append(h('option',{value:v.name,selected:st.voice===v.name},v.name+(v.localService?'':' (en línea)')))); if(jaVoices().length===0) vsel.append(h('option',{value:'',disabled:true},'Este navegador no tiene voces japonesas instaladas')); }; fillVoices(); try{ speechSynthesis.onvoiceschanged=fillVoices; }catch(e){}
+  const rate=h('input',{id:'s-rate',type:'range',min:'0.6',max:'1.2',step:'0.05',value:st.voiceRate||0.9});
+  const neural=h('input',{id:'s-neural',type:'checkbox',checked:!!st.neuralVoice});
+  el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Voz'),
+    h('p',{class:'small muted',style:'margin:0'},'La voz del navegador depende del sistema: en Edge (Windows), Safari (iPhone/Mac) y Chrome en Android hay voces japonesas naturales gratuitas; Chrome en Windows solo tiene la robótica. La voz neuronal de Google suena como una persona y requiere configurar una clave en el servidor (función tts).'),
+    h('div',{class:'grid c2'}, f('Voz del navegador',vsel), f('Velocidad',rate)),
+    h('div',{class:'row'}, h('label',{class:'row small'},neural,' Usar voz neuronal de Google cuando esté disponible')),
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
   // Notificaciones
   const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
   const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);

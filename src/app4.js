@@ -1,18 +1,44 @@
+// ===================== Ritmo adaptativo =====================
+function stats7(){ const t=new Date(); t.setHours(0,0,0,0); let r=0,rc=0,l=0,active=0; for(let i=0;i<7;i++){ const d=S.days[todayKey(new Date(t.getTime()-i*D))]; if(!d) continue; r+=d.r||0; rc+=d.rc||0; l+=d.l||0; if(dayCounts(d)) active++; } return {r,rc,l,active,acc:r?rc/r:null}; }
+function clearedStreak(){ // días seguidos (antes de hoy) con la cola vaciada y buena precisión
+  let n=0; const t=new Date(); t.setHours(0,0,0,0); for(let i=1;i<=7;i++){ const d=S.days[todayKey(new Date(t.getTime()-i*D))]; if(!d||!d.cleared||!(d.r>=10)||(d.rc/d.r)<0.9) break; n++; } return n; }
+function paceToday(){
+  const k=todayKey(); S.pace=S.pace||{goal:null,day:null,mode:'normal'};
+  if (S.pace.day===k && S.pace.lessons!=null) return S.pace;
+  const ceiling=Math.max(0,S.settings.goalLessons||10); const manual=!!S.settings.manualPace;
+  const due=dueItems().length, appr=Object.entries(S.items).filter(([key,r])=>ITEMS.has(key)&&r.s>=1&&r.s<=4).length, missed=daysMissed(), st=stats7(), lch=leeches().length;
+  let prev=S.pace.goal!=null?S.pace.goal:Math.min(ceiling,10); let goal=prev, mode='normal', why='';
+  if (manual){ goal=ceiling; mode='manual'; why='Ritmo fijo: has desactivado la adaptación.'; }
+  else if (due>100){ goal=0; mode='recuperacion'; why=`${due} repasos pendientes. Hoy solo repasar, en sesiones cortas.`; }
+  else if (appr>120){ goal=0; mode='recuperacion'; why=`${appr} ítems en fase Aprendiz: demasiada carga nueva a la vez. Deja que se asienten.`; }
+  else if (missed>=2){ goal=0; mode='recuperacion'; why=`Vuelves tras ${missed} días. Hoy solo repasos, sin prisa. Mañana retomamos lecciones.`; }
+  else if (st.acc!=null && st.r>=30 && st.acc<0.75){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why=`Precisión del ${Math.round(st.acc*100)} % esta semana. Menos material nuevo hasta que suba.`; }
+  else if (lch>=8){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why=`${lch} sanguijuelas. Antes de añadir, machaca las que fallas siempre.`; }
+  else if (due>60 || appr>90){ goal=Math.max(2,Math.min(prev,ceiling)-2); mode='suave'; why=due>60?`${due} repasos esperando: bajo el ritmo un poco.`:`${appr} en Aprendiz: bajo el ritmo un poco.`; }
+  else { const cs=clearedStreak(); if (cs>=3 && (st.acc==null||st.acc>=0.9) && appr<70 && due<30){ goal=Math.min(ceiling,prev+2); mode=goal>prev?'impulso':'normal'; why=goal>prev?`${cs} días seguidos con la cola vacía y más del 90 %: subo a ${goal}.`:`Vas bien y al techo que fijaste (${ceiling}).`; } else { goal=Math.min(ceiling,Math.max(prev,Math.min(ceiling,prev+ (prev<ceiling&&st.active>=3?1:0)))); mode='normal'; why=`Carga equilibrada: ${goal} ${plural(goal,'lección','lecciones')} hoy.`; } }
+  goal=Math.max(0,Math.min(ceiling,goal));
+  const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
+  S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; save(); return S.pace;
+}
+const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
+function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
 function lessonsAvailable(){
   const lv=S.level;
   if (!levelHasContent(lv)) return {items:[], reason:'Este nivel aún no tiene contenido generado.', lock:'gen'};
   const due=dueItems().length;
   if (due>150) return {items:[], reason:`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`, lock:'reviews'};
-  const w=weeklyStatus(); if (w.overdue) return {items:[], reason:'Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.', lock:'weekly'};
+  const pace=paceToday(); if (pace.lessons===0) return {items:[], reason:'Modo '+PACE_LABEL[pace.mode]+': hoy no hay lecciones nuevas. '+pace.why, lock:'pace'};
+  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return {items:[], reason:'Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.', lock:'weekly'};
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
   const order={k:0,v:1,g:2}; all.sort((a,b)=>order[a.kind]-order[b.kind]);
   // vocabulario solo después de sus kanji
   const learnedK=new Set(KANJI_ALL.concat(Object.values(S.gen).flatMap(g=>g.kanji||[])).filter(k=>S.items['k|'+k.k]&&S.items['k|'+k.k].s>0).map(k=>k.k));
   const ready=all.filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
   const list = ready.length?ready:all;
-  const todayL=day().l, goal=S.settings.goalLessons;
-  return {items:list, reason: list.length?'':'Has completado todas las lecciones de este nivel.', todayLeft:Math.max(0,goal-todayL)};
+  const todayL=day().l, goal=pace.lessons;
+  if (todayL>=goal) return {items:[], reason:`Objetivo de hoy cumplido (${goal}). Mañana, según cómo vaya la carga, habrá más.`, lock:'goal', done:true};
+  return {items:list.slice(0,Math.max(0,goal-todayL)), reason: list.length?'':'Has completado todas las lecciones de este nivel.', todayLeft:Math.max(0,goal-todayL), total:list.length};
 }
 let LESSON=null;
 function startLessonBatch(){
@@ -172,6 +198,6 @@ function startReviews(onlyLeeches=false){
   if (onlyLeeches){ due=leeches(); if(!due.length){toast('No tienes sanguijuelas ahora mismo.');return;} startSession('drill',due); return; }
   if (!due.length){ toast('No hay repasos pendientes'); return; }
   due.sort((a,b)=>S.items[keyOf(a)].due-S.items[keyOf(b)].due);
-  startSession('review', due.slice(0,S.settings.maxReviews||100));
+  startSession('review', due.slice(0,paceToday().maxReviews||100));
 }
 function leeches(){ return Object.entries(S.items).filter(([k,r])=>r.s>0&&r.s<9&&ITEMS.has(k)&&(r.w||0)>=3&&leechScore(r)>=1).sort((a,b)=>leechScore(b[1])-leechScore(a[1])).slice(0,10).map(([k])=>ITEMS.get(k)); }
