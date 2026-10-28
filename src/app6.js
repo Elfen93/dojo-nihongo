@@ -12,7 +12,7 @@ function renderAjustes(){
   const strict=h('input',{id:'s-strict',type:'checkbox',checked:!!st.strict});
   const manual=h('input',{id:'s-manual',type:'checkbox',checked:!!st.manualPace});
   const furi=h('input',{id:'s-furi',type:'checkbox',checked:!!st.furigana});
-  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
+  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
     h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
@@ -25,7 +25,7 @@ function renderAjustes(){
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'WaniKani y Bunpro'),
     h('p',{class:'small',style:'margin:0'},'WaniKani: guarda tu token y pulsa sincronizar; lo que tengas en Gurú o superior entra con ese nivel SRS. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí. Bunpro: su API pública está fuera de servicio (responde error 500 a todo); usa el panel "Gramática que ya dominas" de abajo para marcar en bloque lo que tienes hecho allí.'),
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
-    h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
+    h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); S.settingsAt=now(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
   // Gramática ya dominada (sustituye a la sincronización con Bunpro)
   el.append(masteredGrammarCard());
@@ -37,7 +37,7 @@ function renderAjustes(){
     h('p',{class:'small muted',style:'margin:0'},'La voz del navegador depende del sistema: en Edge (Windows), Safari (iPhone/Mac) y Chrome en Android hay voces japonesas naturales gratuitas; Chrome en Windows solo tiene la robótica. La voz neuronal de Google suena como una persona y requiere configurar una clave en el servidor (función tts).'),
     h('div',{class:'grid c2'}, f('Voz del navegador',vsel), f('Velocidad',rate)),
     h('div',{class:'row'}, h('label',{class:'row small'},neural,' Usar voz neuronal de Google cuando esté disponible')),
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; S.settingsAt=now(); save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
   // Notificaciones
   const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
   const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);

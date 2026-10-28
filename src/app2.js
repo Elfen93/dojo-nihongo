@@ -64,13 +64,32 @@ function save(){ S.updated=now(); saveLocal(); clearTimeout(saveT); saveT=setTim
 async function saveRemote(){
   if(!sb||!USER) return; if(remoteBusy){ pendingSave=true; return; }
   remoteBusy=true; try{ const {gen,...rest}=S; const {error}=await sb.from('progress').upsert({user_id:USER.id, state:rest, updated_at:new Date(S.updated).toISOString()}); if(error) throw error; setSyncLabel('Guardado en tu cuenta · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})); }
-  catch(e){ console.warn('save',e); setSyncLabel('Sin conexión: guardado en este dispositivo'); }
+  catch(e){ console.warn('save',e); setSyncLabel('Error al guardar en la cuenta: '+(e.message||e)); }
   remoteBusy=false; if(pendingSave){ pendingSave=false; saveRemote(); }
 }
 function mergeRemote(remote){
-  if (!remote) return;
-  if ((remote.updated||0) > (S.updated||0)) { S={...DEFAULT_STATE(),...remote, gen:S.gen||{}, settings:{...DEFAULT_STATE().settings,...(remote.settings||{})}}; saveLocal(); }
-  else if ((S.updated||0) > (remote.updated||0)) saveRemote();
+  if (!remote||typeof remote!=='object') return;
+  const L=S, R=remote, M={...DEFAULT_STATE(), ...L};
+  // ítems: gana el registro visto más recientemente; a igualdad, el de etapa mayor
+  M.items={...(L.items||{})};
+  for (const [k,r] of Object.entries(R.items||{})){ const l=M.items[k]; if(!l) { M.items[k]=r; continue; } const lt=l.ls||l.lrn||0, rt=r.ls||r.lrn||0; if (rt>lt || (rt===lt && (r.s||0)>(l.s||0))) M.items[k]=r; }
+  // ajustes: los modificados más recientemente
+  M.settings = ((R.settingsAt||0) > (L.settingsAt||0)) ? {...DEFAULT_STATE().settings, ...(R.settings||{})} : {...DEFAULT_STATE().settings, ...(L.settings||{})};
+  M.settingsAt = Math.max(R.settingsAt||0, L.settingsAt||0);
+  // días: máximo por campo
+  M.days={...(L.days||{})}; for (const [d,v] of Object.entries(R.days||{})){ const l=M.days[d]||{}; const o={...l}; for (const f of Object.keys({...l,...v})) o[f]=Math.max(l[f]||0, v[f]||0); M.days[d]=o; }
+  // exámenes: unión por fecha
+  const ex={}; [...(L.exams||[]),...(R.exams||[])].forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
+  M.level=Math.max(L.level||1, R.level||1); M.levelPass={...(R.levelPass||{}),...(L.levelPass||{})};
+  M.weekly={last:Math.max((L.weekly||{}).last||0,(R.weekly||{}).last||0)};
+  M.readings={...(R.readings||{})}; for (const [k,v] of Object.entries(L.readings||{})) if(!M.readings[k]||(v.date||0)>(M.readings[k].date||0)) M.readings[k]=v;
+  M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
+  M.created=Math.min(L.created||now(), R.created||now()); M.gen=L.gen||{}; M.pace=null;
+  const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
+  S=M; updateStreak(); saveLocal();
+  // si lo fusionado difiere de lo remoto, subimos la fusión
+  if (JSON.stringify({i:M.items,s:M.settings,d:M.days,e:M.exams.length}) !== JSON.stringify({i:R.items||{},s:{...DEFAULT_STATE().settings,...(R.settings||{})},d:R.days||{},e:(R.exams||[]).length})) { S.updated=now(); saveRemote(); }
+  return changedLocal;
 }
 async function initDb(){
   if (!window.supabase || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
@@ -88,7 +107,7 @@ async function pullRemote(){
   if(!sb||!USER) return;
   try{
     const {data,error}=await sb.from('progress').select('state').eq('user_id',USER.id).maybeSingle(); if(error) throw error;
-    if (data && data.state) mergeRemote(data.state); else saveRemote();
+    if (data && data.state) mergeRemote(data.state); else { S.updated=now(); saveRemote(); }
     const g=await sb.from('gen_levels').select('lv,data').eq('user_id',USER.id); if(!g.error && g.data) for(const row of g.data){ S.gen[row.lv]=row.data; } registerGenerated();
     const ur=await sb.from('user_readings').select('id,data').eq('user_id',USER.id); if(!ur.error && ur.data){ for(const row of ur.data) USER_READINGS[row.id]=row.data; saveUserReadingsLocal(); }
     setSyncLabel('Sincronizado con tu cuenta');

@@ -9,7 +9,7 @@ function kanjiReadings(k){
   const kun=(k.kun||[]).map(r=>r.split('.')[0]).filter(Boolean);
   return uniq([...on,...kun]);
 }
-function facetsFor(it){ return it.kind==='k'?['km','kr'] : it.kind==='v'?['vm','vr','vp'] : ['gc']; }
+function facetsFor(it){ return it.kind==='k'?['kr','km'] : it.kind==='v'?['vp','vr','vm'] : ['gc']; }
 const FACET_LABEL = {km:'Significado del kanji', kr:'Lectura del kanji', vm:'Significado', vr:'Lectura', vp:'Producción: del español al japonés', gc:'Gramática: completa la frase'};
 function kanjiDistractors(v){
   const word=v.w; const chars=[...word].filter(c=>hasKanji(c));
@@ -36,9 +36,11 @@ const posLabel = p => POS[p]||p||'';
 // ===================== Motor de sesión =====================
 let SESSION=null;
 function startSession(mode, items, opts={}){
-  const queue=[]; const results={};
-  for (const it of items){ const k=keyOf(it); results[k]={wrong:0,left:new Set(facetsFor(it)),it}; for (const f of facetsFor(it)) queue.push({k,f}); }
-  SESSION={mode, queue:shuffle(queue), results, total:items.length, done:0, correct:0, cur:null, phase:'ask', opts, startedAt:now(), wrongKeys:new Set()};
+  const results={}; const its=shuffle(items); const passes=[[],[],[]];
+  for (const it of its){ const k=keyOf(it); const fs=facetsFor(it); results[k]={wrong:0,left:new Set(fs),it}; fs.forEach((f,i)=>passes[i].push({k,f})); }
+  // primera pasada: la faceta principal de cada ítem (español→japonés en vocabulario); luego el resto
+  const queue=[...shuffle(passes[0]), ...shuffle(passes[1]), ...shuffle(passes[2])];
+  SESSION={mode, queue, results, total:items.length, done:0, correct:0, cur:null, phase:'ask', opts, startedAt:now(), wrongKeys:new Set()};
   nextCard();
 }
 function nextCard(){
@@ -63,7 +65,7 @@ function answerCurrent(correct){
 function completeItem(k){
   const s=SESSION, r=s.results[k]; s.done++;
   const rec = S.items[k] || (S.items[k]={s:0,due:0,c:0,w:0});
-  if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump('l'); }
+  if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump(r.it.kind==='g'?'lg':'l'); }
   else { const ok=r.wrong===0; srsAnswer(rec, ok, Math.max(1,r.wrong)); if(ok) s.correct++; bump('r'); if(ok) bump('rc'); }
   save(); if(s.mode!=='lesson') markClearedIfEmpty();
 }
@@ -83,7 +85,7 @@ function finishSession(){
     h('div',{class:'row'},
       wrong.length ? h('button',{class:'btn warn',onclick:()=>startSession('drill',wrong)},'Repetir solo los fallados') : null,
       h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'),
-      s.mode==='lesson' && lessonsAvailable().items.length ? h('button',{class:'btn leaf',onclick:startLessonBatch},'Siguiente lección') : null
+      s.mode==='lesson' && lessonsAvailable(s.opts&&s.opts.track||'kv').items.length ? h('button',{class:'btn leaf',onclick:()=>startLessonBatch(s.opts&&s.opts.track||'kv')},'Siguiente lección') : null
     )
   ));
   window.scrollTo(0,0);

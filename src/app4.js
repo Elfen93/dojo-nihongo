@@ -18,33 +18,36 @@ function paceToday(){
   else { const cs=clearedStreak(); if (cs>=3 && (st.acc==null||st.acc>=0.9) && appr<70 && due<30){ goal=Math.min(ceiling,prev+2); mode=goal>prev?'impulso':'normal'; why=goal>prev?`${cs} días seguidos con la cola vacía y más del 90 %: subo a ${goal}.`:`Vas bien y al techo que fijaste (${ceiling}).`; } else { goal=Math.min(ceiling,Math.max(prev,Math.min(ceiling,prev+ (prev<ceiling&&st.active>=3?1:0)))); mode='normal'; why=`Carga equilibrada: ${goal} ${plural(goal,'lección','lecciones')} hoy.`; } }
   goal=Math.max(0,Math.min(ceiling,goal));
   const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
-  S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; save(); return S.pace;
+  S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; saveLocal(); return S.pace;
 }
 const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
-function lessonsAvailable(){
-  const lv=S.level;
-  if (!levelHasContent(lv)) return {items:[], reason:'Este nivel aún no tiene contenido generado.', lock:'gen'};
+function grammarGoalToday(){ const pi=paceInfo(); const base=pi.days? Math.max(1,Math.ceil(pi.perWeek/7)) : 2; const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(1,Math.floor(base/2)); return Math.min(base,5); }
+function lessonsAvailable(track){
+  const lv=S.level; const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[]});
+  if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido generado.','gen');
   const due=dueItems().length;
-  if (due>150) return {items:[], reason:`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`, lock:'reviews'};
-  const pace=paceToday(); if (pace.lessons===0) return {items:[], reason:'Modo '+PACE_LABEL[pace.mode]+': hoy no hay lecciones nuevas. '+pace.why, lock:'pace'};
-  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return {items:[], reason:'Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.', lock:'weekly'};
+  if (due>150) return empty(`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`,'reviews');
+  const pace=paceToday(); if (pace.lessons===0 && pace.mode==='recuperacion') return empty('Modo Recuperación: hoy no hay lecciones nuevas. '+pace.why,'pace');
+  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return empty('Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.','weekly');
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
-  const order={k:0,v:1,g:2}; all.sort((a,b)=>order[a.kind]-order[b.kind]);
-  // vocabulario solo después de sus kanji
   const learnedK=new Set(KANJI_ALL.concat(Object.values(S.gen).flatMap(g=>g.kanji||[])).filter(k=>S.items['k|'+k.k]&&S.items['k|'+k.k].s>0).map(k=>k.k));
-  const ready=all.filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
-  const list = ready.length?ready:all;
-  const todayL=day().l, goal=pace.lessons;
-  if (todayL>=goal) return {items:[], reason:`Objetivo de hoy cumplido (${goal}). Mañana, según cómo vaya la carga, habrá más.`, lock:'goal', done:true};
-  return {items:list.slice(0,Math.max(0,goal-todayL)), reason: list.length?'':'Has completado todas las lecciones de este nivel.', todayLeft:Math.max(0,goal-todayL), total:list.length};
+  const kv=all.filter(it=>it.kind!=='g').filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
+  const kvList=(kv.length?kv:all.filter(it=>it.kind!=='g')).sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
+  const gList=all.filter(it=>it.kind==='g');
+  const dd=day(); const kvGoal=pace.lessons, gGoal=grammarGoalToday();
+  const kvLeft=Math.max(0,kvGoal-(dd.l||0)), gLeft=Math.max(0,gGoal-(dd.lg||0));
+  const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
+  res.items=[...res.kv,...res.g];
+  if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? 'Has completado todas las lecciones de este nivel.' : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
+  return track==='g' ? {...res, items:res.g} : track==='kv' ? {...res, items:res.kv} : res;
 }
 let LESSON=null;
-function startLessonBatch(){
-  const la=lessonsAvailable(); if(!la.items.length){ toast(la.reason||'No hay lecciones'); return; }
-  const batch=la.items.slice(0,5);
-  LESSON={batch,i:0}; renderLesson();
+function startLessonBatch(track){
+  track = track || 'kv'; const la=lessonsAvailable(track); if(!la.items.length){ toast(la.reason||'No hay lecciones'); return; }
+  const batch=la.items.slice(0, track==='g'?3:5);
+  LESSON={batch,i:0,track}; renderLesson();
 }
 function renderLesson(){
   const L=LESSON, it=L.batch[L.i], el=$('#main'); el.innerHTML='';
@@ -69,7 +72,7 @@ function renderLesson(){
   }
   el.append(h('div',{class:'study stack'}, head, card,
     h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('span',{class:'sp'}),
-      L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b);}},'Empezar el test de la lección'))));
+      L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b,{track:L.track});}},'Empezar el test de la lección'))));
   window.scrollTo(0,0);
 }
 

@@ -2289,13 +2289,32 @@ function save(){ S.updated=now(); saveLocal(); clearTimeout(saveT); saveT=setTim
 async function saveRemote(){
   if(!sb||!USER) return; if(remoteBusy){ pendingSave=true; return; }
   remoteBusy=true; try{ const {gen,...rest}=S; const {error}=await sb.from('progress').upsert({user_id:USER.id, state:rest, updated_at:new Date(S.updated).toISOString()}); if(error) throw error; setSyncLabel('Guardado en tu cuenta · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})); }
-  catch(e){ console.warn('save',e); setSyncLabel('Sin conexión: guardado en este dispositivo'); }
+  catch(e){ console.warn('save',e); setSyncLabel('Error al guardar en la cuenta: '+(e.message||e)); }
   remoteBusy=false; if(pendingSave){ pendingSave=false; saveRemote(); }
 }
 function mergeRemote(remote){
-  if (!remote) return;
-  if ((remote.updated||0) > (S.updated||0)) { S={...DEFAULT_STATE(),...remote, gen:S.gen||{}, settings:{...DEFAULT_STATE().settings,...(remote.settings||{})}}; saveLocal(); }
-  else if ((S.updated||0) > (remote.updated||0)) saveRemote();
+  if (!remote||typeof remote!=='object') return;
+  const L=S, R=remote, M={...DEFAULT_STATE(), ...L};
+  // ítems: gana el registro visto más recientemente; a igualdad, el de etapa mayor
+  M.items={...(L.items||{})};
+  for (const [k,r] of Object.entries(R.items||{})){ const l=M.items[k]; if(!l) { M.items[k]=r; continue; } const lt=l.ls||l.lrn||0, rt=r.ls||r.lrn||0; if (rt>lt || (rt===lt && (r.s||0)>(l.s||0))) M.items[k]=r; }
+  // ajustes: los modificados más recientemente
+  M.settings = ((R.settingsAt||0) > (L.settingsAt||0)) ? {...DEFAULT_STATE().settings, ...(R.settings||{})} : {...DEFAULT_STATE().settings, ...(L.settings||{})};
+  M.settingsAt = Math.max(R.settingsAt||0, L.settingsAt||0);
+  // días: máximo por campo
+  M.days={...(L.days||{})}; for (const [d,v] of Object.entries(R.days||{})){ const l=M.days[d]||{}; const o={...l}; for (const f of Object.keys({...l,...v})) o[f]=Math.max(l[f]||0, v[f]||0); M.days[d]=o; }
+  // exámenes: unión por fecha
+  const ex={}; [...(L.exams||[]),...(R.exams||[])].forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
+  M.level=Math.max(L.level||1, R.level||1); M.levelPass={...(R.levelPass||{}),...(L.levelPass||{})};
+  M.weekly={last:Math.max((L.weekly||{}).last||0,(R.weekly||{}).last||0)};
+  M.readings={...(R.readings||{})}; for (const [k,v] of Object.entries(L.readings||{})) if(!M.readings[k]||(v.date||0)>(M.readings[k].date||0)) M.readings[k]=v;
+  M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
+  M.created=Math.min(L.created||now(), R.created||now()); M.gen=L.gen||{}; M.pace=null;
+  const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
+  S=M; updateStreak(); saveLocal();
+  // si lo fusionado difiere de lo remoto, subimos la fusión
+  if (JSON.stringify({i:M.items,s:M.settings,d:M.days,e:M.exams.length}) !== JSON.stringify({i:R.items||{},s:{...DEFAULT_STATE().settings,...(R.settings||{})},d:R.days||{},e:(R.exams||[]).length})) { S.updated=now(); saveRemote(); }
+  return changedLocal;
 }
 async function initDb(){
   if (!window.supabase || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
@@ -2313,7 +2332,7 @@ async function pullRemote(){
   if(!sb||!USER) return;
   try{
     const {data,error}=await sb.from('progress').select('state').eq('user_id',USER.id).maybeSingle(); if(error) throw error;
-    if (data && data.state) mergeRemote(data.state); else saveRemote();
+    if (data && data.state) mergeRemote(data.state); else { S.updated=now(); saveRemote(); }
     const g=await sb.from('gen_levels').select('lv,data').eq('user_id',USER.id); if(!g.error && g.data) for(const row of g.data){ S.gen[row.lv]=row.data; } registerGenerated();
     const ur=await sb.from('user_readings').select('id,data').eq('user_id',USER.id); if(!ur.error && ur.data){ for(const row of ur.data) USER_READINGS[row.id]=row.data; saveUserReadingsLocal(); }
     setSyncLabel('Sincronizado con tu cuenta');
@@ -2378,7 +2397,7 @@ function kanjiReadings(k){
   const kun=(k.kun||[]).map(r=>r.split('.')[0]).filter(Boolean);
   return uniq([...on,...kun]);
 }
-function facetsFor(it){ return it.kind==='k'?['km','kr'] : it.kind==='v'?['vm','vr','vp'] : ['gc']; }
+function facetsFor(it){ return it.kind==='k'?['kr','km'] : it.kind==='v'?['vp','vr','vm'] : ['gc']; }
 const FACET_LABEL = {km:'Significado del kanji', kr:'Lectura del kanji', vm:'Significado', vr:'Lectura', vp:'Producción: del español al japonés', gc:'Gramática: completa la frase'};
 function kanjiDistractors(v){
   const word=v.w; const chars=[...word].filter(c=>hasKanji(c));
@@ -2405,9 +2424,11 @@ const posLabel = p => POS[p]||p||'';
 // ===================== Motor de sesión =====================
 let SESSION=null;
 function startSession(mode, items, opts={}){
-  const queue=[]; const results={};
-  for (const it of items){ const k=keyOf(it); results[k]={wrong:0,left:new Set(facetsFor(it)),it}; for (const f of facetsFor(it)) queue.push({k,f}); }
-  SESSION={mode, queue:shuffle(queue), results, total:items.length, done:0, correct:0, cur:null, phase:'ask', opts, startedAt:now(), wrongKeys:new Set()};
+  const results={}; const its=shuffle(items); const passes=[[],[],[]];
+  for (const it of its){ const k=keyOf(it); const fs=facetsFor(it); results[k]={wrong:0,left:new Set(fs),it}; fs.forEach((f,i)=>passes[i].push({k,f})); }
+  // primera pasada: la faceta principal de cada ítem (español→japonés en vocabulario); luego el resto
+  const queue=[...shuffle(passes[0]), ...shuffle(passes[1]), ...shuffle(passes[2])];
+  SESSION={mode, queue, results, total:items.length, done:0, correct:0, cur:null, phase:'ask', opts, startedAt:now(), wrongKeys:new Set()};
   nextCard();
 }
 function nextCard(){
@@ -2432,7 +2453,7 @@ function answerCurrent(correct){
 function completeItem(k){
   const s=SESSION, r=s.results[k]; s.done++;
   const rec = S.items[k] || (S.items[k]={s:0,due:0,c:0,w:0});
-  if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump('l'); }
+  if (s.mode==='lesson'){ rec.s=1; rec.due=now()+4*H; rec.lrn=now(); rec.ls=now(); bump(r.it.kind==='g'?'lg':'l'); }
   else { const ok=r.wrong===0; srsAnswer(rec, ok, Math.max(1,r.wrong)); if(ok) s.correct++; bump('r'); if(ok) bump('rc'); }
   save(); if(s.mode!=='lesson') markClearedIfEmpty();
 }
@@ -2452,7 +2473,7 @@ function finishSession(){
     h('div',{class:'row'},
       wrong.length ? h('button',{class:'btn warn',onclick:()=>startSession('drill',wrong)},'Repetir solo los fallados') : null,
       h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'),
-      s.mode==='lesson' && lessonsAvailable().items.length ? h('button',{class:'btn leaf',onclick:startLessonBatch},'Siguiente lección') : null
+      s.mode==='lesson' && lessonsAvailable(s.opts&&s.opts.track||'kv').items.length ? h('button',{class:'btn leaf',onclick:()=>startLessonBatch(s.opts&&s.opts.track||'kv')},'Siguiente lección') : null
     )
   ));
   window.scrollTo(0,0);
@@ -2583,33 +2604,36 @@ function paceToday(){
   else { const cs=clearedStreak(); if (cs>=3 && (st.acc==null||st.acc>=0.9) && appr<70 && due<30){ goal=Math.min(ceiling,prev+2); mode=goal>prev?'impulso':'normal'; why=goal>prev?`${cs} días seguidos con la cola vacía y más del 90 %: subo a ${goal}.`:`Vas bien y al techo que fijaste (${ceiling}).`; } else { goal=Math.min(ceiling,Math.max(prev,Math.min(ceiling,prev+ (prev<ceiling&&st.active>=3?1:0)))); mode='normal'; why=`Carga equilibrada: ${goal} ${plural(goal,'lección','lecciones')} hoy.`; } }
   goal=Math.max(0,Math.min(ceiling,goal));
   const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
-  S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; save(); return S.pace;
+  S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; saveLocal(); return S.pace;
 }
 const PACE_LABEL={recuperacion:'Recuperación',suave:'Suave',normal:'Normal',impulso:'Impulso',manual:'Fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
-function lessonsAvailable(){
-  const lv=S.level;
-  if (!levelHasContent(lv)) return {items:[], reason:'Este nivel aún no tiene contenido generado.', lock:'gen'};
+function grammarGoalToday(){ const pi=paceInfo(); const base=pi.days? Math.max(1,Math.ceil(pi.perWeek/7)) : 2; const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(1,Math.floor(base/2)); return Math.min(base,5); }
+function lessonsAvailable(track){
+  const lv=S.level; const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[]});
+  if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido generado.','gen');
   const due=dueItems().length;
-  if (due>150) return {items:[], reason:`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`, lock:'reviews'};
-  const pace=paceToday(); if (pace.lessons===0) return {items:[], reason:'Modo '+PACE_LABEL[pace.mode]+': hoy no hay lecciones nuevas. '+pace.why, lock:'pace'};
-  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return {items:[], reason:'Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.', lock:'weekly'};
+  if (due>150) return empty(`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`,'reviews');
+  const pace=paceToday(); if (pace.lessons===0 && pace.mode==='recuperacion') return empty('Modo Recuperación: hoy no hay lecciones nuevas. '+pace.why,'pace');
+  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return empty('Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.','weekly');
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
-  const order={k:0,v:1,g:2}; all.sort((a,b)=>order[a.kind]-order[b.kind]);
-  // vocabulario solo después de sus kanji
   const learnedK=new Set(KANJI_ALL.concat(Object.values(S.gen).flatMap(g=>g.kanji||[])).filter(k=>S.items['k|'+k.k]&&S.items['k|'+k.k].s>0).map(k=>k.k));
-  const ready=all.filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
-  const list = ready.length?ready:all;
-  const todayL=day().l, goal=pace.lessons;
-  if (todayL>=goal) return {items:[], reason:`Objetivo de hoy cumplido (${goal}). Mañana, según cómo vaya la carga, habrá más.`, lock:'goal', done:true};
-  return {items:list.slice(0,Math.max(0,goal-todayL)), reason: list.length?'':'Has completado todas las lecciones de este nivel.', todayLeft:Math.max(0,goal-todayL), total:list.length};
+  const kv=all.filter(it=>it.kind!=='g').filter(it=>it.kind!=='v' || [...it.w].filter(hasKanji).every(ch=>learnedK.has(ch)||!itemsOfLevel(lv).some(x=>x.kind==='k'&&x.k===ch)));
+  const kvList=(kv.length?kv:all.filter(it=>it.kind!=='g')).sort((a,b)=>(a.kind==='k'?0:1)-(b.kind==='k'?0:1));
+  const gList=all.filter(it=>it.kind==='g');
+  const dd=day(); const kvGoal=pace.lessons, gGoal=grammarGoalToday();
+  const kvLeft=Math.max(0,kvGoal-(dd.l||0)), gLeft=Math.max(0,gGoal-(dd.lg||0));
+  const res={kv:kvList.slice(0,kvLeft), g:gList.slice(0,gLeft), kvTotal:kvList.length, gTotal:gList.length, kvGoal, gGoal, kvDone:dd.l||0, gDone:dd.lg||0, reason:''};
+  res.items=[...res.kv,...res.g];
+  if (!res.items.length) res.reason = (!kvList.length&&!gList.length) ? 'Has completado todas las lecciones de este nivel.' : 'Objetivo de hoy cumplido. Mañana, según la carga, habrá más.';
+  return track==='g' ? {...res, items:res.g} : track==='kv' ? {...res, items:res.kv} : res;
 }
 let LESSON=null;
-function startLessonBatch(){
-  const la=lessonsAvailable(); if(!la.items.length){ toast(la.reason||'No hay lecciones'); return; }
-  const batch=la.items.slice(0,5);
-  LESSON={batch,i:0}; renderLesson();
+function startLessonBatch(track){
+  track = track || 'kv'; const la=lessonsAvailable(track); if(!la.items.length){ toast(la.reason||'No hay lecciones'); return; }
+  const batch=la.items.slice(0, track==='g'?3:5);
+  LESSON={batch,i:0,track}; renderLesson();
 }
 function renderLesson(){
   const L=LESSON, it=L.batch[L.i], el=$('#main'); el.innerHTML='';
@@ -2634,7 +2658,7 @@ function renderLesson(){
   }
   el.append(h('div',{class:'study stack'}, head, card,
     h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('span',{class:'sp'}),
-      L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b);}},'Empezar el test de la lección'))));
+      L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b,{track:L.track});}},'Empezar el test de la lección'))));
   window.scrollTo(0,0);
 }
 
@@ -2828,7 +2852,7 @@ function pushMessage(){
   if (due>150) return {cls:'',t:`${due} repasos pendientes. Las lecciones se bloquean por encima de 150: hoy toca vaciar la cola, no aprender cosas nuevas.`};
   if (due>=40) return {cls:'info',t:`Tienes ${due} repasos esperando. Cuanto más tardes, más olvidas y más fallos tendrás. Empieza ya.`};
   if (d.r===0 && due>0) return {cls:'info',t:`${due} repasos listos. Primero los repasos, luego las lecciones.`};
-  if (d.l<paceToday().lessons && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} lecciones. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
+  if ((d.l<paceToday().lessons || (d.lg||0)<grammarGoalToday()) && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} ítems de kanji/vocab y ${d.lg||0} de ${grammarGoalToday()} de gramática. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
   if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'Tu examen semanal está disponible. Hazlo hoy y mide dónde estás de verdad.'};
   const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Has aprendido todo el nivel. Haz el examen de nivel para subir.'};
   return {cls:'ok',t:'Vas al día. Si te sobra tiempo: una lectura o un repaso de sanguijuelas.'};
@@ -2851,7 +2875,7 @@ function renderHoy(){
   el.append(h('div',{class:'push '+pm.cls,style:'margin-bottom:14px'}, pm.t));
   const actions=h('div',{class:'grid c3'},
     h('button',{class:'action rev',onclick:()=>startReviews()}, h('div',{class:'big-n'},due), h('div',{}, h('div',{class:'t'},'Repasos'), h('div',{class:'d'}, due?`Más antiguo: ${fmtRel(Math.min(...dueItems().map(i=>S.items[keyOf(i)].due)))}`:'Nada pendiente'))),
-    h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:startLessonBatch,disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?Math.min(la.items.length,5):'🔒'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.items.length} nuevos en el nivel ${S.level}`:la.reason))),
+    h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:()=>go('lecciones'),disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?la.items.length:'🔒'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.kv.length} kanji/vocab · ${la.g.length} gramática hoy`:la.reason))),
     h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Semanal atrasado':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
   );
   el.append(actions);
@@ -2860,7 +2884,8 @@ function renderHoy(){
   el.append(h('div',{class:'grid c2',style:'margin-top:12px'},
     h('div',{class:'card stack'}, h('div',{class:'row between'},h('h3',{},'Objetivo de hoy'),h('span',{class:'small muted'},todayKey())),
       h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
+      h('div',{}, h('div',{class:'row between small'},h('span',{},'Kanji y vocabulario'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
+      h('div',{}, h('div',{class:'row between small'},h('span',{},'Gramática'),h('span',{class:'num'},`${d.lg||0} / ${grammarGoalToday()}`)), h('div',{class:'bar gold'},h('i',{style:'width:'+(grammarGoalToday()?Math.min(100,Math.round(100*(d.lg||0)/grammarGoalToday())):100)+'%'}))),
       h('div',{class:'small muted'}, `Precisión hoy: ${d.r?Math.round(100*(d.rc||0)/d.r):0} % · ${d.rd||0} ${plural(d.rd||0,'lectura')} · ${d.ex||0} ${plural(d.ex||0,'examen','exámenes')}`),
       pace.days?h('div',{class:'small'}, `Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`), `. Para el ${fmtDate(new Date(S.settings.target+'T09:00:00'))} hacen falta `, h('b',{},`${pace.perWeek} puntos/semana`), '.'):h('div',{class:'small'},`Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`))),
     h('div',{class:'card stack'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`))
@@ -2878,7 +2903,11 @@ function renderLecciones(){
   const el=$('#main'); const la=lessonsAvailable(); const lv=S.level, items=itemsOfLevel(lv);
   el.append(h('div',{class:'topline'}, h('h1',{},`Nivel ${lv}`), h('span',{class:'pill'},tierOf(lv).n), h('span',{class:'small muted'},`${items.filter(i=>i.kind==='k').length} kanji · ${items.filter(i=>i.kind==='v').length} vocab · ${items.filter(i=>i.kind==='g').length} gramática`)));
   if (isGenerated(lv) && !levelHasContent(lv)) { el.append(generatePanel(lv)); return; }
-  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, la.items.length?h('button',{class:'btn leaf big',onclick:startLessonBatch},`Empezar lección (${Math.min(5,la.items.length)} ítems · hoy quedan ${la.items.length} de ${la.total||la.items.length} del nivel)`):h('div',{class:'push info'},la.reason), h('div',{class:'small muted'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]}, ${paceToday().lessons} ítems nuevos (techo: ${S.settings.goalLessons}). Hoy: ${day().l||0}. Cada lección = 5 ítems (kanji → vocabulario → gramática) con test al final.`)));
+  el.append(h('div',{class:'grid c2',style:'margin-bottom:12px'},
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Kanji y vocabulario'), h('div',{class:'small muted'},`Hoy: ${la.kvDone} de ${la.kvGoal} · quedan ${la.kvTotal} en el nivel`), la.kv.length?h('button',{class:'btn leaf big',onclick:()=>startLessonBatch('kv')},`Lección de ${Math.min(5,la.kv.length)} ítems`):h('div',{class:'push info small'},la.kvTotal?'Objetivo de hoy cumplido.':'Nivel completo.')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Gramática'), h('div',{class:'small muted'},`Hoy: ${la.gDone} de ${la.gGoal} · quedan ${la.gTotal} en el nivel`), la.g.length?h('button',{class:'btn primary big',onclick:()=>startLessonBatch('g')},`Lección de ${Math.min(3,la.g.length)} ${plural(Math.min(3,la.g.length),'punto')}`):h('div',{class:'push info small'},la.gTotal?'Objetivo de hoy cumplido.':'Nivel completo.'))));
+  if (la.reason && !la.items.length) el.append(h('div',{class:'push info',style:'margin-bottom:12px'},la.reason));
+  el.append(h('div',{class:'small muted',style:'margin-bottom:12px'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]} · kanji/vocab ${paceToday().lessons}/día (techo ${S.settings.goalLessons}) · gramática ${grammarGoalToday()}/día según tu fecha objetivo.`));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
   groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('span',{class:'pill jp '+kind,style:'font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),title:(it.m?it.m.join(', '):it.s||'')+' · '+STAGE_NAMES[st]}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
@@ -2958,7 +2987,7 @@ function renderAjustes(){
   const strict=h('input',{id:'s-strict',type:'checkbox',checked:!!st.strict});
   const manual=h('input',{id:'s-manual',type:'checkbox',checked:!!st.manualPace});
   const furi=h('input',{id:'s-furi',type:'checkbox',checked:!!st.furigana});
-  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
+  const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
     h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
@@ -2971,7 +3000,7 @@ function renderAjustes(){
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'WaniKani y Bunpro'),
     h('p',{class:'small',style:'margin:0'},'WaniKani: guarda tu token y pulsa sincronizar; lo que tengas en Gurú o superior entra con ese nivel SRS. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí. Bunpro: su API pública está fuera de servicio (responde error 500 a todo); usa el panel "Gramática que ya dominas" de abajo para marcar en bloque lo que tienes hecho allí.'),
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
-    h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
+    h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); S.settingsAt=now(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
   // Gramática ya dominada (sustituye a la sincronización con Bunpro)
   el.append(masteredGrammarCard());
@@ -2983,7 +3012,7 @@ function renderAjustes(){
     h('p',{class:'small muted',style:'margin:0'},'La voz del navegador depende del sistema: en Edge (Windows), Safari (iPhone/Mac) y Chrome en Android hay voces japonesas naturales gratuitas; Chrome en Windows solo tiene la robótica. La voz neuronal de Google suena como una persona y requiere configurar una clave en el servidor (función tts).'),
     h('div',{class:'grid c2'}, f('Voz del navegador',vsel), f('Velocidad',rate)),
     h('div',{class:'row'}, h('label',{class:'row small'},neural,' Usar voz neuronal de Google cuando esté disponible')),
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; S.settingsAt=now(); save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
   // Notificaciones
   const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
   const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);

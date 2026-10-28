@@ -59,7 +59,7 @@ function pushMessage(){
   if (due>150) return {cls:'',t:`${due} repasos pendientes. Las lecciones se bloquean por encima de 150: hoy toca vaciar la cola, no aprender cosas nuevas.`};
   if (due>=40) return {cls:'info',t:`Tienes ${due} repasos esperando. Cuanto más tardes, más olvidas y más fallos tendrás. Empieza ya.`};
   if (d.r===0 && due>0) return {cls:'info',t:`${due} repasos listos. Primero los repasos, luego las lecciones.`};
-  if (d.l<paceToday().lessons && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} lecciones. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
+  if ((d.l<paceToday().lessons || (d.lg||0)<grammarGoalToday()) && la.items.length) return {cls:'info',t:`Hoy llevas ${d.l} de ${paceToday().lessons} ítems de kanji/vocab y ${d.lg||0} de ${grammarGoalToday()} de gramática. ${daysLeft&&daysLeft>0?`Quedan ${daysLeft} días para tu objetivo.`:''}`};
   if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'Tu examen semanal está disponible. Hazlo hoy y mide dónde estás de verdad.'};
   const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Has aprendido todo el nivel. Haz el examen de nivel para subir.'};
   return {cls:'ok',t:'Vas al día. Si te sobra tiempo: una lectura o un repaso de sanguijuelas.'};
@@ -82,7 +82,7 @@ function renderHoy(){
   el.append(h('div',{class:'push '+pm.cls,style:'margin-bottom:14px'}, pm.t));
   const actions=h('div',{class:'grid c3'},
     h('button',{class:'action rev',onclick:()=>startReviews()}, h('div',{class:'big-n'},due), h('div',{}, h('div',{class:'t'},'Repasos'), h('div',{class:'d'}, due?`Más antiguo: ${fmtRel(Math.min(...dueItems().map(i=>S.items[keyOf(i)].due)))}`:'Nada pendiente'))),
-    h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:startLessonBatch,disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?Math.min(la.items.length,5):'🔒'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.items.length} nuevos en el nivel ${S.level}`:la.reason))),
+    h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:()=>go('lecciones'),disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?la.items.length:'🔒'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.kv.length} kanji/vocab · ${la.g.length} gramática hoy`:la.reason))),
     h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Semanal atrasado':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
   );
   el.append(actions);
@@ -91,7 +91,8 @@ function renderHoy(){
   el.append(h('div',{class:'grid c2',style:'margin-top:12px'},
     h('div',{class:'card stack'}, h('div',{class:'row between'},h('h3',{},'Objetivo de hoy'),h('span',{class:'small muted'},todayKey())),
       h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
-      h('div',{}, h('div',{class:'row between small'},h('span',{},'Lecciones'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
+      h('div',{}, h('div',{class:'row between small'},h('span',{},'Kanji y vocabulario'),h('span',{class:'num'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar leaf'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
+      h('div',{}, h('div',{class:'row between small'},h('span',{},'Gramática'),h('span',{class:'num'},`${d.lg||0} / ${grammarGoalToday()}`)), h('div',{class:'bar gold'},h('i',{style:'width:'+(grammarGoalToday()?Math.min(100,Math.round(100*(d.lg||0)/grammarGoalToday())):100)+'%'}))),
       h('div',{class:'small muted'}, `Precisión hoy: ${d.r?Math.round(100*(d.rc||0)/d.r):0} % · ${d.rd||0} ${plural(d.rd||0,'lectura')} · ${d.ex||0} ${plural(d.ex||0,'examen','exámenes')}`),
       pace.days?h('div',{class:'small'}, `Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`), `. Para el ${fmtDate(new Date(S.settings.target+'T09:00:00'))} hacen falta `, h('b',{},`${pace.perWeek} puntos/semana`), '.'):h('div',{class:'small'},`Gramática hasta ${S.settings.targetTier||'N4'}: `, h('b',{},`${pace.total-pace.remaining}/${pace.total} puntos`))),
     h('div',{class:'card stack'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`))
@@ -109,7 +110,11 @@ function renderLecciones(){
   const el=$('#main'); const la=lessonsAvailable(); const lv=S.level, items=itemsOfLevel(lv);
   el.append(h('div',{class:'topline'}, h('h1',{},`Nivel ${lv}`), h('span',{class:'pill'},tierOf(lv).n), h('span',{class:'small muted'},`${items.filter(i=>i.kind==='k').length} kanji · ${items.filter(i=>i.kind==='v').length} vocab · ${items.filter(i=>i.kind==='g').length} gramática`)));
   if (isGenerated(lv) && !levelHasContent(lv)) { el.append(generatePanel(lv)); return; }
-  el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, la.items.length?h('button',{class:'btn leaf big',onclick:startLessonBatch},`Empezar lección (${Math.min(5,la.items.length)} ítems · hoy quedan ${la.items.length} de ${la.total||la.items.length} del nivel)`):h('div',{class:'push info'},la.reason), h('div',{class:'small muted'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]}, ${paceToday().lessons} ítems nuevos (techo: ${S.settings.goalLessons}). Hoy: ${day().l||0}. Cada lección = 5 ítems (kanji → vocabulario → gramática) con test al final.`)));
+  el.append(h('div',{class:'grid c2',style:'margin-bottom:12px'},
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Kanji y vocabulario'), h('div',{class:'small muted'},`Hoy: ${la.kvDone} de ${la.kvGoal} · quedan ${la.kvTotal} en el nivel`), la.kv.length?h('button',{class:'btn leaf big',onclick:()=>startLessonBatch('kv')},`Lección de ${Math.min(5,la.kv.length)} ítems`):h('div',{class:'push info small'},la.kvTotal?'Objetivo de hoy cumplido.':'Nivel completo.')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Gramática'), h('div',{class:'small muted'},`Hoy: ${la.gDone} de ${la.gGoal} · quedan ${la.gTotal} en el nivel`), la.g.length?h('button',{class:'btn primary big',onclick:()=>startLessonBatch('g')},`Lección de ${Math.min(3,la.g.length)} ${plural(Math.min(3,la.g.length),'punto')}`):h('div',{class:'push info small'},la.gTotal?'Objetivo de hoy cumplido.':'Nivel completo.'))));
+  if (la.reason && !la.items.length) el.append(h('div',{class:'push info',style:'margin-bottom:12px'},la.reason));
+  el.append(h('div',{class:'small muted',style:'margin-bottom:12px'},`Ritmo de hoy: ${PACE_LABEL[paceToday().mode]} · kanji/vocab ${paceToday().lessons}/día (techo ${S.settings.goalLessons}) · gramática ${grammarGoalToday()}/día según tu fecha objetivo.`));
   const le=levelExamStatus(); el.append(h('div',{class:'card',style:'margin-bottom:12px'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'Examen de nivel'), h('div',{class:'small muted'},le.text)), le.ready?h('button',{class:'btn primary',onclick:()=>startExam('level')},'Hacer examen'):null)));
   const groups=[['k','Kanji'],['v','Vocabulario'],['g','Gramática']];
   groups.forEach(([kind,label])=>{ const its=items.filter(i=>i.kind===kind); if(!its.length) return; el.append(h('h2',{style:'margin:14px 0 8px'},label)); el.append(h('div',{class:'row'}, its.map(it=>{ const rec=S.items[keyOf(it)]; const st=rec?rec.s:0; return h('span',{class:'pill jp '+kind,style:'font-size:'+(kind==='k'?'1.2rem':'.95rem')+';opacity:'+(st>0?1:.55)+(st>=5?';outline:2px solid var(--leaf)':''),title:(it.m?it.m.join(', '):it.s||'')+' · '+STAGE_NAMES[st]}, kind==='k'?it.k:kind==='v'?it.w:it.t); }))); });
