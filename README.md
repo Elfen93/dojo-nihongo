@@ -16,6 +16,9 @@ App personal de japonés (N5 → N1) que mezcla WaniKani (kanji y vocabulario co
 4. Authentication → URL Configuration → Site URL: la URL donde se publique la app (por ejemplo `https://USUARIO.github.io/dojo-nihongo/`). Añádela también en Redirect URLs.
 5. Project Settings → API: copia **Project URL** y **anon public key**.
 
+### 1b. Autorización desde la app
+Ejecuta también `supabase/schema2.sql` y `supabase/schema3.sql`. En `schema3.sql` cambia el correo del superusuario si no es el tuyo. Desde entonces, en Ajustes verás el panel "Cuentas autorizadas" para dar y quitar acceso. Toda la seguridad real está en las políticas RLS y en las funciones, que consultan esa misma tabla.
+
 ### 2. Funciones (Bunpro y generación de niveles)
 Con la CLI de Supabase (`npm i -g supabase`):
 ```

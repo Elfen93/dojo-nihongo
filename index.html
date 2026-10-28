@@ -2363,8 +2363,8 @@ async function initDb(){
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     const { data:{ session } } = await sb.auth.getSession();
     USER = session ? session.user : null; AUTH_PENDING=false;
-    if (USER && !emailAllowed(USER)) { await sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); }
-    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
+    if (USER) { await checkAllowed(); }
+    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && USER.id!==was){ checkAllowed().then(ok=>{ if(!ok){ render(); } }); } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
     if (USER) await pullRemote(); else setSyncLabel('Sin sesión');
     render();
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }
@@ -2425,7 +2425,21 @@ async function enablePush(){
 }
 async function disablePush(){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }
 
-function emailAllowed(u){ const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); if(!list.length) return true; return !!(u&&u.email&&list.includes(u.email.toLowerCase())); }
+let ALLOWED=null, IS_ADMIN=false;
+async function checkAllowed(){
+  try{
+    const r=await sb.rpc('is_allowed'); if(r.error) throw r.error; ALLOWED=!!r.data;
+    const a=await sb.rpc('is_admin'); IS_ADMIN=!a.error&&!!a.data;
+  }catch(e){ // sin schema3 aún: usar la lista de config como respaldo
+    const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); ALLOWED=!list.length||!!(USER&&USER.email&&list.includes(USER.email.toLowerCase())); IS_ADMIN=false;
+  }
+  if(!ALLOWED){ DENIED_EMAIL=USER&&USER.email; await sb.auth.signOut(); USER=null; }
+  return ALLOWED;
+}
+let DENIED_EMAIL=null;
+async function adminList(){ const r=await sb.rpc('admin_list_users'); if(r.error) throw r.error; return r.data||[]; }
+async function adminAdd(email,note){ const r=await sb.rpc('admin_add_user',{p_email:email,p_note:note||null}); if(r.error) throw r.error; }
+async function adminRemove(email){ const r=await sb.rpc('admin_remove_user',{p_email:email}); if(r.error) throw r.error; }
 
 // ===================== Facetas de estudio =====================
 function parseCloze(j){
@@ -3032,7 +3046,8 @@ function renderLoginWall(){
   const gicon='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z" opacity=".9"/><path fill="currentColor" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z" opacity=".7"/><path fill="currentColor" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9z" opacity=".5"/><path fill="currentColor" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z" opacity=".8"/></svg>';
   el.append(h('div',{class:'login-wrap'}, h('div',{class:'login'}, enso, h('h1',{},'Dojo 日本語'), h('div',{class:'sub'},'Un rato de japonés, cada día.'),
     h('button',{class:'google',onclick:()=>{ signInGoogle(); }}, h('span',{html:gicon}), 'Entrar con Google'),
-    h('div',{class:'note'},'Acceso privado. Solo cuentas autorizadas.'))));
+    DENIED_EMAIL?h('div',{class:'note',style:'color:var(--warn)'},`La cuenta ${DENIED_EMAIL} no está autorizada. Pide acceso al administrador.`):h('div',{class:'note'},'Acceso privado. Solo cuentas autorizadas.'))));
+  DENIED_EMAIL=null;
 }
 
 // ===================== Ajustes, importación y sincronización =====================
@@ -3065,6 +3080,7 @@ function renderAjustes(){
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
     h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); S.settingsAt=now(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
+  if (IS_ADMIN) el.append(adminCard());
   // Gramática ya dominada (sustituye a la sincronización con Bunpro)
   el.append(masteredGrammarCard());
   // Voz
@@ -3225,6 +3241,14 @@ function masteredGrammarCard(){
     box.append(det);
   });
   return box;
+}
+
+function adminCard(){
+  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Cuentas autorizadas'), h('p',{class:'small muted',style:'margin:0'},'Solo tú ves este panel. Las cuentas de esta lista pueden entrar y usar las funciones de Claude; el resto puede iniciar sesión con Google pero no accede a nada.'));
+  const list=h('div',{class:'list'}); const email=h('input',{type:'email',placeholder:'correo@gmail.com',autocomplete:'off',style:'flex:1;min-width:0'}); const note=h('input',{type:'text',placeholder:'nota (opcional)',style:'flex:1;min-width:0'});
+  const refresh=async()=>{ list.innerHTML=''; try{ const rows=await adminList(); if(!rows.length) list.append(h('div',{class:'small muted'},'Lista vacía (ejecuta schema3.sql).')); rows.forEach(r=>list.append(h('div',{class:'item'}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},r.email), h('div',{class:'small muted'},(r.note||'')+(r.added_at?' · '+fmtDate(new Date(r.added_at).getTime()):''))), r.email.toLowerCase()===(USER.email||'').toLowerCase()?h('span',{class:'badge soft'},'tú'):h('button',{class:'btn sm warn',onclick:()=>confirmBox(`¿Quitar el acceso a ${r.email}? Su progreso se conserva pero no podrá entrar.`,async()=>{ try{ await adminRemove(r.email); toast('Acceso retirado'); refresh(); }catch(e){ toast('Error: '+e.message); } })},'Quitar')))); }catch(e){ list.append(h('div',{class:'small muted'},'No se pudo leer la lista: '+e.message+'. ¿Has ejecutado schema3.sql?')); } };
+  box.append(list, h('div',{class:'row'}, email, note, h('button',{class:'btn primary',onclick:async()=>{ const v=email.value.trim().toLowerCase(); if(!v.includes('@')){ toast('Correo no válido'); return; } try{ await adminAdd(v,note.value.trim()); email.value=''; note.value=''; toast('Cuenta autorizada'); refresh(); }catch(e){ toast('Error: '+e.message); } }},'Autorizar')));
+  refresh(); return box;
 }
 
 

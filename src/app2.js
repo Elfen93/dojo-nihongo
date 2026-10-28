@@ -98,8 +98,8 @@ async function initDb(){
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     const { data:{ session } } = await sb.auth.getSession();
     USER = session ? session.user : null; AUTH_PENDING=false;
-    if (USER && !emailAllowed(USER)) { await sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); }
-    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
+    if (USER) { await checkAllowed(); }
+    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && USER.id!==was){ checkAllowed().then(ok=>{ if(!ok){ render(); } }); } if(USER && USER.id!==was){ document.body.classList.add('leaving'); pullRemote().then(()=>setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560)); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
     if (USER) await pullRemote(); else setSyncLabel('Sin sesión');
     render();
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }
@@ -160,4 +160,18 @@ async function enablePush(){
 }
 async function disablePush(){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }
 
-function emailAllowed(u){ const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); if(!list.length) return true; return !!(u&&u.email&&list.includes(u.email.toLowerCase())); }
+let ALLOWED=null, IS_ADMIN=false;
+async function checkAllowed(){
+  try{
+    const r=await sb.rpc('is_allowed'); if(r.error) throw r.error; ALLOWED=!!r.data;
+    const a=await sb.rpc('is_admin'); IS_ADMIN=!a.error&&!!a.data;
+  }catch(e){ // sin schema3 aún: usar la lista de config como respaldo
+    const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); ALLOWED=!list.length||!!(USER&&USER.email&&list.includes(USER.email.toLowerCase())); IS_ADMIN=false;
+  }
+  if(!ALLOWED){ DENIED_EMAIL=USER&&USER.email; await sb.auth.signOut(); USER=null; }
+  return ALLOWED;
+}
+let DENIED_EMAIL=null;
+async function adminList(){ const r=await sb.rpc('admin_list_users'); if(r.error) throw r.error; return r.data||[]; }
+async function adminAdd(email,note){ const r=await sb.rpc('admin_add_user',{p_email:email,p_note:note||null}); if(r.error) throw r.error; }
+async function adminRemove(email){ const r=await sb.rpc('admin_remove_user',{p_email:email}); if(r.error) throw r.error; }

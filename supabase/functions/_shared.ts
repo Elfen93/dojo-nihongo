@@ -2,14 +2,18 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 export const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 export const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+// Usuario con sesión válida Y correo autorizado en la tabla allowed_users (consultada con la clave de servidor)
 export async function requireUser(req: Request) {
   const auth = req.headers.get("Authorization") || "";
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) return null;
-  const allowed = (Deno.env.get("ALLOWED_EMAILS") || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (allowed.length && !(user.email && allowed.includes(user.email.toLowerCase()))) return null;
-  return user;
+  if (!user || !user.email) return null;
+  const email = user.email.toLowerCase();
+  const envList = (Deno.env.get("ALLOWED_EMAILS") || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (envList.includes(email)) return user;
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data } = await admin.from("allowed_users").select("email").eq("email", email).maybeSingle();
+  return data ? user : null;
 }
 export async function askClaude(prompt: string, maxTokens = 16000): Promise<string> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
