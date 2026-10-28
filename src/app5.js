@@ -46,6 +46,7 @@ function renderNav(){
   const due=dueItems().length, la=lessonsAvailable();
   const mk=v=>h('button',{class:VIEW===v.id?'active':'',onclick:()=>go(v.id)}, h('span',{class:'ic'},v.ic), h('span',{},v.t), v.id==='repasos'&&due?h('span',{class:'badge'+(due>100?' warn':'')},due):null, v.id==='lecciones'&&la.items.length?h('span',{class:'badge ok'},Math.min(la.items.length,99)):null);
   const side=$('#sidenav'); side.innerHTML=''; side.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},'Dojo 日本語')), ...VIEWS.map(mk), h('div',{class:'foot'}, h('div',{},`Nivel ${S.level} · ${tierOf(S.level).n}`), h('div',{id:'synclabel'},syncLabel)));
+  const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Progreso',onclick:()=>go('progreso')},'進'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes',onclick:()=>go('ajustes')},'⚙')); }
   const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
 }
 function render(){ renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
@@ -73,7 +74,9 @@ function renderHoy(){
   const el=$('#main'); const due=dueItems().length, la=lessonsAvailable(), w=weeklyStatus(), le=levelExamStatus(), d=day(), pm=pushMessage(), pace=paceInfo();
   updateStreak();
   const hello=S.settings.name?`Hola, ${S.settings.name}.`:'Hoy';
-  el.append(h('div',{class:'topline'}, h('h1',{},hello), h('span',{class:'pill'},`Nivel ${S.level} · ${tierOf(S.level).n}`), h('span',{class:'pill'},`🔥 ${S.streak||0} ${plural(S.streak||0,'día')}`), pace.days?h('span',{class:'pill'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):null));
+  const lvItems=itemsOfLevel(S.level), lvDone=lvItems.filter(it=>S.items[keyOf(it)]&&S.items[keyOf(it)].s>0).length, lvPct=lvItems.length?Math.round(100*lvDone/lvItems.length):0;
+  const R=34, C=2*Math.PI*R; const ring=h('div',{class:'ring',html:`<svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="${R}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="8"/><circle cx="42" cy="42" r="${R}" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-lvPct/100)}" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="20">${S.level}</text></svg>`});
+  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`🔥 ${S.streak||0} ${plural(S.streak||0,'día')}`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):null, h('span',{class:'chip'},`${learnedKeys().length} aprendidos`)))));
   if (CONFIG.SUPABASE_URL && !USER) el.append(h('div',{class:'push info',style:'margin-bottom:10px'}, 'No has iniciado sesión: el progreso se guarda solo en este navegador. ', h('a',{href:'#ajustes',onclick:e=>{e.preventDefault();go('ajustes');}},'Inicia sesión'), ' para tenerlo en todos tus dispositivos.'));
   el.append(h('div',{class:'push '+pm.cls,style:'margin-bottom:14px'}, pm.t));
   const actions=h('div',{class:'grid c3'},
