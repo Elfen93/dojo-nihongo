@@ -49,7 +49,7 @@ function renderNav(){
   const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Progreso',onclick:()=>go('progreso')},'進'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes',onclick:()=>go('ajustes')},'⚙')); }
   const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
 }
-function render(){ renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
+function render(){ if (needsLogin()) { renderLoginWall(); return; } renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
 
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
@@ -160,4 +160,17 @@ function importReadingCard(){
     }catch(e){ status.textContent='No se pudo importar: '+(e.message||e); btn.disabled=false; }
   }},'Importar texto');
   return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Importar texto'), h('p',{class:'small muted',style:'margin:0'},'Cualquier texto japonés se convierte en una lectura con furigana, glosario al tocar, traducción y preguntas. Se guarda en tu cuenta.'), title, ta, h('div',{class:'row'}, btn, h('span',{class:'sp'})), status);
+}
+
+function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING; }
+let AUTH_PENDING=true;
+function renderLoginWall(){
+  const el=$('#main'); el.innerHTML=''; $('#sidenav').innerHTML=''; $('#tabnav').innerHTML=''; const mh=$('#mobilehead'); if(mh) mh.innerHTML='';
+  const email=h('input',{id:'l-email',type:'email',placeholder:'tu@correo.com',autocomplete:'email',style:'flex:1;min-width:0'});
+  const msg=h('div',{class:'small muted'});
+  el.append(h('div',{style:'max-width:420px;margin:10vh auto 0'}, h('div',{class:'card stack',style:'text-align:center'},
+    h('div',{style:'font-family:var(--f-jp-display);font-size:3rem;line-height:1'},'道場'), h('h1',{},'Dojo 日本語'), h('p',{class:'muted',style:'margin:0'},'App privada. Inicia sesión para continuar.'),
+    h('div',{class:'row',style:'margin-top:8px'}, email, h('button',{class:'btn primary',onclick:()=>{ if(email.value.includes('@')){ signInEmail(email.value.trim()); msg.textContent='Revisa tu correo y pulsa el enlace.'; } }},'Enlace')),
+    CONFIG.GOOGLE_LOGIN?h('button',{class:'btn',onclick:signInGoogle},'Entrar con Google'):null, msg,
+    CONFIG.ALLOWED_EMAILS&&CONFIG.ALLOWED_EMAILS.length?h('div',{class:'small muted'},'Solo las cuentas autorizadas pueden entrar.'):null)));
 }

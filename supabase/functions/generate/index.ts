@@ -1,15 +1,13 @@
 // Genera el contenido de un nivel N3–N1 con la API de Claude. Requiere el secreto ANTHROPIC_API_KEY.
 // Desplegar: supabase secrets set ANTHROPIC_API_KEY=sk-ant-... && supabase functions deploy generate
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireUser } from "../_shared.ts";
 Deno.serve(async (req) => {
   const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     // Solo usuarios con sesión
-    const auth = req.headers.get("Authorization") || "";
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-    const { data: { user } } = await sb.auth.getUser();
+    const user = await requireUser(req);
     if (!user) return json({ error: "sin sesión" }, 401);
     const { lv, prompt } = await req.json();
     if (!prompt || typeof prompt !== "string" || prompt.length > 20000) return json({ error: "prompt no válido" }, 400);

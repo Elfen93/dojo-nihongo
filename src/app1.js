@@ -31,7 +31,7 @@ function jaVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^ja/i.te
 function bestVoice(){ const vs=jaVoices(); if(!vs.length) return null; const want=S&&S.settings&&S.settings.voice; if(want){ const v=vs.find(x=>x.name===want); if(v) return v; } for(const re of VOICE_PREF){ const v=vs.find(x=>re.test(x.name)); if(v) return v; } return vs[0]; }
 const TTS_CACHE=new Map(); let ttsAudio=null, speaking=false;
 function stopSpeak(){ try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} setSpeaking(false); }
-function setSpeaking(on){ speaking=on; let b=document.getElementById('stopvoice'); if(on){ if(!b){ b=document.createElement('button'); b.id='stopvoice'; b.className='btn warn'; b.textContent='⏹ Parar voz'; b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.3)'; b.onclick=stopSpeak; document.body.append(b); } } else if(b) b.remove(); }
+function setSpeaking(on){ speaking=on; }
 async function speak(text){
   if (speaking){ stopSpeak(); return; }
   stopSpeak();

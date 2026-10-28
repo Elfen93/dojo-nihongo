@@ -166,7 +166,7 @@ function renderAjustes2(){ const el=$('#main'); el.innerHTML=''; renderAjustes()
 function boot(){
   loadLocal(); loadGenLocal(); loadUserReadingsLocal(); updateStreak();
   const hash=location.hash.replace('#',''); if (VIEWS.some(v=>v.id===hash)) VIEW=hash;
-  render();
+  if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
   window.addEventListener('hashchange',()=>{ const id=location.hash.replace('#',''); if(VIEWS.some(v=>v.id===id)&&id!==VIEW) go(id); });
   initDb();
   if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }

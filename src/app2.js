@@ -73,14 +73,16 @@ function mergeRemote(remote){
   else if ((S.updated||0) > (remote.updated||0)) saveRemote();
 }
 async function initDb(){
-  if (!window.supabase || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ setSyncLabel('Sin cuenta configurada: guardado solo aquí'); return; }
+  if (!window.supabase || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
   try{
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     const { data:{ session } } = await sb.auth.getSession();
-    USER = session ? session.user : null;
-    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; if(USER && USER.id!==was){ pullRemote().then(render); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
-    if (USER) await pullRemote(); else setSyncLabel('Sin sesión: guardado solo en este dispositivo');
-  }catch(e){ console.warn(e); setSyncLabel('Error de conexión: guardado solo aquí'); }
+    USER = session ? session.user : null; AUTH_PENDING=false;
+    if (USER && !emailAllowed(USER)) { await sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); }
+    sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; USER=sess?sess.user:null; AUTH_PENDING=false; if(USER && !emailAllowed(USER)){ sb.auth.signOut(); USER=null; toast('Esta cuenta no está autorizada'); render(); return; } if(USER && USER.id!==was){ pullRemote().then(render); } if(!USER && ev==='SIGNED_OUT'){ render(); } });
+    if (USER) await pullRemote(); else setSyncLabel('Sin sesión');
+    render();
+  }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }
 }
 async function pullRemote(){
   if(!sb||!USER) return;
@@ -137,3 +139,5 @@ async function enablePush(){
   toast('Notificaciones activadas en este dispositivo');
 }
 async function disablePush(){ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }
+
+function emailAllowed(u){ const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); if(!list.length) return true; return !!(u&&u.email&&list.includes(u.email.toLowerCase())); }

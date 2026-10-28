@@ -6,6 +6,9 @@ export async function requireUser(req: Request) {
   const auth = req.headers.get("Authorization") || "";
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
   const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+  const allowed = (Deno.env.get("ALLOWED_EMAILS") || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (allowed.length && !(user.email && allowed.includes(user.email.toLowerCase()))) return null;
   return user;
 }
 export async function askClaude(prompt: string, maxTokens = 16000): Promise<string> {
