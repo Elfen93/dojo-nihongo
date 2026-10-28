@@ -2137,19 +2137,22 @@ let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidde
 const VOICE_PREF=[/Nanami/i,/O-?ren/i,/Kyoko/i,/Google 日本語/i,/Google.*ja/i,/Natural/i,/Online/i,/ja[-_]JP/i,/ja/i];
 function jaVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang)); }catch(e){ return []; } }
 function bestVoice(){ const vs=jaVoices(); if(!vs.length) return null; const want=S&&S.settings&&S.settings.voice; if(want){ const v=vs.find(x=>x.name===want); if(v) return v; } for(const re of VOICE_PREF){ const v=vs.find(x=>re.test(x.name)); if(v) return v; } return vs[0]; }
-const TTS_CACHE=new Map(); let ttsAudio=null;
+const TTS_CACHE=new Map(); let ttsAudio=null, speaking=false;
+function stopSpeak(){ try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} setSpeaking(false); }
+function setSpeaking(on){ speaking=on; let b=document.getElementById('stopvoice'); if(on){ if(!b){ b=document.createElement('button'); b.id='stopvoice'; b.className='btn warn'; b.textContent='⏹ Parar voz'; b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.3)'; b.onclick=stopSpeak; document.body.append(b); } } else if(b) b.remove(); }
 async function speak(text){
-  try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){}
+  if (speaking){ stopSpeak(); return; }
+  stopSpeak();
   if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
     try{
       let url=TTS_CACHE.get(text);
       if(!url){ const r=await callFunction('tts',{text}); if(!r||!r.audio) throw new Error(r&&r.error||'sin audio'); const bin=atob(r.audio); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); url=URL.createObjectURL(new Blob([u8],{type:'audio/mpeg'})); if(TTS_CACHE.size>300){ const k=TTS_CACHE.keys().next().value; URL.revokeObjectURL(TTS_CACHE.get(k)); TTS_CACHE.delete(k); } TTS_CACHE.set(text,url); }
-      ttsAudio=new Audio(url); await ttsAudio.play(); return;
+      ttsAudio=new Audio(url); ttsAudio.onended=()=>setSpeaking(false); ttsAudio.onerror=()=>setSpeaking(false); setSpeaking(true); await ttsAudio.play(); return;
     }catch(e){ console.warn('tts',e); if(!speak._warned){ speak._warned=true; toast('Voz neuronal no disponible; uso la voz del navegador'); } }
   }
-  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){}
+  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; u.onend=()=>setSpeaking(false); u.onerror=()=>setSpeaking(false); speechSynthesis.cancel(); setSpeaking(true); speechSynthesis.speak(u);}catch(e){ setSpeaking(false); }
 }
-const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
+const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
 
 // ===================== Kana / romaji =====================
 const kataToHira = s => s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60));
@@ -2784,7 +2787,7 @@ function renderLectura(){
   const qa=h('div',{class:'stack',style:'margin-top:16px'});
   r.q.forEach((q,qi)=>{ const box=h('div',{class:'card'}, h('div',{class:'jp',style:'font-weight:600'},(qi+1)+'. '+q.q)); const ch=h('div',{class:'choices text one'}); q.o.forEach((o,oi)=>ch.append(h('button',{lang:'ja',onclick:()=>{ if(READER.answers[qi]!=null) return; READER.answers[qi]=oi; [...ch.children].forEach((b,i)=>{ b.disabled=true; if(i===q.a) b.classList.add('right'); else if(i===oi) b.classList.add('wrong'); }); checkReadingDone(r); }},o))); box.append(ch); qa.append(box); });
   el.append(h('div',{class:'stack'},
-    h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{READER.id=null;renderLectura();}},'← Lecturas'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>{READER.furi=!READER.furi;reader.classList.toggle('nofuri');}},'Furigana'), h('button',{class:'btn sm',onclick:()=>speak(plainReading(r))},'🔊 Leer'), h('button',{class:'btn sm',onclick:()=>{READER.trans=!READER.trans;$('#trans').hidden=!READER.trans;}},'Traducción')),
+    h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{READER.id=null;renderLectura();}},'← Lecturas'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>{READER.furi=!READER.furi;reader.classList.toggle('nofuri');}},'Furigana'), h('button',{class:'btn sm',onclick:()=>speak(plainReading(r))},'🔊 Leer / parar'), h('button',{class:'btn sm',onclick:()=>{READER.trans=!READER.trans;$('#trans').hidden=!READER.trans;}},'Traducción')),
     h('h1',{class:'jp'},r.title), h('div',{class:'muted small'},r.sub),
     h('div',{class:'card'}, reader),
     gloss,
@@ -2803,7 +2806,7 @@ function addReadingVocab(r){ let n=0; const re=/\[([^|\]]+)\|/g; let m; while((m
 // ===================== Vistas =====================
 const VIEWS=[{id:'hoy',t:'Hoy',ic:'今'},{id:'lecciones',t:'Lecciones',ic:'学'},{id:'repasos',t:'Repasos',ic:'復'},{id:'lectura',t:'Lectura',ic:'読'},{id:'examenes',t:'Exámenes',ic:'試'},{id:'progreso',t:'Progreso',ic:'進'},{id:'ajustes',t:'Ajustes',ic:'設'}];
 let VIEW='hoy';
-function go(id){ VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
+function go(id){ stopSpeak(); VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
 function renderNav(){
   const due=dueItems().length, la=lessonsAvailable();
   const mk=v=>h('button',{class:VIEW===v.id?'active':'',onclick:()=>go(v.id)}, h('span',{class:'ic'},v.ic), h('span',{},v.t), v.id==='repasos'&&due?h('span',{class:'badge'+(due>100?' warn':'')},due):null, v.id==='lecciones'&&la.items.length?h('span',{class:'badge ok'},Math.min(la.items.length,99)):null);
@@ -2931,6 +2934,7 @@ function renderAjustes(){
   const f=(label,input,help)=>h('div',{class:'field'}, h('label',{for:input.id},label), input, help?h('div',{class:'small muted'},help):null);
   const name=h('input',{id:'s-name',type:'text',value:st.name||'',placeholder:'Tu nombre'});
   const target=h('input',{id:'s-target',type:'date',value:st.target||''});
+  const presets=h('select',{id:'s-preset',onchange:e=>{ if(e.target.value) target.value=e.target.value; }}, h('option',{value:''},'Elegir convocatoria JLPT…'), [['2026-12-06','Diciembre 2026 (6 dic)'],['2027-07-04','Julio 2027 (4 jul)'],['2027-12-05','Diciembre 2027 (5 dic)'],['2028-07-02','Julio 2028 (2 jul)']].map(([v,l])=>h('option',{value:v},l)));
   const tier=h('select',{id:'s-tier'}, ['N4','N3','N2','N1'].map(t=>h('option',{value:t,selected:st.targetTier===t},t)));
   const goal=h('input',{id:'s-goal',type:'number',min:0,max:60,value:st.goalLessons});
   const maxr=h('input',{id:'s-maxr',type:'number',min:10,max:500,value:st.maxReviews||100});
@@ -2940,7 +2944,7 @@ function renderAjustes(){
   const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
-    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',target,'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
+    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
     h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)

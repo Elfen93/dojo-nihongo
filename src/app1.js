@@ -29,19 +29,22 @@ let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidde
 const VOICE_PREF=[/Nanami/i,/O-?ren/i,/Kyoko/i,/Google 日本語/i,/Google.*ja/i,/Natural/i,/Online/i,/ja[-_]JP/i,/ja/i];
 function jaVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang)); }catch(e){ return []; } }
 function bestVoice(){ const vs=jaVoices(); if(!vs.length) return null; const want=S&&S.settings&&S.settings.voice; if(want){ const v=vs.find(x=>x.name===want); if(v) return v; } for(const re of VOICE_PREF){ const v=vs.find(x=>re.test(x.name)); if(v) return v; } return vs[0]; }
-const TTS_CACHE=new Map(); let ttsAudio=null;
+const TTS_CACHE=new Map(); let ttsAudio=null, speaking=false;
+function stopSpeak(){ try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} setSpeaking(false); }
+function setSpeaking(on){ speaking=on; let b=document.getElementById('stopvoice'); if(on){ if(!b){ b=document.createElement('button'); b.id='stopvoice'; b.className='btn warn'; b.textContent='⏹ Parar voz'; b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.3)'; b.onclick=stopSpeak; document.body.append(b); } } else if(b) b.remove(); }
 async function speak(text){
-  try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){}
+  if (speaking){ stopSpeak(); return; }
+  stopSpeak();
   if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
     try{
       let url=TTS_CACHE.get(text);
       if(!url){ const r=await callFunction('tts',{text}); if(!r||!r.audio) throw new Error(r&&r.error||'sin audio'); const bin=atob(r.audio); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); url=URL.createObjectURL(new Blob([u8],{type:'audio/mpeg'})); if(TTS_CACHE.size>300){ const k=TTS_CACHE.keys().next().value; URL.revokeObjectURL(TTS_CACHE.get(k)); TTS_CACHE.delete(k); } TTS_CACHE.set(text,url); }
-      ttsAudio=new Audio(url); await ttsAudio.play(); return;
+      ttsAudio=new Audio(url); ttsAudio.onended=()=>setSpeaking(false); ttsAudio.onerror=()=>setSpeaking(false); setSpeaking(true); await ttsAudio.play(); return;
     }catch(e){ console.warn('tts',e); if(!speak._warned){ speak._warned=true; toast('Voz neuronal no disponible; uso la voz del navegador'); } }
   }
-  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){}
+  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; u.onend=()=>setSpeaking(false); u.onerror=()=>setSpeaking(false); speechSynthesis.cancel(); setSpeaking(true); speechSynthesis.speak(u);}catch(e){ setSpeaking(false); }
 }
-const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
+const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'🔊');
 
 // ===================== Kana / romaji =====================
 const kataToHira = s => s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60));

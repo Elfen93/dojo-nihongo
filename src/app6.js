@@ -5,6 +5,7 @@ function renderAjustes(){
   const f=(label,input,help)=>h('div',{class:'field'}, h('label',{for:input.id},label), input, help?h('div',{class:'small muted'},help):null);
   const name=h('input',{id:'s-name',type:'text',value:st.name||'',placeholder:'Tu nombre'});
   const target=h('input',{id:'s-target',type:'date',value:st.target||''});
+  const presets=h('select',{id:'s-preset',onchange:e=>{ if(e.target.value) target.value=e.target.value; }}, h('option',{value:''},'Elegir convocatoria JLPT…'), [['2026-12-06','Diciembre 2026 (6 dic)'],['2027-07-04','Julio 2027 (4 jul)'],['2027-12-05','Diciembre 2027 (5 dic)'],['2028-07-02','Julio 2028 (2 jul)']].map(([v,l])=>h('option',{value:v},l)));
   const tier=h('select',{id:'s-tier'}, ['N4','N3','N2','N1'].map(t=>h('option',{value:t,selected:st.targetTier===t},t)));
   const goal=h('input',{id:'s-goal',type:'number',min:0,max:60,value:st.goalLessons});
   const maxr=h('input',{id:'s-maxr',type:'number',min:10,max:500,value:st.maxReviews||100});
@@ -14,7 +15,7 @@ function renderAjustes(){
   const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim(); st.target=target.value; st.targetTier=tier.value; st.goalLessons=Math.max(0,+goal.value||0); st.maxReviews=Math.max(10,+maxr.value||100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
-    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',target,'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
+    h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Techo de lecciones nuevas por día',goal,'El ritmo real de cada día lo decide la app según tu carga (modo Recuperación, Suave, Normal o Impulso) sin pasar de este techo.'), f('Máximo de repasos por sesión',maxr)),
     h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)
