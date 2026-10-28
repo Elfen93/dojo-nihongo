@@ -179,14 +179,13 @@ function evaluate(ans){
   if (ok && p.pick){ s.phase='pick'; setTimeout(renderStudy,250); return; }
   setTimeout(()=>answerCurrent(ok), ok?250:0);
 }
-// Línea de acierto: la respuesta en una línea y adelante (Enter o espera). "Ver ficha" abre la ficha completa y para el avance.
+// Línea de acierto: la respuesta en una línea y adelante (Enter o espera), sin botones. Las fichas se ven al final de la sesión.
 function quickFeedback(c){
   const p=c.p, it=p.it, s=SESSION;
   const line = it.kind==='v' ? h('span',{class:'jp'}, it.w, ' ', h('span',{class:'muted'},'（'+it.r+'）'), ' · ', h('span',{style:'font-family:var(--f-ui)'},it.m.join(', ')))
     : it.kind==='k' ? h('span',{class:'jp'}, it.k, ' · ', kanjiReadings(it).join('・'), ' · ', h('span',{style:'font-family:var(--f-ui)'},it.m.join(', ')))
     : h('span',{class:'jp'}, p.cloze.pre+p.cloze.answers[0]+p.cloze.post);
-  const fb=h('div',{class:'feedback quick'}, h('div',{class:'verdict ok'},'Correcto'), h('div',{},line),
-    h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>{ if(SESSION!==s||s.cur!==c) return; clearTimeout(s.autoT); c.full=true; renderStudy(); }},'Ver ficha'), h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer')));
+  const fb=h('div',{class:'feedback quick'}, h('div',{class:'verdict ok'},'Correcto'), h('div',{},line));
   const handler=e=>{ if(e.key==='Enter' && SESSION===s && s.cur===c && s.phase==='feedback'){ e.preventDefault(); nextCard(); } };
   if (s.enterHandler) document.removeEventListener('keydown',s.enterHandler);
   s.enterHandler=handler; document.addEventListener('keydown',handler);
