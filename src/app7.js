@@ -3,7 +3,7 @@
 const jaLen = s => (String(s||'').match(/[぀-ヿ一-龯々ー]/g)||[]).length;
 // Frases de una lectura con su versión en kana (para dictado)
 function readingSentences(r){
-  const kana=r.t.replace(/\[([^|\]]+)\|([^|\]]*)\|[^\]]*\]/g,(m,w,rd)=>rd||w), plain=plainReading(r);
+  const rt=r.t.replace(SPEAKER_RE,'$1'); const kana=rt.replace(/\[([^|\]]+)\|([^|\]]*)\|[^\]]*\]/g,(m,w,rd)=>rd||w), plain=plainReading({t:rt});
   const split=t=>t.replace(/\\n|\r?\n/g,'').split('。').map(s=>s.trim()).filter(s=>s.length>=6).map(s=>s+'。');
   const a=split(plain), b=split(kana); return a.map((s,i)=>({j:s,k:b[i]||s,lv:r.lv,es:'',src:r.title})).filter(x=>!/「|」/.test(x.j)||x.j.length<40);
 }
@@ -87,7 +87,7 @@ function renderEscucha(){
     el.append(list); return;
   }
   const r=allReadings().find(x=>x.id===P.id); const sents=readingSentences(r);
-  el.append(h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{ stopSpeak(); P.id=null; renderEscucha(); }},'← Textos'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>speak(plainReading(r))},'音 Todo / parar')));
+  el.append(h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{ stopSpeak(); P.id=null; renderEscucha(); }},'← Textos'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>speakSeq(readingChunks(r))},'音 Todo / parar')));
   el.append(h('h1',{class:'jp'},r.title), h('div',{class:'muted small'},r.sub));
   el.append(h('div',{class:'card'}, h('div',{class:'eyebrow'},'Escucha por frases'), h('div',{class:'row',style:'margin-top:8px'}, sents.map((s,i)=>h('button',{class:'btn sm',onclick:()=>speak(s.j)},String(i+1)))), h('p',{class:'small muted',style:'margin:8px 0 0'},'El texto está oculto. Responde solo con lo que oigas; al terminar podrás leerlo.')));
   const qa=h('div',{class:'stack',style:'margin-top:12px'});

@@ -223,6 +223,17 @@ function renderExamResult(E, rec, secs, penal, msg){
   window.scrollTo(0,0);
 }
 function plainReading(r){ return r.t.replace(/\[([^|\]]+)\|[^\]]*\]/g,'$1'); }
+// Etiqueta de hablante de un diálogo: [A|…] o [B|…] al inicio de línea, seguida de 「
+const SPEAKER_RE=/(^|\n|\\n)\[([AB])\|[^\]]*\](?=「)/g;
+// Texto para el audio: sin etiquetas de hablante ("A", "B") ni anotaciones
+function speechPlain(r){ return plainReading({t:r.t.replace(SPEAKER_RE,'$1')}); }
+// Trozos para leer en voz alta: en un diálogo, una voz por hablante; en un texto normal, todo seguido
+function readingChunks(r){
+  const lines=r.t.split(/\r?\n|\\n/); const chunks=[]; let any=false;
+  for (const ln of lines){ const m=ln.match(/^\[([AB])\|[^\]]*\](?=「)/); const spk=m?m[1]:undefined; if(m) any=true; const txt=plainReading({t:m?ln.slice(m[0].length):ln}).trim(); if(txt) chunks.push({text:txt,spk}); }
+  if (!any) return [{text:speechPlain(r)}];
+  return chunks;
+}
 
 // ===================== Repasos =====================
 function startReviews(onlyLeeches=false, limit=null){

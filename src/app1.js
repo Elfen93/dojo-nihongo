@@ -30,21 +30,32 @@ let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidde
 const VOICE_PREF=[/Nanami/i,/O-?ren/i,/Kyoko/i,/Google 日本語/i,/Google.*ja/i,/Natural/i,/Online/i,/ja[-_]JP/i,/ja/i];
 function jaVoices(){ try{ return speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang)); }catch(e){ return []; } }
 function bestVoice(){ const vs=jaVoices(); if(!vs.length) return null; const want=S&&S.settings&&S.settings.voice; if(want){ const v=vs.find(x=>x.name===want); if(v) return v; } for(const re of VOICE_PREF){ const v=vs.find(x=>re.test(x.name)); if(v) return v; } return vs[0]; }
-const TTS_CACHE=new Map(); let ttsAudio=null, speaking=false;
-function stopSpeak(){ try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} setSpeaking(false); }
+const TTS_CACHE=new Map(); let ttsAudio=null, speaking=false, SEQ=0;
+function stopSpeak(){ SEQ++; try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null; } }catch(e){} try{ speechSynthesis.cancel(); }catch(e){} setSpeaking(false); }
 function setSpeaking(on){ speaking=on; }
-async function speak(text){
-  if (speaking){ stopSpeak(); return; }
-  stopSpeak();
-  if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
-    try{
-      let url=TTS_CACHE.get(text);
-      if(!url){ const r=await callFunction('tts',{text}); if(!r||!r.audio) throw new Error(r&&r.error||'sin audio'); const bin=atob(r.audio); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); url=URL.createObjectURL(new Blob([u8],{type:'audio/mpeg'})); if(TTS_CACHE.size>300){ const k=TTS_CACHE.keys().next().value; URL.revokeObjectURL(TTS_CACHE.get(k)); TTS_CACHE.delete(k); } TTS_CACHE.set(text,url); }
-      ttsAudio=new Audio(url); ttsAudio.onended=()=>setSpeaking(false); ttsAudio.onerror=()=>setSpeaking(false); setSpeaking(true); await ttsAudio.play(); return;
-    }catch(e){ console.warn('tts',e); if(!speak._warned){ speak._warned=true; toast('Voz neuronal no disponible; uso la voz del navegador'); } }
-  }
-  try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const v=bestVoice(); if(v) u.voice=v; u.onend=()=>setSpeaking(false); u.onerror=()=>setSpeaking(false); speechSynthesis.cancel(); setSpeaking(true); speechSynthesis.speak(u);}catch(e){ setSpeaking(false); }
+// Voz del hablante B en diálogos: otra voz japonesa si el navegador la tiene; si no, tono distinto
+function voiceFor(spk){ const base=bestVoice(); if(spk!=='B') return {voice:base,pitch:1}; const vs=jaVoices().filter(v=>!base||v.name!==base.name); return vs.length?{voice:vs[0],pitch:1}:{voice:base,pitch:0.8}; }
+function speakOnce(text, spk){
+  return new Promise(async resolve=>{
+    if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
+      try{
+        const nv=spk==='B'?'ja-JP-Neural2-C':'ja-JP-Neural2-B', key=nv+'|'+text; let url=TTS_CACHE.get(key);
+        if(!url){ const r=await callFunction('tts',{text,voice:nv}); if(!r||!r.audio) throw new Error(r&&r.error||'sin audio'); const bin=atob(r.audio); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); url=URL.createObjectURL(new Blob([u8],{type:'audio/mpeg'})); if(TTS_CACHE.size>300){ const k=TTS_CACHE.keys().next().value; URL.revokeObjectURL(TTS_CACHE.get(k)); TTS_CACHE.delete(k); } TTS_CACHE.set(key,url); }
+        const my=SEQ; if(my!==SEQ) return resolve(); ttsAudio=new Audio(url); ttsAudio.onended=()=>resolve(); ttsAudio.onerror=()=>resolve(); await ttsAudio.play(); return;
+      }catch(e){ console.warn('tts',e); if(!speak._warned){ speak._warned=true; toast('Voz neuronal no disponible; uso la voz del navegador'); } }
+    }
+    try{ if(!('speechSynthesis' in window)) return resolve(); const u=new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=(S&&S.settings&&S.settings.voiceRate)||0.9; const vf=voiceFor(spk); if(vf.voice) u.voice=vf.voice; u.pitch=vf.pitch; u.onend=()=>resolve(); u.onerror=()=>resolve(); speechSynthesis.speak(u); }catch(e){ resolve(); }
+  });
 }
+// Reproduce una lista de trozos [{text, spk}] seguidos; volver a pulsar mientras suena lo detiene
+async function speakSeq(chunks){
+  if (speaking){ stopSpeak(); return; }
+  stopSpeak(); const token=SEQ; setSpeaking(true);
+  try{ speechSynthesis.cancel(); }catch(e){}
+  for (const ch of chunks){ if(token!==SEQ) return; await speakOnce(ch.text, ch.spk); }
+  if (token===SEQ) setSpeaking(false);
+}
+function speak(text, spk){ return speakSeq([{text,spk}]); }
 const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'音');
 
 // ===================== Kana / romaji =====================
