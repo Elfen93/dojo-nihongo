@@ -86,7 +86,7 @@ const WRITING_TOPICS = {
   N2:[{t:'Ventajas e inconvenientes de las redes sociales',d:'Estructura: introducción, dos argumentos por lado, conclusión.'},{t:'Un problema social de tu país',d:'Causas, consecuencias y una propuesta.'},{t:'Carta formal de solicitud',d:'Pide una beca, un puesto o una colaboración (keigo).'},{t:'¿Qué significa aprender un idioma de adulto?',d:'Reflexión con ejemplos propios.'},{t:'Describe un proceso',d:'Cómo se hace algo paso a paso (receta, trámite, trabajo).'}],
   N1:[{t:'Ensayo: tecnología y soledad',d:'Tesis, argumentos con matices, contraargumento y conclusión.'},{t:'Crítica de una decisión política',d:'Expón, analiza y valora con lenguaje formal.'},{t:'Relato breve',d:'Un relato con narrador, diálogo y un giro (lenguaje literario).'},{t:'Informe para tu empresa',d:'Situación, análisis y recomendación (文書体).'}],
 };
-const WRITING_MIN = {N5:120, N4:200, N3:300, N2:400, N1:600};
+const WRITING_MIN = {N5:300, N4:500, N3:700, N2:1000, N1:1300};
 function writingMin(){ return WRITING_MIN[tierOf(S.level).n]||200; }
 function pickTopic(){ const tier=tierOf(S.level).n; const tiers=['N5','N4','N3','N2','N1']; const pool=tiers.slice(0,tiers.indexOf(tier)+1).flatMap(t=>WRITING_TOPICS[t].map(x=>({...x,tier:t}))); const recent=(S.writings||[]).slice(-6).map(w=>w.topic.t); const fresh=pool.filter(x=>!recent.includes(x.t)&&x.tier===tier); const pick1=rnd(fresh.length?fresh:pool); const gs=shuffle(learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='g')).slice(0,2).map(g=>g.t); return {...pick1, use:gs, min:writingMin()}; }
 function renderRedaccion(){
