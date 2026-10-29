@@ -101,7 +101,7 @@ function finishSession(){
       h('div',{class:'eyebrow'}, s.mode==='lesson'?'Lección completada':'Sesión de repaso terminada'),
       h('div',{class:'score '+(pct>=80?'pass':'fail')}, pct+'%'),
       h('p',{class:'muted'}, s.mode==='lesson' ? `${s.total} ${plural(s.total,'ítem','ítems')} nuevos. Primer repaso en 4 horas.` : s.mode==='drill' ? `${s.total-wrong.length} de ${s.total} correctos. El refuerzo no cambia la etapa SRS; lo fallado vuelve a la cola de repasos.` : `${s.total-wrong.length} de ${s.total} correctos. Los fallos vuelven antes.`),
-      s.mode!=='lesson' && pct<70 ? h('div',{class:'push'}, 'Menos del 70 %. Esto no es mala suerte: son ítems que todavía no están asentados. Repásalos ahora con el botón de abajo y vuelve mañana.') : null
+      null
     ),
     sessionSummary(s),
     h('div',{class:'row'},
@@ -119,7 +119,7 @@ function sessionSummary(s){
   const card=r=>{ const it=r.it, rec=S.items[keyOf(it)]||{s:0}; const main=it.kind==='k'?it.k:it.kind==='v'?it.w:it.t; const sub=it.kind==='k'?(it.m||[]).join(', '):it.kind==='v'?it.r+' · '+it.m.join(', '):(it.s||'');
     return h('details',{class:r.failed?'ko':'',open:!!r.failed}, h('summary',{}, h('span',{class:'pill '+it.kind}, it.kind==='k'?'kanji':it.kind==='v'?'vocab':'gram.'), h('div',{style:'min-width:0;flex:1'}, h('div',{class:'t jp'},main), h('div',{class:'small muted'},sub)), h('span',{class:'badge '+(r.failed?'warn':'soft')}, r.failed?'fallado':STAGE_NAMES[rec.s]||'Nuevo')), h('div',{class:'body'}, itemDetails(it, r.lastP)));
   };
-  return h('div',{class:'card'}, h('h3',{}, s.mode==='lesson'?'Lo aprendido en esta lección':'Lo repasado en esta sesión'), h('p',{class:'small muted',style:'margin:2px 0 8px'}, nf?`${nf} ${plural(nf,'fallado')} (abiertos) y ${rs.length-nf} ${plural(rs.length-nf,'acertado')}. Toca cualquiera para ver su ficha.`:'Todo acertado. Toca cualquiera para ver su ficha.'), h('div',{class:'sess'}, rs.map(card)));
+  return h('div',{class:'card'}, h('h3',{}, s.mode==='lesson'?'Lo aprendido en esta lección':'Lo repasado en esta sesión'), h('div',{class:'small muted',style:'margin:2px 0 8px'}, nf?`${nf} ${plural(nf,'fallado')} · ${rs.length-nf} ${plural(rs.length-nf,'acertado')}`:'Todo acertado'), h('div',{class:'sess'}, rs.map(card)));
 }
 function itemRow(it){
   const rec=S.items[keyOf(it)]||{s:0};
@@ -177,7 +177,6 @@ function renderStudy(){
     sendBtn.addEventListener('click',submit);
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
     study.append(h('div',{class:'answer'}, input, sendBtn));
-    study.append(h('div',{class:'kbd',style:'margin-top:6px;text-align:center'}, p.input==='kana'?"Romaji → kana. nn + vocal = んな (annai → あんない); n' separa (sen'en → せんえん). Enter para responder.":'Escribe el significado en español. Enter para responder.'));
     setTimeout(()=>input.focus(),0);
   } else if (s.phase==='pick'){
     study.append(h('div',{class:'muted',style:'margin-top:10px;text-align:center'}, 'Lectura correcta: ', h('b',{class:'jp'},p.it.r), '. Ahora elige cómo se escribe.'));

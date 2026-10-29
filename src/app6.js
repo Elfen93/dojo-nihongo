@@ -2,7 +2,7 @@
 function renderAjustes(){
   const el=$('#main'); const st=S.settings;
   el.append(h('div',{class:'topline'}, h('h1',{},'Ajustes'), h('span',{class:'small muted synclabel'},syncLabel)));
-  const f=(label,input,help)=>h('div',{class:'field'}, h('label',{for:input.id},label), input, help?h('div',{class:'small muted'},help):null);
+  const f=(label,input)=>h('div',{class:'field'}, h('label',{for:input.id},label), input);
   const name=h('input',{id:'s-name',type:'text',value:st.name||'',placeholder:'Tu nombre'});
   const target=h('input',{id:'s-target',type:'date',value:st.target||''});
   const presets=h('select',{id:'s-preset',onchange:e=>{ if(e.target.value) target.value=e.target.value; }}, h('option',{value:''},'Elegir convocatoria JLPT…'), [['2026-12-06','Diciembre 2026 (6 dic)'],['2027-07-04','Julio 2027 (4 jul)'],['2027-12-05','Diciembre 2027 (5 dic)'],['2028-07-02','Julio 2028 (2 jul)']].map(([v,l])=>h('option',{value:v},l)));
@@ -21,17 +21,17 @@ function renderAjustes(){
     const wkEl=$('#s-wk'), bpEl=$('#s-bp'), vEl=$('#s-voice'), rEl=$('#s-rate'), nEl=$('#s-neural'); if(wkEl) st.wkToken=wkEl.value.trim(); if(bpEl) st.bpKey=bpEl.value.trim(); if(vEl) st.voice=vEl.value; if(rEl) st.voiceRate=+rEl.value||0.9; if(nEl) st.neuralVoice=nEl.checked;
     S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
+  el.append(h('div',{class:'row',style:'margin-top:12px'}, h('button',{class:'btn',onclick:()=>go('guia')},'Guía de uso')));
   el.append(updateCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
     h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Kanji y vocabulario nuevos por día (techo)',goal,'El ritmo real lo decide la app según tu carga (Recuperación, Suave, Normal, Impulso) sin pasar de este techo. Las palabras se desbloquean cuando sus kanji llegan a Gurú.'), f('Puntos de gramática nuevos por día',goalG,'Se reduce a la mitad en modo Suave y a cero en Recuperación. Con 1 al día llegas a N2 en unos dos años; con 2, en uno.'), f('Máximo de repasos por sesión',maxr)),
-    h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')), h('div',{class:'row'}, h('label',{class:'row small'},autoNext,' Pasar a la siguiente automáticamente cuando acierto')), h('div',{class:'row'}, h('label',{class:'row small'},askR,' Preguntar también la lectura a partir del kanji en vocabulario (tercera pregunta)')),
+    h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo (sin adaptación)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Furigana en las lecturas')), h('div',{class:'row'}, h('label',{class:'row small'},autoNext,' Avanzar solo al acertar')), h('div',{class:'row'}, h('label',{class:'row small'},askR,' Preguntar también la lectura')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)
   const wk=h('input',{id:'s-wk',type:'password',value:st.wkToken||'',placeholder:'Token de API v2 de WaniKani',autocomplete:'off'});
   const bp=h('input',{id:'s-bp',type:'password',value:st.bpKey||'',placeholder:'Clave de API de Bunpro',autocomplete:'off'});
   const syncStatus=h('div',{class:'small muted'}, S.sync&&S.sync.wkDiag?h('div',{},S.sync.wkDiag):null, S.sync&&S.sync.bpDiag?h('div',{style:'margin-bottom:6px'},S.sync.bpDiag):null, S.sync&&S.sync.date? `Última sincronización: ${fmtDate(S.sync.date)} · WaniKani nivel ${S.sync.wkLevel||'—'} · ${S.sync.wkMatched||0} ítems alineados · Bunpro ${S.sync.bpMatched||0} puntos alineados` : 'Sin sincronizar todavía.');
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'WaniKani y Bunpro'),
-    h('p',{class:'small',style:'margin:0'},'WaniKani: guarda tu token y pulsa sincronizar; todo lo que tengas empezado allí (Aprendiz, Gurú, Maestro…) entra aquí con la misma etapa SRS. Puedes repetirlo cuando quieras: nunca baja lo que ya tienes aquí. Bunpro: su API pública está fuera de servicio (responde error 500 a todo); usa el panel "Gramática que ya dominas" de abajo para marcar en bloque lo que tienes hecho allí.'),
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
     h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); S.settingsAt=now(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
@@ -43,12 +43,11 @@ function renderAjustes(){
   const rate=h('input',{id:'s-rate',type:'range',min:'0.6',max:'1.2',step:'0.05',value:st.voiceRate||0.9});
   const neural=h('input',{id:'s-neural',type:'checkbox',checked:!!st.neuralVoice});
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Voz'),
-    h('p',{class:'small muted',style:'margin:0'},'La voz del navegador depende del sistema: en Edge (Windows), Safari (iPhone/Mac) y Chrome en Android hay voces japonesas naturales gratuitas; Chrome en Windows solo tiene la robótica. La voz neuronal de Google suena como una persona y requiere configurar una clave en el servidor (función tts).'),
     h('div',{class:'grid c2'}, f('Voz del navegador',vsel), f('Velocidad',rate)),
     h('div',{class:'row'}, h('label',{class:'row small'},neural,' Usar voz neuronal de Google cuando esté disponible')),
     h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ st.voice=vsel.value; st.voiceRate=+rate.value; st.neuralVoice=neural.checked; S.settingsAt=now(); save(); speak('日本語の勉強は毎日続けることが大切です。'); }},'Guardar y probar la voz'))));
   // Notificaciones
-  const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'), h('p',{class:'small',style:'margin:0'},'La app te avisa cuando se acumulan repasos, cuando vence el examen semanal y si a última hora del día no has estudiado. En iPhone hace falta tener la app añadida a la pantalla de inicio.'));
+  const pushBox=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Notificaciones'));
   const pstatus=h('div',{class:'small muted'},'Comprobando…'); const prow=h('div',{class:'row'}); pushBox.append(pstatus,prow); el.append(pushBox);
   pushStatus().then(stt=>{ pstatus.textContent={unsupported:'Este navegador no admite notificaciones push.',denied:'Has bloqueado las notificaciones en el navegador; actívalas en los ajustes del sitio.',on:'Activadas en este dispositivo.',off:'Desactivadas en este dispositivo.'}[stt]; if(stt==='on') prow.append(h('button',{class:'btn sm',onclick:()=>disablePush().then(()=>renderAjustes2())},'Desactivar aquí')); if(stt==='off') prow.append(h('button',{class:'btn primary',onclick:()=>enablePush().then(()=>renderAjustes2())},'Activar notificaciones')); });
   // Copia de seguridad
@@ -56,12 +55,6 @@ function renderAjustes(){
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Copia de seguridad'),
     h('div',{class:'row'}, h('button',{class:'btn',onclick:exportBackup},'Descargar copia (.json)'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Copiado al portapapeles')).catch(()=>{ ta.value=JSON.stringify(S); ta.select(); toast('Selecciona y copia el texto'); }); }},'Copiar al portapapeles'), h('span',{class:'sp'}), h('button',{class:'btn warn sm',onclick:()=>confirmBox('Esto borra TODO tu progreso en este dispositivo y en tu cuenta. ¿Seguro?',()=>{ S=DEFAULT_STATE(); S.resetAt=now(); S.settingsAt=now(); loadGenLocal(); save(); go('hoy'); toast('Progreso borrado'); })},'Borrar progreso')),
     f('Restaurar',ta), h('button',{class:'btn',onclick:()=>{ try{ const o=parseLooseJson(ta.value); if(!o||!o.items) throw 0; S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; S.gen={...(S.gen||{}),...(o.gen||{})}; S.pace=null; S.settingsAt=now(); S.updated=now(); registerGenerated(); updateStreak(); save(); toast('Copia restaurada'); go('hoy'); }catch(e){ toast('JSON no válido'); } }},'Restaurar desde el texto')));
-  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Cómo funciona'), h('ul',{class:'small',style:'padding-left:18px;margin:8px 0 0'},
-    h('li',{},'SRS con 9 etapas (4 h → 8 h → 1 d → 2 d → 1 sem → 2 sem → 1 mes → 4 meses → quemado). Fallar baja una etapa (dos si estabas en Gurú o más).'),
-    h('li',{},'El vocabulario se pregunta en tres direcciones; la de español → japonés con elección del kanji es la que entrena tu punto débil.'),
-    h('li',{},'Examen semanal obligatorio: si pasa más de un día de la fecha, se bloquean las lecciones. Examen de nivel al 80 % para subir. Los fallos de examen vuelven a la cola de repasos al momento.'),
-    h('li',{},'Las lecciones se bloquean con más de 150 repasos pendientes: primero vaciar, luego aprender.'),
-    h('li',{},'N5 y N4 van incluidos. N3, N2 y N1 se generan nivel a nivel con Claude cuando llegas a ellos.'))));
   collapseSettingsOnMobile();
 }
 // JSON pegado a mano: admite vallas ```json y texto alrededor
@@ -124,7 +117,6 @@ function generatePanel(lv){
   const ta=h('textarea',{id:'gen-paste',placeholder:'Pega aquí el JSON generado'});
   const box=h('div',{class:'card stack'},
     h('h3',{},`Generar el nivel ${lv} (${tier.n})`),
-    h('p',{class:'small',style:'margin:0'},`Este nivel tiene ${ks.length} kanji y ${gs.length} puntos gramaticales previstos. El contenido completo (significados en español, mnemotecnias, vocabulario con ejemplos, explicaciones y frases con hueco) se genera con Claude y se guarda en tu cuenta.`),
     h('div',{class:'row'}, ks.map(k=>h('span',{class:'pill k jp',style:'font-size:1.1rem'},k.k))),
     h('div',{class:'row'}, gs.map(g=>h('span',{class:'pill g jp'},g))),
     h('div',{class:'row'}, h('button',{class:'btn primary',id:'gen-btn',onclick:()=>generateWithClaude(lv,status)},'Generar con Claude'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(generationPrompt(lv)).then(()=>toast('Prompt copiado: pégalo en Claude y trae el JSON')).catch(()=>{ ta.value=generationPrompt(lv); ta.select(); toast('Copia el texto del cuadro'); }); }},'Copiar prompt para hacerlo a mano')),
@@ -205,10 +197,10 @@ function showUpdateBar(){
   document.body.append(bar);
 }
 function updateCard(){
-  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Actualizar la app'), h('p',{class:'small muted',style:'margin:0'},'Descarga la última versión publicada. Tu progreso está en tu cuenta y no se toca.'), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:updateApp},'Actualizar ahora'), h('span',{class:'small muted'},'Versión: '+APP_BUILD)));
+  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Actualizar la app'), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:updateApp},'Actualizar ahora'), h('span',{class:'small muted'},'Versión: '+APP_BUILD)));
 }
 function masteredGrammarCard(){
-  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Gramática que ya dominas'), h('p',{class:'small muted',style:'margin:0'},'Marca lo que ya tienes hecho en Bunpro (u otro sitio). Entra como Gurú I: no se enseña de cero, pero sigue en repasos espaciados. Lo que ya esté a un nivel igual o superior no cambia.'));
+  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Gramática que ya dominas'));
   const applyMany=(items)=>{ let n=0; for(const it of items){ const k=keyOf(it); const cur=S.items[k]; if(!cur||cur.s<5){ S.items[k]={...(cur||{c:0,w:0}), s:5, due:now()+STAGE_HOURS[5]*H*Math.random(), lrn:cur&&cur.lrn||now(), ls:now()}; n++; } } save(); toast(n?`${n} puntos marcados como dominados`:'Nada que cambiar'); renderAjustes2(); };
   TIERS.filter(t=>t.n==='N5'||t.n==='N4').forEach(t=>{
     const gs=GRAMMAR_ALL.filter(g=>g.lv>=t.from&&g.lv<=t.to); const done=gs.filter(g=>S.items['g|'+g.id]&&S.items['g|'+g.id].s>=5).length;
@@ -221,7 +213,7 @@ function masteredGrammarCard(){
 }
 
 function adminCard(){
-  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Cuentas autorizadas'), h('p',{class:'small muted',style:'margin:0'},'Solo tú ves este panel. Las cuentas de esta lista pueden entrar y usar las funciones de Claude; el resto puede iniciar sesión con Google pero no accede a nada.'));
+  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Cuentas autorizadas'));
   const list=h('div',{class:'list'}); const email=h('input',{type:'email',placeholder:'correo@gmail.com',autocomplete:'off',style:'flex:1;min-width:0'}); const note=h('input',{type:'text',placeholder:'nota (opcional)',style:'flex:1;min-width:0'});
   const refresh=async()=>{ list.innerHTML=''; try{ const rows=await adminList(); if(!rows.length) list.append(h('div',{class:'small muted'},'Lista vacía (ejecuta schema3.sql).')); rows.forEach(r=>list.append(h('div',{class:'item'}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},r.email), h('div',{class:'small muted'},(r.note||'')+(r.added_at?' · '+fmtDate(new Date(r.added_at).getTime()):''))), r.email.toLowerCase()===(USER.email||'').toLowerCase()?h('span',{class:'badge soft'},'tú'):h('button',{class:'btn sm warn',onclick:()=>confirmBox(`¿Quitar el acceso a ${r.email}? Su progreso se conserva pero no podrá entrar.`,async()=>{ try{ await adminRemove(r.email); toast('Acceso retirado'); refresh(); }catch(e){ toast('Error: '+e.message); } })},'Quitar')))); }catch(e){ list.append(h('div',{class:'small muted'},'No se pudo leer la lista: '+e.message+'. ¿Has ejecutado schema3.sql?')); } };
   box.append(list, h('div',{class:'row'}, email, note, h('button',{class:'btn primary',onclick:async()=>{ const v=email.value.trim().toLowerCase(); if(!v.includes('@')){ toast('Correo no válido'); return; } try{ await adminAdd(v,note.value.trim()); email.value=''; note.value=''; toast('Cuenta autorizada'); refresh(); }catch(e){ toast('Error: '+e.message); } }},'Autorizar')));

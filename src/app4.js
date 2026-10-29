@@ -69,7 +69,6 @@ function renderLesson(){
     const ks=[...it.w].filter(hasKanji).map(ch=>KANJI_META[ch]||(ITEMS.get('k|'+ch))).filter(Boolean);
     if (ks.length) card.append(h('div',{class:'mn'}, h('b',{class:'small'},'Composición · '), h('span',{class:'jp'}, ks.map(k=>k.k+' ('+(k.m||[])[0]+')').join(' + '))));
     if (it.ex) card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, it.ex, ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
-    card.append(h('div',{class:'small muted',style:'margin-top:10px'}, 'En los repasos te pediré también la dirección español → japonés: ', h('b',{},it.m[0]), ' → ', h('b',{class:'jp'},it.r), '. Fíjate ahora en cómo se escribe.'));
   } else {
     card.append(h('div',{class:'ask g',style:'text-align:center'},'Gramática nueva'), h('div',{class:'mid-jp',style:'text-align:center;font-weight:700'},it.t), h('div',{class:'small muted jp',style:'text-align:center'}, it.s||''), h('p',{style:'margin:10px 0 0'}, it.e||''));
     (it.ex||[]).forEach(ex=>{ const c=parseCloze(ex.j); card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, c.pre, h('b',{style:'color:var(--leaf)'},c.answers[0]), c.post, ' ', spkBtn(c.pre+c.answers[0]+c.post)), h('div',{class:'small muted'}, ex.s))); });
@@ -217,7 +216,7 @@ function renderExamResult(E, rec, secs, penal, msg){
   el.append(h('div',{class:'study stack'},
     h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},E.title), h('div',{class:'score '+(pct>=passAt?'pass':'fail')},pct+'%'), h('div',{class:'muted'},`${ok}/${total} · ${rec.minutes} min`), h('p',{},msg), penal?h('div',{class:'small muted'},`${penal} ${plural(penal,'ítem','ítems')} han bajado de nivel SRS y están pendientes ahora.`):null),
     h('div',{class:'result-grid'}, Object.entries(secs).map(([s,v])=>h('div',{class:'card'}, h('div',{class:'section-tag'},s), h('div',{class:'num',style:'font-weight:700;font-size:1.2rem'},`${v.ok}/${v.n}`), h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))),
-    h('div',{class:'card'}, h('h3',{},'Revisión de fallos'), E.answers.some(a=>!a.ok&&a.typed)?h('p',{class:'small muted',style:'margin:2px 0 8px'},'En las frases libres puede haber más de una traducción correcta. Si la tuya lo era, pulsa «Era válida» o pregúntale a Claude.'):null, h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Pregunta'),h('th',{},'Tu respuesta'),h('th',{},'Correcta'),h('th',{},''))), h('tbody',{}, rows, rows.length?null:h('tr',{},h('td',{colspan:4},'Sin fallos. Impecable.')))))),
+    h('div',{class:'card'}, h('h3',{},'Revisión de fallos'), h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Pregunta'),h('th',{},'Tu respuesta'),h('th',{},'Correcta'),h('th',{},''))), h('tbody',{}, rows, rows.length?null:h('tr',{},h('td',{colspan:4},'Sin fallos. Impecable.')))))),
     h('div',{class:'row'}, penal?h('button',{class:'btn warn',onclick:()=>startReviews()},'Repasar los fallos ahora'):null, h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'))
   ));
   window.scrollTo(0,0);

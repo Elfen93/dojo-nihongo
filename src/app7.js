@@ -21,19 +21,13 @@ function renderPractica(){
   if (PRACT.mode==='escucha') return renderEscucha();
   if (PRACT.mode==='redaccion') return renderRedaccion();
   const d=day(); const ws=(S.writings||[]).slice(-1)[0]; const minW=writingMin();
-  el.append(h('div',{class:'topline'}, h('h1',{},'Práctica'), h('span',{class:'small muted'},'Escucha y escritura: lo que el SRS no entrena.')));
+  el.append(h('div',{class:'topline'}, h('h1',{},'Práctica')));
   el.append(h('div',{class:'grid c3'},
-    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Dictado'), h('p',{class:'small',style:'margin:0'},'Oyes una frase sin verla: primero la escribes en kana (se corrige carácter a carácter) y después la traduces al español y la comparas con la referencia.'), h('div',{class:'small muted'},`Hoy: ${d.di||0} ${plural(d.di||0,'frase')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'dictado',n:0,sum:0,plays:0}; nextDictation(); }},'Empezar (10 frases)')),
-    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Comprensión auditiva'), h('p',{class:'small',style:'margin:0'},'Una lectura entera solo con el oído: escuchas el texto y respondes a las preguntas sin leer.'), h('div',{class:'small muted'},`${Object.keys(S.listen||{}).length} ${plural(Object.keys(S.listen||{}).length,'texto escuchado','textos escuchados')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'escucha',id:null}; renderPractica(); }},'Elegir texto')),
-    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Redacción · grado ${writingGrade()} de 10 (${WRITING_GRADES[writingGrade()].tier})`), h('p',{class:'small',style:'margin:0'},`Un tema, entre ${writingRange()[0]} y ${writingRange()[1]} caracteres, y corrección de Claude: errores, versión natural, nota y dónde estudiar lo que falles.`), h('div',{class:'small muted'},(writingGrade()<10?`${writingPassCount()} de ${WR_NEED} con ${WR_PASS} % o más para subir de grado`:'Grado máximo')+(ws?` · última: ${fmtDate(ws.date)}, ${ws.score!=null?ws.score+'%':'sin corregir'}`:'')), writingLowStreak()?h('div',{class:'small',style:'color:var(--warn)'},'Dos notas bajas seguidas: te propongo repetir el mismo tema.'):null, h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(true),text:'',result:null}; renderPractica(); }},'Escribir'))));
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Dictado'), h('div',{class:'small muted'},`Hoy: ${d.di||0} ${plural(d.di||0,'frase')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'dictado',n:0,sum:0,plays:0}; nextDictation(); }},'Empezar (10 frases)')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Comprensión auditiva'), h('div',{class:'small muted'},`${Object.keys(S.listen||{}).length} ${plural(Object.keys(S.listen||{}).length,'texto escuchado','textos escuchados')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'escucha',id:null}; renderPractica(); }},'Elegir texto')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Redacción · grado ${writingGrade()} de 10 (${WRITING_GRADES[writingGrade()].tier})`), h('div',{class:'small muted'},`${writingRange()[0]} a ${writingRange()[1]} caracteres`), h('div',{class:'small muted'},(writingGrade()<10?`${writingPassCount()}/${WR_NEED} para subir`:'Grado máximo')+(ws?` · última ${ws.score!=null?ws.score+' %':'sin corregir'}`:'')), writingLowStreak()?h('div',{class:'small',style:'color:var(--warn)'},'Repite el mismo tema.'):null, h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(true),text:'',result:null}; renderPractica(); }},'Escribir'))));
   const ws10=(S.writings||[]).slice(-10).reverse();
   if (ws10.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Redacciones'), h('div',{class:'list',style:'margin-top:8px'}, ws10.map(w=>h('button',{class:'item',onclick:()=>{ PRACT={mode:'redaccion',topic:w.topic,text:w.text,result:w.result||null,saved:true}; renderPractica(); }}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},w.topic.t), h('div',{class:'small muted'},`${fmtDate(w.date)} · ${jaLen(w.text)} caracteres`)), h('span',{class:'badge '+(w.score>=70?'ok':'soft')}, w.score!=null?w.score+'%':'—'))))));
-  el.append(h('div',{class:'card soft',style:'margin-top:12px'}, h('h3',{},'Recursos gratuitos para escuchar y escribir'), h('ul',{class:'small',style:'margin:8px 0 0;padding-left:18px'},
-    h('li',{}, h('a',{href:'https://www.jlpt.jp/e/samples/forlearners.html',target:'_blank',rel:'noopener'},'JLPT: preguntas de muestra oficiales'), ' con audio de 聴解 de cada nivel. Es el formato exacto del examen.'),
-    h('li',{}, h('a',{href:'https://www3.nhk.or.jp/news/easy/',target:'_blank',rel:'noopener'},'NHK News Web Easy'), ': noticias con audio y furigana. Escucha primero, lee después; pega el texto en Lectura para el glosario.'),
-    h('li',{}, h('a',{href:'https://tadoku.org/japanese/en/free-books-en/',target:'_blank',rel:'noopener'},'Tadoku'), ': libros graduados gratis (niveles 0 a 5), muchos con audio.'),
-    h('li',{}, h('a',{href:'https://www.erin.jpf.go.jp/',target:'_blank',rel:'noopener'},'Erin\'s Challenge (Fundación Japón)'), ': vídeos con diálogos reales y transcripción, N5 a N4.'),
-    h('li',{}, h('a',{href:'https://langcorrect.com/',target:'_blank',rel:'noopener'},'LangCorrect'), ' y ', h('a',{href:'https://hinative.com/',target:'_blank',rel:'noopener'},'HiNative'), ': correcciones de redacciones por hablantes nativos, para contrastar con la corrección de aquí.'))));
 }
 // ---------- Dictado ----------
 function nextDictation(){
@@ -50,7 +44,7 @@ function renderDictado(){
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
     const submit=()=>{ const v=input.value.trim(); if(!v) return; P.answer=toKana(v,true); const r=kanaDiff(P.answer,c.k); P.last=r; S.stats=S.stats||{}; const st=S.stats.di=S.stats.di||{c:0,w:0}; if(r.pct>=85) st.c++; else st.w++; renderDictado(); };
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
-    wrap.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Corregir',onclick:submit},'→')), h('div',{class:'kbd',style:'margin-top:6px;text-align:center'},'Paso 1 de 2: escribe lo que oyes. Puedes escucharla las veces que quieras. Enter para corregir.'));
+    wrap.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Corregir',onclick:submit},'→')));
     setTimeout(()=>input.focus(),0);
   } else if (P.trans==null){
     // Paso 2: traducir al español lo escuchado
@@ -58,7 +52,7 @@ function renderDictado(){
     const ta=h('input',{type:'text',id:'ans',autocomplete:'off',lang:'es',placeholder:'¿Qué significa? Escríbelo en español'});
     const go2=()=>{ const v=ta.value.trim(); if(!v) return; P.trans=v; renderDictado(); };
     ta.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go2(); } });
-    fb.append(h('div',{class:'answer'}, ta, h('button',{class:'btn primary',title:'Comprobar',onclick:go2},'→')), h('div',{class:'kbd',style:'margin-top:6px;text-align:center'},'Paso 2 de 2: traduce la frase que has oído. Enter para comparar.'));
+    fb.append(h('div',{class:'answer'}, ta, h('button',{class:'btn primary',title:'Comprobar',onclick:go2},'→')));
     wrap.append(fb); setTimeout(()=>ta.focus(),0);
   } else {
     const r=P.last; const fb=h('div',{class:'feedback'}, h('div',{class:'verdict '+(r.pct>=85?'ok':'ko')}, `Dictado: ${r.pct} %`, h('span',{class:'muted',style:'font-weight:400'},` · escuchada ${P.plays+1} ${plural(P.plays+1,'vez','veces')}`)));
@@ -70,7 +64,7 @@ function renderDictado(){
     add('Referencia', c.es||h('span',{class:'muted'},'(sin traducción de referencia para esta frase)'));
     fb.append(dl);
     const finish=(g)=>{ if(P.graded) return; P.graded=true; P.sum+=Math.round(r.pct*0.5+g*50); S.stats=S.stats||{}; const st=S.stats.tr=S.stats.tr||{c:0,w:0}; if(g>=0.5) st.c++; else st.w++; bump('di'); P.n++; nextDictation(); };
-    fb.append(h('div',{class:'small muted',style:'margin-top:10px'},'¿Tu traducción recoge el sentido?'), h('div',{class:'row',style:'margin-top:6px'}, h('button',{class:'btn',onclick:()=>finish(1)},'Sí (1)'), h('button',{class:'btn',onclick:()=>finish(0.5)},'A medias (2)'), h('button',{class:'btn warn',onclick:()=>finish(0)},'No (3)')));
+    fb.append(h('div',{class:'small muted',style:'margin-top:10px'},'¿Tu traducción es correcta?'), h('div',{class:'row',style:'margin-top:6px'}, h('button',{class:'btn',onclick:()=>finish(1)},'Sí (1)'), h('button',{class:'btn',onclick:()=>finish(0.5)},'A medias (2)'), h('button',{class:'btn warn',onclick:()=>finish(0)},'No (3)')));
     wrap.append(fb);
     const hd=e=>{ if(PRACT!==P||P.trans==null) return; const g={'1':1,'2':0.5,'3':0}[e.key]; if(g==null) return; e.preventDefault(); document.removeEventListener('keydown',hd); finish(g); }; document.addEventListener('keydown',hd); P.kh=hd;
   }
@@ -89,7 +83,7 @@ function renderEscucha(){
   const r=allReadings().find(x=>x.id===P.id); const sents=readingSentences(r);
   el.append(h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{ stopSpeak(); P.id=null; renderEscucha(); }},'← Textos'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>speakSeq(readingChunks(r))},'音 Todo / parar')));
   el.append(h('h1',{class:'jp'},r.title), h('div',{class:'muted small'},r.sub));
-  el.append(h('div',{class:'card'}, h('div',{class:'eyebrow'},'Escucha por frases'), h('div',{class:'row',style:'margin-top:8px'}, sents.map((s,i)=>h('button',{class:'btn sm',onclick:()=>speak(s.j)},String(i+1)))), h('p',{class:'small muted',style:'margin:8px 0 0'},'El texto está oculto. Responde solo con lo que oigas; al terminar podrás leerlo.')));
+  el.append(h('div',{class:'card'}, h('div',{class:'eyebrow'},'Escucha por frases'), h('div',{class:'row',style:'margin-top:8px'}, sents.map((s,i)=>h('button',{class:'btn sm',onclick:()=>speak(s.j)},String(i+1))))));
   const qa=h('div',{class:'stack',style:'margin-top:12px'});
   r.q.forEach((q,qi)=>{ const box=h('div',{class:'card'}, h('div',{class:'row'}, h('div',{class:'jp',style:'font-weight:600;flex:1'},(qi+1)+'. '+q.q), spkBtn(q.q))); const ch=h('div',{class:'choices text one'}); q.o.forEach((o,oi)=>ch.append(h('button',{lang:'ja',onclick:()=>{ if(P.answers[qi]!=null) return; P.answers[qi]=oi; [...ch.children].forEach((b,i)=>{ b.disabled=true; if(i===q.a) b.classList.add('right'); else if(i===oi) b.classList.add('wrong'); }); if(Object.keys(P.answers).length>=r.q.length){ const ok=r.q.filter((x,i)=>P.answers[i]===x.a).length; const score=Math.round(100*ok/r.q.length); S.listen=S.listen||{}; S.listen[r.id]={score,date:now()}; bump('li'); toast(`Escucha completada: ${score}%`); $('#li-text').hidden=false; } }},o))); box.append(ch); qa.append(box); });
   el.append(h('h2',{},'Preguntas'), qa, h('div',{id:'li-text',class:'card soft',hidden:true,style:'margin-top:12px'}, h('div',{class:'eyebrow'},'Texto'), h('div',{class:'jp',style:'margin-top:6px;line-height:2'},plainReading(r)), h('div',{class:'small muted',style:'margin-top:8px'},r.es)));
@@ -117,7 +111,7 @@ function pickTopic(repeat){ const g=writingGrade(); const tier=WRITING_GRADES[g]
 function renderRedaccion(){
   const P=PRACT, el=$('#main'); el.innerHTML=''; const tp=P.topic;
   el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Redacción'), h('button',{class:'btn sm',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(),text:'',result:null}; renderPractica(); }},'Otro tema')));
-  el.append(h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Tema · ${tp.tier||''} · grado ${tp.grade||writingGrade()} · entre ${tp.min} y ${tp.max||Math.round(tp.min*1.4)} caracteres`), h('h2',{},tp.t), h('p',{class:'small',style:'margin:0'},tp.d), tp.use&&tp.use.length?h('div',{class:'small muted'},'Intenta usar: ', tp.use.map(t=>h('span',{class:'pill g jp',style:'margin:2px'},t))):null));
+  el.append(h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Tema · ${tp.tier||''} · grado ${tp.grade||writingGrade()} · entre ${tp.min} y ${tp.max||Math.round(tp.min*1.4)} caracteres`), h('h2',{},tp.t), h('p',{class:'small',style:'margin:0'},tp.d), tp.use&&tp.use.length?h('div',{class:'small muted'},'Usa: ', tp.use.map(t=>h('span',{class:'pill g jp',style:'margin:2px'},t))):null));
   const counter=h('span',{class:'num small muted'});
   const ta=h('textarea',{id:'wr-text',lang:'ja',placeholder:'Escribe aquí en japonés con tu teclado japonés (kanji y kana). Sin límite máximo.',style:'min-height:220px;font-family:var(--f-jp);font-size:1.1rem'}); ta.value=P.text||'';
   const upd=()=>{ const n=jaLen(ta.value), mx=tp.max||Math.round(tp.min*1.4); counter.textContent=`${n} caracteres · entre ${tp.min} y ${mx}`+(n>mx?' (te has pasado; no pasa nada, pero sé conciso)':''); counter.style.color=n<tp.min?'var(--muted)':n>mx?'var(--warn)':'var(--ok)'; btn.disabled=n<tp.min; saveBtn.disabled=n<Math.floor(tp.min/2); P.text=ta.value; }; ta.addEventListener('input',upd);
@@ -146,7 +140,58 @@ function studyLinks(errors){
     list.append(h('div',{class:'row small',style:'align-items:center'}, h('b',{class:'jp'},pt), own?h('button',{class:'pill g jp',title:'Ver el punto en la app',onclick:()=>itemSheet(own)},'En la app: '+own.t):h('span',{class:'muted'},'(no está en el temario de la app)'),
       h('a',{href:'https://bunpro.jp/grammar_points?search='+q,target:'_blank',rel:'noopener'},'Bunpro'), h('a',{href:'https://jlptsensei.com/?s='+q,target:'_blank',rel:'noopener'},'JLPT Sensei'), h('a',{href:'https://www.google.com/search?q='+encodeURIComponent(pt+' gramática japonesa'),target:'_blank',rel:'noopener'},'Buscar')));
   });
-  box.append(list, h('p',{class:'small muted',style:'margin:6px 0 0'},'Para explicaciones en español: la ', h('a',{href:'https://www.guidetojapanese.org/spanish/',target:'_blank',rel:'noopener'},'Guía de Tae Kim'), ' (gramática completa, gratis) y ', h('a',{href:'https://hablajapones.org/',target:'_blank',rel:'noopener'},'Habla Japonés'), '.'));
+  box.append(list);
   return box;
 }
 function saveWriting(P,r){ S.writings=S.writings||[]; const rec={date:now(),topic:P.topic,grade:P.topic.grade||writingGrade(),text:P.text,score:r?r.score:null,result:r?{score:r.score,comment:r.comment||'',errors:(r.errors||[]).slice(0,30).map(e=>({orig:e.orig||'',fix:e.fix||'',why:e.why||'',point:e.point||''})),corrected:r.corrected||'',level:r.level||''}:null}; const i=S.writings.findIndex(w=>w.topic.t===P.topic.t&&w.text===P.text); if(i>=0) S.writings[i]=rec; else S.writings.push(rec); if(S.writings.length>50) S.writings=S.writings.slice(-50); if(!P.saved) bump('wr'); P.saved=true; save(); }
+
+// ===================== Guía de uso =====================
+function renderGuia(){
+  const el=$('#main'); el.innerHTML='';
+  el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>go('ajustes')},'← Ajustes'), h('h1',{},'Guía de uso')));
+  const a=(href,t)=>h('a',{href,target:'_blank',rel:'noopener'},t);
+  const sec=(title,...kids)=>h('details',{class:'sec'}, h('summary',{},title), h('div',{class:'stack small'}, ...kids));
+  const ul=(...items)=>h('ul',{style:'padding-left:18px;margin:0;display:flex;flex-direction:column;gap:6px'}, items.map(i=>h('li',{},i)));
+  el.append(h('div',{class:'card'},
+    sec('Cómo se estudia',
+      ul('Cada día: primero los repasos, después las lecciones nuevas. Con más de 150 repasos pendientes las lecciones se bloquean.',
+         'El SRS tiene 9 etapas: 4 h, 8 h, 1 día, 2 días, 1 semana, 2 semanas, 1 mes, 4 meses y quemado. Fallar baja una etapa, o dos si ya estabas en Gurú o más.',
+         'El ritmo se adapta solo (Recuperación, Suave, Normal, Impulso) sin pasar del techo que fijes en Ajustes. Con «Ritmo fijo» se desactiva la adaptación.',
+         'Kanji y vocabulario cuentan aparte de la gramática, cada uno con su objetivo diario. Una palabra se desbloquea cuando sus kanji llegan a Gurú.')),
+    sec('Lecciones',
+      ul('Cada lección son 5 ítems de kanji o vocabulario, o 3 puntos de gramática, seguidos de un test corto.',
+         '«Ya lo sé» quema el ítem (no vuelve a salir) y entra el siguiente disponible.',
+         'En la lista del nivel, los ítems opacos están sin aprender y los que tienen borde verde están en Gurú o más. Pulsa uno para ver su ficha.')),
+    sec('Repasos',
+      ul('Kanji: significado y lectura. Vocabulario: significado y español → japonés eligiendo el kanji (tu punto débil). Gramática: frase con hueco. Un fallo en cualquier pregunta cuenta como fallo del ítem.',
+         'Al acertar solo ves una línea y pasa a la siguiente (Enter para ir más rápido). Las fichas de todo lo repasado se ven al final.',
+         'Si escribes una palabra válida pero distinta de la buscada, te avisa y vuelves a intentarlo sin penalización. «Mi palabra también era válida» la guarda para ese ítem.',
+         '«Sesión de 5 minutos» repasa solo los 12 más antiguos. «Solo sanguijuelas» y «Entrenar producción» son refuerzo: no cambian la etapa SRS.',
+         'Romaji → kana: nn + vocal da んな (annai → あんない); n\' separa (sen\'en → せんえん).')),
+    sec('Exámenes',
+      ul('Semanal (obligatorio, unos 30 min): si lo dejas pasar más de un día, se bloquean las lecciones.',
+         'De nivel: hace falta un 80 % para subir al siguiente. Simulacro JLPT: unas 70 preguntas, 60 min, sin ayudas.',
+         'Frases nuevas: Claude escribe preguntas con lo que has aprendido, frases que nunca viste. Se activa con 30 palabras y 8 puntos de gramática.',
+         'Los fallos bajan un nivel SRS y vuelven a repasos. En las frases libres puede haber más de una traducción correcta: «Era válida» la cuenta como acierto, y «Preguntar a Claude» la juzga.')),
+    sec('Lectura',
+      ul('Las lecturas se abren en orden: termina una (responde sus preguntas) para pasar a la siguiente.',
+         'Lee primero sin furigana y toca una palabra solo cuando te atasques. Después responde las preguntas, igual que el 読解 del JLPT.',
+         'Importar texto convierte cualquier texto japonés en una lectura con furigana, glosario, traducción y preguntas.')),
+    sec('Práctica: escucha y escritura',
+      ul('Dictado: oyes una frase sin verla, la escribes en kana (se corrige carácter a carácter) y después la traduces al español.',
+         'Comprensión auditiva: una lectura entera con el texto oculto; respondes las preguntas solo con el oído.',
+         'Redacción: 10 grados, de 120 a 1700 caracteres. Se sube con 3 redacciones corregidas por Claude, dentro del rango, con 85 % o más. Tras cada corrección ves dónde estudiar lo que fallaste.')),
+    sec('Ajustes y cuentas',
+      ul('WaniKani: guarda tu token y sincroniza; lo que tengas empezado allí entra con la misma etapa SRS. Nunca baja lo que ya tienes aquí.',
+         'Bunpro: su API pública no funciona; marca lo que dominas en «Gramática que ya dominas» (entra como Gurú I y sigue en repasos).',
+         'Voz: la del navegador depende del sistema. La neuronal de Google suena más natural y necesita su clave en el servidor.',
+         'Notificaciones: avisan de repasos acumulados, del examen semanal y si a última hora no has estudiado. En iPhone hace falta añadir la app a la pantalla de inicio.',
+         'Cuentas autorizadas (solo administrador): quien no esté en la lista puede iniciar sesión pero no accede a nada.')),
+    sec('Recursos gratuitos',
+      ul(h('span',{}, a('https://www.jlpt.jp/e/samples/forlearners.html','JLPT, preguntas de muestra'), ' con audio de cada nivel.'),
+         h('span',{}, a('https://www3.nhk.or.jp/news/easy/','NHK News Web Easy'), ': noticias con audio y furigana; pega el texto en Lectura.'),
+         h('span',{}, a('https://tadoku.org/japanese/en/free-books-en/','Tadoku'), ': libros graduados gratis.'),
+         h('span',{}, a('https://www.erin.jpf.go.jp/','Erin\'s Challenge'), ': vídeos con diálogos reales, N5 a N4.'),
+         h('span',{}, a('https://www.guidetojapanese.org/spanish/','Guía de Tae Kim'), ' y ', a('https://hablajapones.org/','Habla Japonés'), ': gramática en español.'),
+         h('span',{}, a('https://langcorrect.com/','LangCorrect'), ' y ', a('https://hinative.com/','HiNative'), ': correcciones de nativos.')))));
+}
