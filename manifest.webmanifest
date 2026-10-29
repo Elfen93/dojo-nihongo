@@ -1,15 +1,24 @@
 {
+  "id": "/dojo-nihongo/",
   "name": "Dojo 日本語",
   "short_name": "Dojo",
-  "description": "Japonés N5 a N1: SRS, gramática, lectura y exámenes JLPT",
+  "description": "Japonés N5 a N1 para hispanohablantes: SRS, gramática, lectura, escucha, escritura y exámenes JLPT",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#eeebe3",
   "theme_color": "#eeebe3",
   "lang": "es",
+  "categories": ["education"],
   "icons": [
-    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Repasos", "url": "./index.html#repasos", "icons": [{"src": "icons/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Lecciones", "url": "./index.html#lecciones", "icons": [{"src": "icons/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Práctica", "url": "./index.html#practica", "icons": [{"src": "icons/icon-192.png", "sizes": "192x192"}]}
   ]
 }
