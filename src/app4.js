@@ -152,7 +152,7 @@ const fmtTimer = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/6e4), s=Math.f
 function examKeysOff(E){ if(E&&E._kh){ document.removeEventListener('keydown',E._kh); E._kh=null; } }
 function renderExam(){
   const E=EXAM, q=E.qs[E.i], el=$('#main'); el.innerHTML=''; document.body.classList.add('focus'); examKeysOff(E);
-  const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Abandonar el examen? No se guardará.',()=>go('examenes'))},'✕ Abandonar'), h('span',{class:'sp'}), h('span',{class:'num'},`${E.i+1}/${E.qs.length}`), h('span',{class:'timer',id:'timer'},fmtTimer(E.deadline-now())));
+  const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Abandonar el examen? No se guardará.',()=>go('examenes'))},'✕ Abandonar'), h('span',{class:'sp'}), h('span',{class:'num'},`${E.i+1}/${E.total||E.qs.length}`), E.dynamic?null:h('span',{class:'timer',id:'timer'},fmtTimer(E.deadline-now())));
   const card=h('div',{class:'card stack'});
   card.append(h('div',{class:'row between'}, h('span',{class:'section-tag'}, q.sec), h('span',{class:'small muted'}, E.title)));
   if (q.reading){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].reading!==q.reading}, h('summary',{}, q.reading.title), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2'}, plainReading(q.reading)))); }
@@ -160,25 +160,31 @@ function renderExam(){
   if (q.audio){ card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:()=>speak(q.audio)},'音 Escuchar'))); if(!q._played){ q._played=true; setTimeout(()=>speak(q.audio),400); } }
   if (q.type==='order'){ const o=q.o; const parts=o.parts.map((p,i)=> i===q.star? h('span',{class:'slot star'},'★') : h('span',{class:'slot'},'＿')); card.append(h('div',{class:'exam-q',lang:'ja'}, o.pre, ...parts, o.post)); }
   else if (q.text){ const t=q.under? h('span',{html:esc(q.text).replace(esc(q.under),'<u>'+esc(q.under)+'</u>')}) : q.text; card.append(h('div',{class:'exam-q',lang:'ja'}, t)); }
-  if (q.es && q.type!=='typed' && E.kind!=='mock') card.append(h('div',{class:'small muted'}, h('details',{}, h('summary',{class:'small'},'Traducción (ayuda)'), q.es)));
-  if (q.type==='typed'){
+  if (q.es && q.type!=='typed' && E.kind!=='mock' && !E.dynamic) card.append(h('div',{class:'small muted'}, h('details',{}, h('summary',{class:'small'},'Traducción (ayuda)'), q.es)));
+  if (q.type==='write'){
+    card.append(h('div',{class:'big-es',style:'font-size:1.4rem'}, q.topic), h('div',{class:'small muted'}, q.desc));
+    const ta=h('textarea',{lang:'ja',placeholder:'Escribe en japonés',style:'min-height:160px;font-family:var(--f-jp);font-size:1.1rem;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card)'});
+    const cnt=h('span',{class:'small muted num'}); const send=h('button',{class:'btn primary',disabled:true,onclick:()=>{ if(EXAM!==E) return; q.topic=q.topic; recordExam(q,ta.value,true); }},'Enviar');
+    ta.addEventListener('input',()=>{ const n=jaLen(ta.value); cnt.textContent=`${n} / ${q.tmin} caracteres como mínimo`; send.disabled=n<q.tmin; });
+    card.append(ta, h('div',{class:'row'}, cnt, h('span',{class:'sp'}), h('button',{class:'btn ghost',onclick:()=>recordExam(q,'',false,true)},'Omitir'), send)); setTimeout(()=>ta.focus(),0);
+  } else if (q.type==='typed'){
     card.append(h('div',{class:'big-es',style:'font-size:1.4rem'}, q.es));
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
     let sent=false; const submit=()=>{ if(sent||EXAM!==E) return; const v=input.value.trim(); if(!v) return; sent=true; recordExam(q, toKana(v,true), q.check(v)); };
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();submit();} });
-    card.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Responder',onclick:submit},'→'))); setTimeout(()=>input.focus(),0);
+    card.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Responder',onclick:submit},'→'))); if(E.dynamic) card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>{ if(EXAM!==E) return; recordExam(q,'(no sé)',false,true); }},'No sé'))); setTimeout(()=>input.focus(),0);
   } else {
     const ch=h('div',{class:'choices text'+(q.options.some(o=>o.length>12)?' one':'')});
-    let sent=false; const choose=o=>{ if(sent||EXAM!==E) return; sent=true; [...ch.children].forEach(b=>b.disabled=true); recordExam(q,o,o===q.answer); };
+    let sent=false; const choose=(o,unk)=>{ if(sent||EXAM!==E) return; sent=true; [...ch.children].forEach(b=>b.disabled=true); recordExam(q,o,!unk&&o===q.answer,!!unk); };
     q.options.forEach((o,i)=>ch.append(h('button',{lang:'ja',onclick:()=>choose(o)}, h('span',{class:'muted small',style:'margin-right:8px'},(i+1)+'.'), o)));
-    card.append(ch);
+    card.append(ch); if(E.dynamic) card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>choose('(no sé)',true)},'No sé')));
     const kh=e=>{ if(EXAM!==E||E.qs[E.i]!==q||e.ctrlKey||e.metaKey||e.altKey) return; const n=parseInt(e.key); if(n>=1&&n<=q.options.length){ examKeysOff(E); choose(q.options[n-1]); } };
     document.addEventListener('keydown',kh); E._kh=kh;
   }
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok, unknown){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, unknown:!!unknown, topic:q.topic, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.dynamic){ plAnswer(E,q,ok,unknown); const nq=plNext(E); if(!nq){ finishPlacement(E); return; } E.qs.push(nq); renderExam(); return; } if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
   const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS

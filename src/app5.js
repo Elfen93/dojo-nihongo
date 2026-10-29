@@ -148,6 +148,7 @@ function renderExamenes(){
   const learnedIts=learnedKeys().map(k=>ITEMS.get(k)); const nv=learnedIts.filter(i=>i.kind==='v').length, ng=learnedIts.filter(i=>i.kind==='g').length, freshOk=nv>=30&&ng>=8;
   el.append(h('div',{class:'topline'}, h('h1',{},'Exámenes')));
   el.append(h('div',{class:'grid c2'},
+    placementCard(),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Semanal · obligatorio'), h('div',{class:'small muted'},w.text), h('button',{class:'btn primary',disabled:!w.available,onclick:()=>startExam('weekly')},'Hacer examen semanal')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},`Nivel ${S.level}`), h('div',{class:'small muted'},le.text), h('button',{class:'btn primary',disabled:!le.ready,onclick:()=>startExam('level')},'Hacer examen de nivel')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Frases nuevas · Claude'), h('div',{class:'small muted',id:'fresh-status'},freshOk?'Disponible':`Se activa con 30 palabras (llevas ${nv}) y 8 puntos gramaticales (llevas ${ng})`), h('button',{class:'btn primary',disabled:!freshOk,onclick:()=>startFreshExam($('#fresh-status'))},'Generar examen nuevo')),
