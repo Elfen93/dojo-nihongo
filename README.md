@@ -39,6 +39,14 @@ Sin estas funciones la app sigue funcionando: Bunpro no se sincroniza y los nive
 - **GitHub Pages**: Settings → Pages → Source: *Deploy from a branch*, rama `main`, carpeta `/ (root)`. `index.html` va construido en el repositorio (`python3 build.py` antes de cada push) y `config.js` lleva la URL y la anon key de Supabase (públicas por diseño).
 - **Cualquier otro hosting estático** (Netlify, Cloudflare Pages, Vercel): ejecuta `python3 build.py`, rellena `config.js` y sube la carpeta.
 
+## Entorno local (Windows)
+Requisitos: Git y Python 3 (Node 20 solo para la prueba automática). En PowerShell, dentro de la carpeta del proyecto:
+```
+.\dev.ps1          # actualiza, construye y sirve en http://localhost:8000
+.\dev.ps1 -Test    # además instala Playwright y pasa la prueba de extremo a extremo
+```
+Si PowerShell bloquea el script: `Set-ExecutionPolicy -Scope Process Bypass` y vuelve a ejecutarlo.
+
 ## Desarrollo
 - `src/` código de la app por módulos; `data/` contenido (kanji, vocabulario, gramática, lecturas); `python3 build.py` genera `index.html`.
 - Para editar contenido, toca los archivos de `data/` y vuelve a construir.
