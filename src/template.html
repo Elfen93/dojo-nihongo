@@ -229,7 +229,7 @@ body.leaving .login-wrap{animation:fadeout .55s ease forwards}
 @keyframes draw{to{stroke-dashoffset:40}}
 @media (prefers-reduced-motion:reduce){ .login .enso path{animation:none;stroke-dashoffset:40} }
 /* Aviso de versión nueva */
-.updatebar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--accent);border-radius:999px;padding:6px 8px 6px 16px;box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:.9rem;max-width:calc(100% - 24px)}
+.updatebar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--accent);border-radius:999px;padding:6px 8px 6px 16px;box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:.9rem;width:max-content;max-width:calc(100% - 24px);white-space:nowrap}
 /* Plegables */
 details.sec{border-top:1px solid var(--line);padding:10px 0}
 details.sec summary{cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;list-style:none;min-height:40px}
