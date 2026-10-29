@@ -26,7 +26,7 @@ function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.clea
 function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }
 function lessonsAvailable(track){
   const lv=S.level; const dd0=day(); const empty=(reason,lock)=>({items:[],reason,lock,kv:[],g:[],kvTotal:0,gTotal:0,kvWaiting:0,kvGoal:paceToday().lessons,gGoal:grammarGoalToday(),kvDone:dd0.l||0,gDone:dd0.lg||0,locked:true});
-  if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido generado.','gen');
+  if (!levelHasContent(lv)) return empty('Este nivel aún no tiene contenido.','gen');
   const due=dueItems().length;
   if (due>150) return empty(`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`,'reviews');
   const pace=paceToday(); if (pace.lessons===0 && pace.mode==='recuperacion') return empty('Modo Recuperación: hoy no hay lecciones nuevas. '+pace.why,'pace');
@@ -136,7 +136,7 @@ async function startFreshExam(statusEl){
   const learned=learnedKeys().map(k=>ITEMS.get(k));
   const vs=learned.filter(i=>i.kind==='v'), gs=learned.filter(i=>i.kind==='g'), ks=learned.filter(i=>i.kind==='k');
   if(vs.length<30||gs.length<8){ toast('Necesitas al menos 30 palabras y 8 puntos gramaticales aprendidos'); return; }
-  if(statusEl) statusEl.textContent='Claude está escribiendo frases nuevas con lo que has aprendido (hasta un minuto)…';
+  if(statusEl) statusEl.textContent='Preparando frases nuevas con lo que has aprendido (hasta un minuto)…';
   try{
     const r=await callFunction('exam',{vocab:shuffle(vs).slice(0,250).map(v=>v.w+'/'+v.r), grammar:shuffle(gs).slice(0,120).map(g=>g.t), kanji:ks.map(k=>k.k), counts:{kr:6,or:4,ctx:5,gr:6,prod:6}, level:tierOf(S.level).n});
     const qs=(r&&r.qs||[]).map(q=>{ if(!q||!q.sec) return null; if(q.sec==='producción'){ if(!q.answer||!q.es) return null; const acc=[q.answer,...(q.alt||[])]; return {sec:'producción',type:'typed',prompt:'Escribe en japonés (kana):',es:q.es,check:a=>matchSentence(a,acc),answer:q.answer,key:null}; } if(!Array.isArray(q.options)||q.options.length<2||!q.options.includes(q.answer)) return null; return {sec:q.sec,type:'mc',text:q.text||'',under:q.under||'',es:q.es||'',prompt:{'漢字読み':'¿Cómo se lee la palabra subrayada?','表記':'¿Cómo se escribe la palabra subrayada?','文脈規定':'Elige la palabra que encaja en el hueco','文法形式':'Elige la forma correcta'}[q.sec]||'Elige', options:shuffle(q.options.slice()), answer:q.answer, key:null}; }).filter(Boolean);
@@ -217,7 +217,7 @@ function renderExamResult(E, rec, secs, penal, msg){
   const el=$('#main'); el.innerHTML='';
   const rows=E.answers.filter(a=>!a.ok).map(a=>{ const st=h('span',{class:'small muted'}); 
     const valid=h('button',{class:'btn sm ghost',title:'Mi respuesta era correcta',onclick:()=>{ penal=examMarkValid(E,rec,secs,a,penal); renderExamResult(E,rec,secs,penal,msg); toast('Contada como correcta'); }},'Era válida');
-    const ask=h('button',{class:'btn sm ghost',onclick:async()=>{ if(!sb||!USER){ st.textContent='Inicia sesión para preguntar a Claude.'; return; } ask.disabled=true; st.textContent='Claude lo está mirando…'; try{ const r=await callFunction('exam',{judge:true,es:a.es||'',answer:a.answer,given:a.given,level:tierOf(S.level).n}); if(r&&r.valid){ penal=examMarkValid(E,rec,secs,a,penal); toast('Claude: es correcta'); renderExamResult(E,rec,secs,penal,msg); } else { st.textContent='Claude: '+((r&&r.why)||'no es correcta.'); } }catch(e){ st.textContent='No se pudo consultar: '+(e.message||e); ask.disabled=false; } }},'Preguntar a Claude');
+    const ask=h('button',{class:'btn sm ghost',onclick:async()=>{ if(!sb||!USER){ st.textContent='Inicia sesión para comprobarlo.'; return; } ask.disabled=true; st.textContent='Comprobando…'; try{ const r=await callFunction('exam',{judge:true,es:a.es||'',answer:a.answer,given:a.given,level:tierOf(S.level).n}); if(r&&r.valid){ penal=examMarkValid(E,rec,secs,a,penal); toast('Es correcta'); renderExamResult(E,rec,secs,penal,msg); } else { st.textContent=((r&&r.why)||'No es correcta.'); } }catch(e){ st.textContent='No se pudo consultar: '+(e.message||e); ask.disabled=false; } }},'Comprobar');
     return h('tr',{}, h('td',{class:'jp wrap'},a.text||a.es||''), h('td',{class:'jp wrap',style:'color:var(--warn)'},a.given), h('td',{class:'jp wrap',style:'color:var(--ok)'},a.answer), h('td',{class:'wrap'}, a.typed?h('div',{class:'stack',style:'gap:4px'}, valid, ask, st):null)); });
   el.append(h('div',{class:'study stack'},
     h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},E.title), h('div',{class:'score '+(pct>=passAt?'pass':'fail')},pct+'%'), h('div',{class:'muted'},`${ok}/${total} · ${rec.minutes} min`), h('p',{},msg), penal?h('div',{class:'small muted'},`${penal} ${plural(penal,'ítem','ítems')} han bajado de nivel SRS y están pendientes ahora.`):null),

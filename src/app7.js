@@ -116,7 +116,7 @@ function renderRedaccion(){
   const ta=h('textarea',{id:'wr-text',lang:'ja',placeholder:'Escribe aquí en japonés con tu teclado japonés (kanji y kana). Sin límite máximo.',style:'min-height:220px;font-family:var(--f-jp);font-size:1.1rem'}); ta.value=P.text||'';
   const upd=()=>{ const n=jaLen(ta.value), mx=tp.max||Math.round(tp.min*1.4); counter.textContent=`${n} caracteres · entre ${tp.min} y ${mx}`+(n>mx?' (te has pasado; no pasa nada, pero sé conciso)':''); counter.style.color=n<tp.min?'var(--muted)':n>mx?'var(--warn)':'var(--ok)'; btn.disabled=n<tp.min; saveBtn.disabled=n<Math.floor(tp.min/2); P.text=ta.value; }; ta.addEventListener('input',upd);
   const status=h('div',{class:'small muted'});
-  const btn=h('button',{class:'btn primary',onclick:async()=>{ if(!sb||!USER){ status.textContent='Inicia sesión para corregir con Claude.'; return; } btn.disabled=true; status.textContent='Claude está corrigiendo (30 a 60 segundos)…'; try{ const r=await callFunction('write',{text:ta.value,topic:tp.t+'. '+tp.d,level:tierOf(S.level).n,use:tp.use||[],min:tp.min,max:tp.max}); if(!r||typeof r.score!=='number') throw new Error('respuesta incompleta'); P.result=r; saveWriting(P,r); status.textContent=''; if(writingPromote()) toast(`Subes al grado ${writingGrade()} de redacción: ahora entre ${writingRange()[0]} y ${writingRange()[1]} caracteres`); renderPractica(); }catch(e){ status.textContent='No se pudo corregir: '+(e.message||e); btn.disabled=false; } }},'Corregir con Claude');
+  const btn=h('button',{class:'btn primary',onclick:async()=>{ if(!sb||!USER){ status.textContent='Inicia sesión para corregir.'; return; } btn.disabled=true; status.textContent='Corrigiendo (30 a 60 segundos)…'; try{ const r=await callFunction('write',{text:ta.value,topic:tp.t+'. '+tp.d,level:tierOf(S.level).n,use:tp.use||[],min:tp.min,max:tp.max}); if(!r||typeof r.score!=='number') throw new Error('respuesta incompleta'); P.result=r; saveWriting(P,r); status.textContent=''; if(writingPromote()) toast(`Subes al grado ${writingGrade()} de redacción: ahora entre ${writingRange()[0]} y ${writingRange()[1]} caracteres`); renderPractica(); }catch(e){ status.textContent='No se pudo corregir: '+(e.message||e); btn.disabled=false; } }},'Corregir');
   const saveBtn=h('button',{class:'btn',onclick:()=>{ saveWriting(P,null); toast('Guardada sin corregir'); PRACT={mode:null}; renderPractica(); }},'Guardar sin corregir');
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, ta, h('div',{class:'row'}, counter, h('span',{class:'sp'}), saveBtn, btn), status)); upd();
   const r=P.result; if (r){
@@ -171,8 +171,8 @@ function renderGuia(){
     sec('Exámenes',
       ul('Semanal (obligatorio, unos 30 min): si lo dejas pasar más de un día, se bloquean las lecciones.',
          'De nivel: hace falta un 80 % para subir al siguiente. Simulacro JLPT: unas 70 preguntas, 60 min, sin ayudas.',
-         'Frases nuevas: Claude escribe preguntas con lo que has aprendido, frases que nunca viste. Se activa con 30 palabras y 8 puntos de gramática.',
-         'Los fallos bajan un nivel SRS y vuelven a repasos. En las frases libres puede haber más de una traducción correcta: «Era válida» la cuenta como acierto, y «Preguntar a Claude» la juzga.')),
+         'Frases nuevas: preguntas escritas al momento con lo que has aprendido, con frases que nunca viste. Se activa con 30 palabras y 8 puntos de gramática.',
+         'Los fallos bajan un nivel SRS y vuelven a repasos. En las frases libres puede haber más de una traducción correcta: «Era válida» la cuenta como acierto, y «Comprobar» la revisa.')),
     sec('Test de nivel',
       ul('Unas 30 preguntas de vocabulario y kanji, gramática, lectura, escucha, producción y una redacción corta (si has iniciado sesión).',
          'Se adapta a ti: si aciertas, la siguiente es más difícil; si fallas, más fácil. «No sé» cuenta como fallo, mejor que adivinar.',
@@ -185,7 +185,7 @@ function renderGuia(){
     sec('Práctica: escucha y escritura',
       ul('Dictado: oyes una frase sin verla, la escribes en kana (se corrige carácter a carácter) y después la traduces al español.',
          'Comprensión auditiva: una lectura entera con el texto oculto; respondes las preguntas solo con el oído.',
-         'Redacción: 10 grados, de 120 a 1700 caracteres. Se sube con 3 redacciones corregidas por Claude, dentro del rango, con 85 % o más. Tras cada corrección ves dónde estudiar lo que fallaste.')),
+         'Redacción: 10 grados, de 120 a 1700 caracteres. Se sube con 3 redacciones corregidas, dentro del rango, con 85 % o más. Tras cada corrección ves dónde estudiar lo que fallaste.')),
     sec('Ajustes y cuentas',
       ul('WaniKani: guarda tu token y sincroniza; lo que tengas empezado allí entra con la misma etapa SRS. Nunca baja lo que ya tienes aquí.',
          'Bunpro: su API pública no funciona; marca lo que dominas en «Gramática que ya dominas» (entra como Gurú I y sigue en repasos).',

@@ -17,13 +17,13 @@ export async function requireUser(req: Request) {
 }
 export async function askClaude(prompt: string, maxTokens = 16000): Promise<string> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!key) throw new Error("falta ANTHROPIC_API_KEY en el servidor");
+  if (!key) throw new Error("falta la clave del servicio en el servidor");
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
   });
-  if (!r.ok) throw new Error("Claude " + r.status + " " + (await r.text()).slice(0, 200));
+  if (!r.ok) throw new Error("Servicio no disponible (" + r.status + ")");
   const out = await r.json();
   if (out.stop_reason === "max_tokens") throw new Error("respuesta truncada por longitud; inténtalo otra vez");
   return (out.content || []).map((c: any) => c.text || "").join("");

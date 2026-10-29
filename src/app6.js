@@ -114,25 +114,22 @@ function validateGen(o, lv){
 function generatePanel(lv){
   const tier=tierOf(lv); const ks=(ROADMAP[tier.n].kanjiByLevel||{})[lv]||[]; const gs=(ROADMAP[tier.n].grammarByLevel||{})[lv]||[];
   const status=h('div',{class:'small muted'});
-  const ta=h('textarea',{id:'gen-paste',placeholder:'Pega aquí el JSON generado'});
-  const box=h('div',{class:'card stack'},
-    h('h3',{},`Generar el nivel ${lv} (${tier.n})`),
+  return h('div',{class:'card stack'},
+    h('h3',{},`Preparar el nivel ${lv} (${tier.n})`),
     h('div',{class:'row'}, ks.map(k=>h('span',{class:'pill k jp',style:'font-size:1.1rem'},k.k))),
     h('div',{class:'row'}, gs.map(g=>h('span',{class:'pill g jp'},g))),
-    h('div',{class:'row'}, h('button',{class:'btn primary',id:'gen-btn',onclick:()=>generateWithClaude(lv,status)},'Generar con Claude'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(generationPrompt(lv)).then(()=>toast('Prompt copiado: pégalo en Claude y trae el JSON')).catch(()=>{ ta.value=generationPrompt(lv); ta.select(); toast('Copia el texto del cuadro'); }); }},'Copiar prompt para hacerlo a mano')),
-    status,
-    h('details',{}, h('summary',{class:'small'},'Pegar JSON generado a mano'), h('div',{class:'field',style:'margin-top:8px'}, ta, h('button',{class:'btn',onclick:()=>{ try{ const o=parseLooseJson(ta.value); const v=validateGen(o,lv); if(typeof v==='string') throw new Error(v); saveGen(lv,v).then(()=>{toast('Nivel generado y guardado'); render();}); }catch(e){ toast('JSON no válido: '+e.message); } }},'Importar este nivel'))));
-  return box;
+    h('div',{class:'row'}, h('button',{class:'btn primary',id:'gen-btn',onclick:()=>generateLevel(lv,status)},'Preparar nivel')),
+    status);
 }
-async function generateWithClaude(lv, status){
+async function generateLevel(lv, status){
   const btn=$('#gen-btn'); if(btn) btn.disabled=true;
-  if (!sb||!USER){ status.textContent='Inicia sesión para generar niveles automáticamente, o usa "Copiar prompt" y pega el JSON.'; if(btn) btn.disabled=false; return; }
+  if (!sb||!USER){ status.textContent='Inicia sesión para preparar el nivel.'; if(btn) btn.disabled=false; return; }
   try{
-    status.textContent='Generando el nivel con Claude (puede tardar un minuto)…';
+    status.textContent='Preparando el nivel (puede tardar un minuto)…';
     const res=await callFunction('generate',{lv, prompt:generationPrompt(lv)});
     const v=validateGen(res, lv); if (typeof v==='string') throw new Error(v);
-    await saveGen(lv, v); status.textContent='Listo.'; toast(`Nivel ${lv} generado: ${v.kanji.length} kanji, ${v.vocab.length} palabras, ${v.grammar.length} puntos`); render();
-  }catch(e){ console.warn(e); status.textContent='No se pudo generar: '+(e&&e.message||'error')+'. Prueba otra vez o usa el prompt manual.'; if(btn) btn.disabled=false; }
+    await saveGen(lv, v); status.textContent='Listo.'; toast(`Nivel ${lv} preparado: ${v.kanji.length} kanji, ${v.vocab.length} palabras, ${v.grammar.length} puntos`); render();
+  }catch(e){ console.warn(e); status.textContent='No se pudo preparar el nivel: '+(e&&e.message||'error')+'. Prueba otra vez.'; if(btn) btn.disabled=false; }
 }
 function accountCard(){
   if (!CONFIG.SUPABASE_URL) return h('div',{class:'push'},'La cuenta no está configurada todavía (falta config.js). El progreso se guarda solo en este navegador.');
