@@ -98,6 +98,7 @@ const VOCAB_N5 = [
 {w:"出口",r:"でぐち",m:["salida"],lv:2,p:"n",ex:"出口はあちらです。",es:"La salida está por allí."},
 {w:"入る",r:"はいる",m:["entrar"],lv:2,p:"v5",ex:"どうぞ、入ってください。",es:"Adelante, pase."},
 {w:"入口",r:"いりぐち",m:["entrada"],lv:2,p:"n",ex:"入口で待っています。",es:"Te espero en la entrada."},
+{w:"玄関",r:"げんかん",m:["entrada de la casa","recibidor","entrada"],lv:2,p:"n",ex:"玄関で靴を脱いでください。",es:"Quítese los zapatos en la entrada."},
 {w:"食べる",r:"たべる",m:["comer"],lv:2,p:"v1",ex:"朝ご飯を食べましたか。",es:"¿Has desayunado?"},
 {w:"食べ物",r:"たべもの",m:["comida"],lv:2,p:"n",ex:"好きな食べ物は何ですか。",es:"¿Cuál es tu comida favorita?"},
 {w:"飲む",r:"のむ",m:["beber"],lv:2,p:"v5",ex:"コーヒーを飲みませんか。",es:"¿Tomamos un café?"},
