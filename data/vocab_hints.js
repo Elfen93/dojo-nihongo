@@ -32,5 +32,6 @@ const VOCAB_HINT = {
 "服":"ropa (prendas)","洋服":"ropa (estilo occidental)",
 "親":"padres (en general)","両親":"padres (los dos, padre y madre)",
 "夕飯":"cena (más informal)","晩ご飯":"cena (de la noche)",
+"熱い":"caliente (al tacto, líquidos)","暑い":"caluroso (el clima)","速い":"rápido (velocidad)","早い":"temprano","遅い":"lento; tarde","優しい":"amable (persona)","易しい":"fácil (de entender)","難しい":"difícil",
 "大事":"importante (cuidar, valorar)","大切":"importante (querido, valioso)"
 };

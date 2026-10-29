@@ -1,6 +1,6 @@
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-data=''.join(open('data/'+f).read()+'\n' for f in ['kanji.js','kanji_n4.js','vocab_n5.js','vocab_n4a.js','vocab_n4b.js','vocab_hints.js','grammar_n5.js','grammar_n4a.js','grammar_n4b.js','grammar_extra.js','readings.js','readings_tales.js','readings_more.js','exam_bank.js','grammar_n3.js','grammar_n3b.js','roadmap.js'])
+data=''.join(open('data/'+f).read()+'\n' for f in ['kanji.js','kanji_n4.js','vocab_n5.js','vocab_n5b.js','vocab_n4a.js','vocab_n4b.js','vocab_hints.js','grammar_n5.js','grammar_n4a.js','grammar_n4b.js','grammar_extra.js','readings.js','readings_tales.js','readings_more.js','exam_bank.js','grammar_n3.js','grammar_n3b.js','roadmap.js'])
 data+='const CLOZE_KANA='+open('data/cloze_auto.json').read()+';\n'
 data+='const EXAM_KANA='+open('data/exam_kana.json').read()+';\n'
 import datetime
