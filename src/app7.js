@@ -7,7 +7,11 @@ function readingSentences(r){
   const split=t=>t.replace(/\\n|\r?\n/g,'').split('。').map(s=>s.trim()).filter(s=>s.length>=6).map(s=>s+'。');
   const a=split(plain), b=split(kana); return a.map((s,i)=>({j:s,k:b[i]||s,lv:r.lv,es:'',src:r.title})).filter(x=>!/「|」/.test(x.j)||x.j.length<40);
 }
-function dictationPool(){ const out=[]; for(const r of allReadings()){ if((r.lv||1)>S.level) continue; out.push(...readingSentences(r)); } return out; }
+function dictationPool(){
+  const bank=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=S.level&&x.es&&EXAM_KANA[x.j]).map(x=>({j:x.j,k:EXAM_KANA[x.j],es:x.es,lv:x.lv,src:'banco de examen'}));
+  if (bank.length>=10) return bank;
+  const out=bank.slice(); for(const r of allReadings()){ if((r.lv||1)>S.level) continue; out.push(...readingSentences(r)); } return out;
+}
 // Comparación carácter a carácter (kana): porcentaje de acierto y marcado de diferencias
 function kanaDiff(a,b){ a=[...normKana(a)]; b=[...normKana(b)]; const m=a.length,n=b.length; const d=Array.from({length:m+1},()=>Array(n+1).fill(0)); for(let i=0;i<=m;i++) d[i][0]=i; for(let j=0;j<=n;j++) d[0][j]=j; for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); let i=m,j=n; const marks=[]; while(i>0||j>0){ if(i>0&&j>0&&a[i-1]===b[j-1]&&d[i][j]===d[i-1][j-1]){ marks.unshift({c:b[j-1],ok:true}); i--; j--; } else if(j>0&&(i===0||d[i][j]===d[i][j-1]+1)){ marks.unshift({c:b[j-1],ok:false}); j--; } else if(i>0&&(j===0||d[i][j]===d[i-1][j]+1)){ i--; } else { marks.unshift({c:b[j-1],ok:false}); i--; j--; } } return {pct:n?Math.max(0,Math.round(100*(1-d[m][n]/n))):0, marks}; }
 let PRACT={mode:null};
@@ -19,7 +23,7 @@ function renderPractica(){
   const d=day(); const ws=(S.writings||[]).slice(-1)[0]; const minW=writingMin();
   el.append(h('div',{class:'topline'}, h('h1',{},'Práctica'), h('span',{class:'small muted'},'Escucha y escritura: lo que el SRS no entrena.')));
   el.append(h('div',{class:'grid c3'},
-    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Dictado'), h('p',{class:'small',style:'margin:0'},'Oyes una frase de las lecturas (sin verla) y la escribes en kana. Se corrige carácter a carácter.'), h('div',{class:'small muted'},`Hoy: ${d.di||0} ${plural(d.di||0,'frase')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'dictado',n:0,sum:0,plays:0}; nextDictation(); }},'Empezar (10 frases)')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Dictado'), h('p',{class:'small',style:'margin:0'},'Oyes una frase sin verla: primero la escribes en kana (se corrige carácter a carácter) y después la traduces al español y la comparas con la referencia.'), h('div',{class:'small muted'},`Hoy: ${d.di||0} ${plural(d.di||0,'frase')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'dictado',n:0,sum:0,plays:0}; nextDictation(); }},'Empezar (10 frases)')),
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Comprensión auditiva'), h('p',{class:'small',style:'margin:0'},'Una lectura entera solo con el oído: escuchas el texto y respondes a las preguntas sin leer.'), h('div',{class:'small muted'},`${Object.keys(S.listen||{}).length} ${plural(Object.keys(S.listen||{}).length,'texto escuchado','textos escuchados')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'escucha',id:null}; renderPractica(); }},'Elegir texto')),
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Redacción'), h('p',{class:'small',style:'margin:0'},`Un tema, un mínimo de ${minW} caracteres y corrección de Claude: errores, versión natural y nota.`), h('div',{class:'small muted'},ws?`Última: ${fmtDate(ws.date)} · ${ws.score!=null?ws.score+'%':'sin corregir'}`:'Todavía ninguna'), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(),text:'',result:null}; renderPractica(); }},'Escribir'))));
   const ws10=(S.writings||[]).slice(-10).reverse();
@@ -35,7 +39,7 @@ function renderPractica(){
 function nextDictation(){
   const P=PRACT; if(P.n>=10){ finishDictation(); return; }
   const pool=dictationPool().filter(x=>!(P.used||[]).includes(x.j)); if(!pool.length){ toast('No hay frases disponibles en tu nivel'); PRACT={mode:null}; renderPractica(); return; }
-  P.cur=rnd(pool); (P.used=P.used||[]).push(P.cur.j); P.plays=0; P.answer=null; renderDictado(); setTimeout(()=>speak(P.cur.j),300);
+  P.cur=rnd(pool); (P.used=P.used||[]).push(P.cur.j); P.plays=0; P.answer=null; P.trans=null; P.graded=false; if(P.kh){ document.removeEventListener('keydown',P.kh); P.kh=null; } renderDictado(); setTimeout(()=>speak(P.cur.j),300);
 }
 function renderDictado(){
   const P=PRACT, el=$('#main'); el.innerHTML=''; document.body.classList.add('focus'); const c=P.cur;
@@ -44,22 +48,35 @@ function renderDictado(){
   const wrap=h('div',{class:'study'}, head, card);
   if (P.answer==null){
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
-    const submit=()=>{ const v=input.value.trim(); if(!v) return; P.answer=toKana(v,true); const r=kanaDiff(P.answer,c.k); P.last=r; P.sum+=r.pct; S.stats=S.stats||{}; const st=S.stats.di=S.stats.di||{c:0,w:0}; if(r.pct>=85) st.c++; else st.w++; bump('di'); renderDictado(); };
+    const submit=()=>{ const v=input.value.trim(); if(!v) return; P.answer=toKana(v,true); const r=kanaDiff(P.answer,c.k); P.last=r; S.stats=S.stats||{}; const st=S.stats.di=S.stats.di||{c:0,w:0}; if(r.pct>=85) st.c++; else st.w++; renderDictado(); };
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
-    wrap.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Corregir',onclick:submit},'→')), h('div',{class:'kbd',style:'margin-top:6px;text-align:center'},'Puedes escucharla las veces que quieras. Enter para corregir.'));
+    wrap.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Corregir',onclick:submit},'→')), h('div',{class:'kbd',style:'margin-top:6px;text-align:center'},'Paso 1 de 2: escribe lo que oyes. Puedes escucharla las veces que quieras. Enter para corregir.'));
     setTimeout(()=>input.focus(),0);
+  } else if (P.trans==null){
+    // Paso 2: traducir al español lo escuchado
+    const r=P.last; const fb=h('div',{class:'feedback'}, h('div',{class:'verdict '+(r.pct>=85?'ok':'ko')}, `Dictado: ${r.pct} %`), h('div',{class:'jp',style:'margin:4px 0 8px'}, r.marks.map(m=>m.ok?m.c:h('b',{style:'color:var(--warn)'},m.c))));
+    const ta=h('input',{type:'text',id:'ans',autocomplete:'off',lang:'es',placeholder:'¿Qué significa? Escríbelo en español'});
+    const go2=()=>{ const v=ta.value.trim(); if(!v) return; P.trans=v; renderDictado(); };
+    ta.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go2(); } });
+    fb.append(h('div',{class:'answer'}, ta, h('button',{class:'btn primary',title:'Comprobar',onclick:go2},'→')), h('div',{class:'kbd',style:'margin-top:6px;text-align:center'},'Paso 2 de 2: traduce la frase que has oído. Enter para comparar.'));
+    wrap.append(fb); setTimeout(()=>ta.focus(),0);
   } else {
-    const r=P.last; const fb=h('div',{class:'feedback'}, h('div',{class:'verdict '+(r.pct>=85?'ok':'ko')}, `${r.pct} % de acierto`, h('span',{class:'muted',style:'font-weight:400'},` · escuchada ${P.plays+1} ${plural(P.plays+1,'vez','veces')}`)));
+    const r=P.last; const fb=h('div',{class:'feedback'}, h('div',{class:'verdict '+(r.pct>=85?'ok':'ko')}, `Dictado: ${r.pct} %`, h('span',{class:'muted',style:'font-weight:400'},` · escuchada ${P.plays+1} ${plural(P.plays+1,'vez','veces')}`)));
     const dl=h('dl'); const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
     add('Tu dictado', h('span',{class:'jp'},P.answer));
     add('Correcto', h('span',{class:'jp'}, r.marks.map(m=>m.ok?m.c:h('b',{style:'color:var(--warn)'},m.c))));
     add('Con kanji', h('span',{class:'jp'}, c.j, ' ', spkBtn(c.j)));
-    fb.append(dl); const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:()=>{ P.n++; nextDictation(); }},'Siguiente (Enter)'); fb.append(next); wrap.append(fb);
-    const hd=e=>{ if(e.key==='Enter'&&PRACT===P&&P.answer!=null){ e.preventDefault(); document.removeEventListener('keydown',hd); P.n++; nextDictation(); } }; document.addEventListener('keydown',hd); P.kh=hd; setTimeout(()=>next.focus(),0);
+    add('Tu traducción', P.trans);
+    add('Referencia', c.es||h('span',{class:'muted'},'(sin traducción de referencia para esta frase)'));
+    fb.append(dl);
+    const finish=(g)=>{ if(P.graded) return; P.graded=true; P.sum+=Math.round(r.pct*0.5+g*50); S.stats=S.stats||{}; const st=S.stats.tr=S.stats.tr||{c:0,w:0}; if(g>=0.5) st.c++; else st.w++; bump('di'); P.n++; nextDictation(); };
+    fb.append(h('div',{class:'small muted',style:'margin-top:10px'},'¿Tu traducción recoge el sentido?'), h('div',{class:'row',style:'margin-top:6px'}, h('button',{class:'btn',onclick:()=>finish(1)},'Sí (1)'), h('button',{class:'btn',onclick:()=>finish(0.5)},'A medias (2)'), h('button',{class:'btn warn',onclick:()=>finish(0)},'No (3)')));
+    wrap.append(fb);
+    const hd=e=>{ if(PRACT!==P||P.trans==null) return; const g={'1':1,'2':0.5,'3':0}[e.key]; if(g==null) return; e.preventDefault(); document.removeEventListener('keydown',hd); finish(g); }; document.addEventListener('keydown',hd); P.kh=hd;
   }
   el.append(wrap); window.scrollTo(0,0);
 }
-function finishDictation(){ const P=PRACT; const avg=Math.round(P.sum/Math.max(1,P.n)); PRACT={mode:null}; document.body.classList.remove('focus'); const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'study stack'}, h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},'Dictado terminado'), h('div',{class:'score '+(avg>=85?'pass':'fail')},avg+'%'), h('p',{class:'muted'}, avg>=85?'Buen oído. Sube la velocidad de la voz en Ajustes para hacerlo más difícil.':'Por debajo del 85 %: vuelve a escuchar las frases falladas en voz alta, repitiéndolas tú también (shadowing).')), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:()=>go('practica')},'Volver a Práctica')))); window.scrollTo(0,0); }
+function finishDictation(){ const P=PRACT; const avg=Math.round(P.sum/Math.max(1,P.n)); PRACT={mode:null}; document.body.classList.remove('focus'); const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'study stack'}, h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},'Dictado terminado'), h('div',{class:'score '+(avg>=75?'pass':'fail')},avg+'%'), h('p',{class:'muted'}, 'Media de dictado y traducción. ', avg>=75?'Buen oído. Sube la velocidad de la voz en Ajustes para hacerlo más difícil.':'Por debajo del 85 %: vuelve a escuchar las frases falladas en voz alta, repitiéndolas tú también (shadowing).')), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:()=>go('practica')},'Volver a Práctica')))); window.scrollTo(0,0); }
 // ---------- Comprensión auditiva ----------
 function renderEscucha(){
   const P=PRACT, el=$('#main'); el.innerHTML='';
