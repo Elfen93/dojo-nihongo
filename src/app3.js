@@ -38,7 +38,7 @@ function buildPrompt(it, facet){
   else if (facet==='kr'){ p.kind='k'; p.main=it.k; p.ask='Lectura (cualquiera)'; p.input='kana'; const acc=kanjiReadings(it); p.check=a=>matchKana(a,acc); p.correct=acc.join('・'); }
   else if (facet==='vm'){ p.kind='v'; p.main=it.w; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,it.m); p.correct=it.m.join(', '); }
   else if (facet==='vr'){ p.kind='v'; p.main=it.w; p.ask='Lectura'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.correct=it.r; }
-  else if (facet==='vp'){ p.kind='p'; p.mainEs=it.m.join(', '); p.sub=it.p?posLabel(it.p):''; p.ask='Escribe la palabra en japonés'; p.input='kana'; p.check=a=>{ if(matchKana(a,[it.r])) return true; const alt=vocabSynonym(it,a); if(alt){ p.alt=alt; return true; } p.alt=null; return false; }; p.correct=it.r+(hasKanji(it.w)?'（'+it.w+'）':''); if (hasKanji(it.w)) { p.pick={correct:it.w, options:shuffle([it.w,...kanjiDistractors(it)])}; } }
+  else if (facet==='vp'){ p.kind='p'; p.mainEs=it.m.join(', '); p.sub=it.p?posLabel(it.p):''; p.ask='Escribe la palabra en japonés'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.synonym=a=>vocabSynonym(it,a); p.correct=it.r+(hasKanji(it.w)?'（'+it.w+'）':''); if (hasKanji(it.w)) { p.pick={correct:it.w, options:shuffle([it.w,...kanjiDistractors(it)])}; } }
   else if (facet==='gc'){ p.kind='g'; const ex = it._ex || rnd(it.ex); const c=parseCloze(ex.j); p.cloze=c; p.ex=ex; p.ask='Completa'; p.input='kana'; const acc=uniq([...c.answers, ...(ex.k?[ex.k]:[]), ...(typeof CLOZE_KANA!=='undefined'&&CLOZE_KANA[c.answers[0]]?[CLOZE_KANA[c.answers[0]]]:[])]); p.check=a=>{ const t=toKana(a,true); return acc.some(x=>normKana(x)===normKana(t)) || acc.some(x=>x===a.trim()); }; p.correct=c.answers[0]; }
   return p;
 }
@@ -78,7 +78,7 @@ function answerCurrent(correct){
     r.wrong++; s.wrongKeys.add(c.k);
     const pos=Math.min(s.queue.length, 2+Math.floor(Math.random()*5)); s.queue.splice(pos,0,{k:c.k,f:c.f});
   }
-  s.phase='feedback'; c.ok=correct; if(correct&&c.p.alt) c.full=true; renderStudy();
+  s.phase='feedback'; c.ok=correct; renderStudy();
   if (correct && S.settings.autoNext!==false){ const token=s.cur; s.autoT=setTimeout(()=>{ if(SESSION===s && s.cur===token && s.phase==='feedback' && !token.full) nextCard(); }, 550); }
 }
 function completeItem(k){
@@ -166,6 +166,7 @@ function renderStudy(){
   el.append(h('div',{class:'study'}, head, card));
   const study=el.firstChild;
   if (s.phase==='ask'){
+    if (c.syn){ const a=c.syn; study.append(h('div',{class:'push warnish',style:'margin-top:10px'}, h('span',{class:'jp'}, a.w, '（'+a.r+'）'), ' también es correcto y significa lo mismo, pero no es la palabra que buscamos aquí. Prueba con otra.')); }
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',lang:p.input==='kana'?'ja':'es',placeholder:p.input==='kana'?'romaji → かな':'en español',inputmode:'text'});
     if (p.input==='kana') kanaInput(input);
     const sendBtn=h('button',{class:'btn primary',title:'Responder'},'→');
@@ -188,7 +189,9 @@ function evaluate(ans){
   const s=SESSION; if(!s||s.phase!=='ask') return; const c=s.cur, p=c.p; if(c.answer!==undefined) return; const ok=p.check(ans);
   c.answer=ans;
   const input=$('#ans'); if(input){ input.classList.add(ok?'right':'wrong'); input.disabled=true; }
-  if (ok && p.pick && !p.alt){ s.phase='pick'; setTimeout(renderStudy,250); return; }
+  if (!ok && p.synonym){ const alt=p.synonym(ans); if(alt){ // palabra válida pero no la buscada: no se evalúa, se vuelve a preguntar
+    c.syn=alt; c.answer=undefined; s.phase='ask'; renderStudy(); return; } }
+  if (ok && p.pick){ s.phase='pick'; setTimeout(renderStudy,250); return; }
   setTimeout(()=>answerCurrent(ok), ok?250:0);
 }
 // Línea de acierto: la respuesta en una línea y adelante (Enter o espera), sin botones. Las fichas se ven al final de la sesión.
@@ -206,7 +209,6 @@ function quickFeedback(c){
 function itemDetails(it, p){
   const dl=h('dl');
   const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
-  if (p&&p.alt){ const a=p.alt; add('Tu palabra', h('span',{class:'jp'}, a.w, ' ', h('span',{class:'muted'},'（'+a.r+'）'), ' ', spkBtn(a.w))); add('Significado', a.m.join(', ')); }
   if (it.kind==='k'){
     add('Significado', it.m.join(', ')); add('On', h('span',{class:'jp'},(it.on||[]).join('・')||'—')); add('Kun', h('span',{class:'jp'},(it.kun||[]).join('・')||'—'));
     if (it.mn) add('Mnemotecnia', it.mn);
@@ -229,7 +231,6 @@ function feedbackPanel(c){
   const p=c.p, it=p.it, ok=c.ok;
   const fb=h('div',{class:'feedback'});
   fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null));
-  if (ok&&p.alt) fb.append(h('div',{class:'push',style:'margin:4px 0 8px'},'También es correcto: significa lo mismo. La palabra que tenía prevista la app era la de abajo; apréndela también.'));
   fb.append(itemDetails(it, p));
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
