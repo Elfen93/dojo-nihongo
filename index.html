@@ -2775,7 +2775,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
-  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], alts:{}, days:{}, gen:{},
+  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], alts:{}, exDel:[], days:{}, gen:{},
   settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
   sync:{}, log:[]
 });
@@ -2811,7 +2811,8 @@ function mergeRemote(remote){
   M.days={}; for (const [d,v] of Object.entries(L.days||{})) if(d>=cutDay) M.days[d]=v;
   for (const [d,v] of Object.entries(R.days||{})){ if(d<cutDay) continue; const l=M.days[d]||{}; const o={...l}; for (const f of Object.keys({...l,...v})) o[f]=Math.max(l[f]||0, v[f]||0); M.days[d]=o; }
   // exámenes: unión por fecha
-  const ex={}; [...(L.exams||[]),...(R.exams||[])].filter(e=>e&&fresh(e.date)).forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
+  M.exDel=uniq([...(L.exDel||[]),...(R.exDel||[])]).slice(-200);
+  const ex={}; [...(L.exams||[]),...(R.exams||[])].filter(e=>e&&fresh(e.date)&&!M.exDel.includes(e.date)).forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
   if (newer){ M.level=newer.level||1; M.levelPass={...(newer.levelPass||{})}; M.weekly={last:(newer.weekly||{}).last||0}; M.stats={...(newer.stats||{})}; M.created=newer.created||now(); }
   else {
     M.level=Math.max(L.level||1, R.level||1); M.levelPass={...(R.levelPass||{}),...(L.levelPass||{})};
@@ -3581,7 +3582,7 @@ function renderExamenes(){
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Frases nuevas · Claude'), h('p',{class:'small',style:'margin:0'},'27 preguntas escritas en el momento con tu vocabulario y gramática aprendidos, en frases que no has visto nunca. El reto real.'), h('div',{class:'small muted',id:'fresh-status'},freshOk?'Disponible':`Se activa con 30 palabras (llevas ${nv}) y 8 puntos gramaticales (llevas ${ng})`), h('button',{class:'btn primary',disabled:!freshOk,onclick:()=>startFreshExam($('#fresh-status'))},'Generar examen nuevo')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Simulacro JLPT'), h('p',{class:'small',style:'margin:0'},'Unas 70 preguntas, 60 min, sin ayudas, con lectura y escucha. Para medirte antes del examen real.'), h('div',{class:'small muted'},learnedKeys().length<60?'Se activa con 60 ítems aprendidos':'Disponible'), h('button',{class:'btn',disabled:learnedKeys().length<60,onclick:()=>startExam('mock')},'Hacer simulacro'))));
   const ex=S.exams.slice().reverse();
-  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Historial'), ex.length?h('div',{class:'tscroll'},h('table',{}, h('thead',{},h('tr',{},h('th',{},'Fecha'),h('th',{},'Tipo'),h('th',{},'Nivel'),h('th',{},'Nota'),h('th',{},'Secciones'))), h('tbody',{}, ex.slice(0,20).map(e=>h('tr',{}, h('td',{},fmtDate(e.date)), h('td',{},{weekly:'Semanal',level:'Nivel',mock:'Simulacro',fresh:'Frases nuevas'}[e.kind]||e.kind), h('td',{class:'num'},e.level), h('td',{},h('b',{style:'color:'+(e.score>=80?'var(--ok)':e.score>=60?'var(--gold)':'var(--warn)')},e.score+'%')), h('td',{class:'small'}, Object.entries(e.secs||{}).map(([s,v])=>`${s} ${v.ok}/${v.n}`).join(' · '))))))):h('p',{class:'small muted'},'Todavía no has hecho ningún examen.')));
+  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Historial'), ex.length?h('div',{class:'tscroll'},h('table',{}, h('thead',{},h('tr',{},h('th',{},'Fecha'),h('th',{},'Tipo'),h('th',{},'Nivel'),h('th',{},'Nota'),h('th',{},'Secciones'),h('th',{},''))), h('tbody',{}, ex.slice(0,20).map(e=>h('tr',{}, h('td',{},fmtDate(e.date)), h('td',{},{weekly:'Semanal',level:'Nivel',mock:'Simulacro',fresh:'Frases nuevas'}[e.kind]||e.kind), h('td',{class:'num'},e.level), h('td',{},h('b',{style:'color:'+(e.score>=80?'var(--ok)':e.score>=60?'var(--gold)':'var(--warn)')},e.score+'%')), h('td',{class:'small'}, Object.entries(e.secs||{}).map(([s,v])=>`${s} ${v.ok}/${v.n}`).join(' · ')), h('td',{}, h('button',{class:'btn sm ghost warn',title:'Borrar este examen del historial','aria-label':'Borrar este examen',onclick:()=>confirmBox(`¿Borrar del historial el examen del ${fmtDate(e.date)} (${e.score} %)? No se puede deshacer.`,()=>{ S.exams=S.exams.filter(x=>x.date!==e.date); S.exDel=uniq([...(S.exDel||[]),e.date]); S.settingsAt=S.settingsAt||0; save(); toast('Examen borrado del historial'); render(); })},'Borrar'))))))):h('p',{class:'small muted'},'Todavía no has hecho ningún examen.'), ex.length?h('p',{class:'small muted',style:'margin:8px 0 0'},'Borrar solo quita la fila: no deshace los ítems que bajaron de nivel SRS por ese examen ni cambia la fecha del próximo semanal.'):null));
 }
 function renderProgreso(){
   const el=$('#main'); el.append(h('div',{class:'topline'}, h('h1',{},'Progreso')));

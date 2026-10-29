@@ -57,7 +57,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
-  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], alts:{}, days:{}, gen:{},
+  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], alts:{}, exDel:[], days:{}, gen:{},
   settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
   sync:{}, log:[]
 });
@@ -93,7 +93,8 @@ function mergeRemote(remote){
   M.days={}; for (const [d,v] of Object.entries(L.days||{})) if(d>=cutDay) M.days[d]=v;
   for (const [d,v] of Object.entries(R.days||{})){ if(d<cutDay) continue; const l=M.days[d]||{}; const o={...l}; for (const f of Object.keys({...l,...v})) o[f]=Math.max(l[f]||0, v[f]||0); M.days[d]=o; }
   // exámenes: unión por fecha
-  const ex={}; [...(L.exams||[]),...(R.exams||[])].filter(e=>e&&fresh(e.date)).forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
+  M.exDel=uniq([...(L.exDel||[]),...(R.exDel||[])]).slice(-200);
+  const ex={}; [...(L.exams||[]),...(R.exams||[])].filter(e=>e&&fresh(e.date)&&!M.exDel.includes(e.date)).forEach(e=>{ ex[e.date]=e; }); M.exams=Object.values(ex).sort((a,b)=>a.date-b.date);
   if (newer){ M.level=newer.level||1; M.levelPass={...(newer.levelPass||{})}; M.weekly={last:(newer.weekly||{}).last||0}; M.stats={...(newer.stats||{})}; M.created=newer.created||now(); }
   else {
     M.level=Math.max(L.level||1, R.level||1); M.levelPass={...(R.levelPass||{}),...(L.levelPass||{})};
