@@ -21,6 +21,7 @@ function renderAjustes(){
     const wkEl=$('#s-wk'), bpEl=$('#s-bp'), vEl=$('#s-voice'), rEl=$('#s-rate'), nEl=$('#s-neural'); if(wkEl) st.wkToken=wkEl.value.trim(); if(bpEl) st.bpKey=bpEl.value.trim(); if(vEl) st.voice=vEl.value; if(rEl) st.voiceRate=+rEl.value||0.9; if(nEl) st.neuralVoice=nEl.checked;
     S.settingsAt=now(); if(S.pace) S.pace.day=null; save(); toast('Ajustes guardados'); renderNav(); }},'Guardar ajustes');
   el.append(accountCard());
+  el.append(updateCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
     h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Kanji y vocabulario nuevos por día (techo)',goal,'El ritmo real lo decide la app según tu carga (Recuperación, Suave, Normal, Impulso) sin pasar de este techo. Las palabras se desbloquean cuando sus kanji llegan a Gurú.'), f('Puntos de gramática nuevos por día',goalG,'Se reduce a la mitad en modo Suave y a cero en Recuperación. Con 1 al día llegas a N2 en unos dos años; con 2, en uno.'), f('Máximo de repasos por sesión',maxr)),
     h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto: para subir de nivel, el 75 % de los kanji deben estar en Gurú')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo: desactivar la adaptación automática (no recomendado)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Mostrar furigana por defecto en las lecturas')), h('div',{class:'row'}, h('label',{class:'row small'},autoNext,' Pasar a la siguiente automáticamente cuando acierto')), h('div',{class:'row'}, h('label',{class:'row small'},askR,' Preguntar también la lectura a partir del kanji en vocabulario (tercera pregunta)')),
@@ -185,13 +186,27 @@ function boot(){
   else if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
   window.addEventListener('hashchange',()=>{ const id=location.hash.replace('#',''); if(VIEWS.some(v=>v.id===id)&&id!==VIEW) go(id); });
   initDb();
-  if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)); }catch(e){} }
+  if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)); navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.type==='update-ready') showUpdateBar(); }); }catch(e){} }
   // refresco periódico de contadores (los repasos van venciendo)
   setInterval(()=>{ if(!SESSION&&!LESSON&&!EXAM&&(VIEW==='hoy'||VIEW==='repasos')) render(); }, 6e4);
   try{ speechSynthesis.getVoices(); }catch(e){}
 }
 boot();
 
+// Actualizar: borra la copia guardada y recarga la última versión publicada
+async function updateApp(){
+  toast('Actualizando…');
+  try{ if('serviceWorker' in navigator){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){ console.warn('update',e); }
+  location.reload();
+}
+function showUpdateBar(){
+  if ($('#updatebar')) return;
+  const bar=h('div',{id:'updatebar',class:'updatebar'}, h('span',{},'Hay una versión nueva.'), h('button',{class:'btn sm primary',onclick:updateApp},'Actualizar'), h('button',{class:'btn sm ghost','aria-label':'Cerrar',onclick:()=>bar.remove()},'✕'));
+  document.body.append(bar);
+}
+function updateCard(){
+  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Actualizar la app'), h('p',{class:'small muted',style:'margin:0'},'Descarga la última versión publicada. Tu progreso está en tu cuenta y no se toca.'), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:updateApp},'Actualizar ahora'), h('span',{class:'small muted'},'Versión: '+APP_BUILD)));
+}
 function masteredGrammarCard(){
   const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Gramática que ya dominas'), h('p',{class:'small muted',style:'margin:0'},'Marca lo que ya tienes hecho en Bunpro (u otro sitio). Entra como Gurú I: no se enseña de cero, pero sigue en repasos espaciados. Lo que ya esté a un nivel igual o superior no cambia.'));
   const applyMany=(items)=>{ let n=0; for(const it of items){ const k=keyOf(it); const cur=S.items[k]; if(!cur||cur.s<5){ S.items[k]={...(cur||{c:0,w:0}), s:5, due:now()+STAGE_HOURS[5]*H*Math.random(), lrn:cur&&cur.lrn||now(), ls:now()}; n++; } } save(); toast(n?`${n} puntos marcados como dominados`:'Nada que cambiar'); renderAjustes2(); };
