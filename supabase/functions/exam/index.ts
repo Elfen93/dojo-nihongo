@@ -5,6 +5,18 @@ Deno.serve(async (req) => {
   try {
     const user = await requireUser(req); if (!user) return json({ error: "sin sesión" }, 401);
     const body = await req.json();
+    // Modo juez: ¿la traducción del alumno es una versión correcta y natural, aunque no coincida con la de referencia?
+    if (body.judge) {
+      const es = String(body.es || "").slice(0, 300), answer = String(body.answer || "").slice(0, 300), given = String(body.given || "").slice(0, 300);
+      if (!es || !given) return json({ error: "faltan datos" }, 400);
+      const jp = `Eres profesor de japonés (JLPT ${cleanLevel(body.level)}). Un alumno hispanohablante tradujo una frase al japonés, escribiéndola en kana. Decide si su versión es una traducción CORRECTA y natural de la frase en español, aunque difiera de la de referencia (otro orden, otra palabra válida, partículas opcionales como に tras un día, へ por に, お母さん por 母, omitir ぼくの, etc.). Es incorrecta si cambia el significado, usa una partícula equivocada que cambia la frase, una conjugación errónea o una palabra inadecuada.
+Frase en español: ${es}
+Referencia: ${answer}
+Alumno: ${given}
+Responde SOLO con JSON: {"valid":true|false,"why":"una frase breve en español que explique el veredicto y, si es incorrecta, el error concreto"}`;
+      const v = extractJson(await askClaude(jp, 400));
+      return json({ valid: v.valid === true, why: String(v.why || "").slice(0, 300) });
+    }
     const vocab = strList(body.vocab, 250, 60), grammar = strList(body.grammar, 120, 60), kanji = strList(body.kanji, 300, 2), level = cleanLevel(body.level);
     if (vocab.length < 10 || grammar.length < 3) return json({ error: "faltan datos" }, 400);
     const n: Record<string, number> = { kr: 6, or: 4, ctx: 5, gr: 6, prod: 6 };
@@ -21,7 +33,7 @@ Responde SOLO con JSON válido:
  {"sec":"文法形式","text":"frase con （　　） donde falta la forma gramatical","options":["forma correcta","distractor","distractor","distractor"],"answer":"forma correcta","es":"traducción","point":"punto gramatical"},
  {"sec":"producción","es":"frase corta en español para traducir","answer":"traducción japonesa en kana (sin kanji)","alt":["otra traducción válida en kana"]}
 ]}
-Cantidades: ${n.kr} de 漢字読み, ${n.or} de 表記, ${n.ctx} de 文脈規定, ${n.gr} de 文法形式 (cada una de un punto gramatical distinto), ${n.prod} de producción (frases de 3 a 6 palabras que se puedan escribir solo con el vocabulario aprendido). Los distractores deben ser plausibles (lecturas con rendaku, vocal larga o っ cambiados; kanji con componentes parecidos; formas gramaticales del mismo grupo). En "options" el orden debe ser aleatorio.`;
+Cantidades: ${n.kr} de 漢字読み, ${n.or} de 表記, ${n.ctx} de 文脈規定, ${n.gr} de 文法形式 (cada una de un punto gramatical distinto), ${n.prod} de producción (frases de 3 a 6 palabras que se puedan escribir solo con el vocabulario aprendido). En cada producción rellena "alt" con TODAS las variantes naturales aceptables (con o sin に tras un día de la semana, へ por に, お母さん por 母, otra palabra de significado equivalente, con o sin sujeto implícito), mínimo 2 si existen. Los distractores deben ser plausibles (lecturas con rendaku, vocal larga o っ cambiados; kanji con componentes parecidos; formas gramaticales del mismo grupo). En "options" el orden debe ser aleatorio.`;
     const parsed = extractJson(await askClaude(prompt, 12000));
     return json(parsed);
   } catch (e) { return json({ error: String(e) }, 500); }

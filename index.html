@@ -3343,7 +3343,7 @@ async function startFreshExam(statusEl){
   if(statusEl) statusEl.textContent='Claude está escribiendo frases nuevas con lo que has aprendido (hasta un minuto)…';
   try{
     const r=await callFunction('exam',{vocab:shuffle(vs).slice(0,250).map(v=>v.w+'/'+v.r), grammar:shuffle(gs).slice(0,120).map(g=>g.t), kanji:ks.map(k=>k.k), counts:{kr:6,or:4,ctx:5,gr:6,prod:6}, level:tierOf(S.level).n});
-    const qs=(r&&r.qs||[]).map(q=>{ if(!q||!q.sec) return null; if(q.sec==='producción'){ if(!q.answer||!q.es) return null; const acc=[q.answer,...(q.alt||[])]; return {sec:'producción',type:'typed',prompt:'Escribe en japonés (kana):',es:q.es,check:a=>matchKana(a,acc),answer:q.answer,key:null}; } if(!Array.isArray(q.options)||q.options.length<2||!q.options.includes(q.answer)) return null; return {sec:q.sec,type:'mc',text:q.text||'',under:q.under||'',es:q.es||'',prompt:{'漢字読み':'¿Cómo se lee la palabra subrayada?','表記':'¿Cómo se escribe la palabra subrayada?','文脈規定':'Elige la palabra que encaja en el hueco','文法形式':'Elige la forma correcta'}[q.sec]||'Elige', options:shuffle(q.options.slice()), answer:q.answer, key:null}; }).filter(Boolean);
+    const qs=(r&&r.qs||[]).map(q=>{ if(!q||!q.sec) return null; if(q.sec==='producción'){ if(!q.answer||!q.es) return null; const acc=[q.answer,...(q.alt||[])]; return {sec:'producción',type:'typed',prompt:'Escribe en japonés (kana):',es:q.es,check:a=>matchSentence(a,acc),answer:q.answer,key:null}; } if(!Array.isArray(q.options)||q.options.length<2||!q.options.includes(q.answer)) return null; return {sec:q.sec,type:'mc',text:q.text||'',under:q.under||'',es:q.es||'',prompt:{'漢字読み':'¿Cómo se lee la palabra subrayada?','表記':'¿Cómo se escribe la palabra subrayada?','文脈規定':'Elige la palabra que encaja en el hueco','文法形式':'Elige la forma correcta'}[q.sec]||'Elige', options:shuffle(q.options.slice()), answer:q.answer, key:null}; }).filter(Boolean);
     if(qs.length<10) throw new Error('respuesta incompleta ('+qs.length+' preguntas)');
     const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','聴解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
     EXAM={kind:'fresh',title:'Examen con frases nuevas',qs,minutes:Math.max(15,qs.length),i:0,answers:[],start:now(),deadline:now()+Math.max(15,qs.length)*6e4};
@@ -3382,7 +3382,7 @@ function renderExam(){
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
   const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS
@@ -3397,13 +3397,30 @@ function finishExam(){
   if (E.kind==='level'){ passed=pct>=80; if(passed){ S.levelPass[S.level]=pct; if(S.level<MAX_LEVEL) S.level++; msg=`Nivel superado. Bienvenido al nivel ${S.level}.`; } else msg='Necesitas un 80 % para subir de nivel. Los fallos ya están en tu cola: repásalos y repite el examen mañana.'; }
   if (E.kind==='fresh'){ msg = pct>=70 ? 'Con frases que nunca habías visto. Esto sí mide japonés real.' : 'Frases nuevas: por debajo del 70 %. Las secciones flojas te dicen qué repasar; el vocabulario lo sabes, aplicarlo en contexto nuevo es lo que falta.'; }
   if (E.kind==='mock'){ msg = pct>=60 ? 'Por encima del umbral orientativo de aprobado del JLPT (60 %).' : 'Por debajo del umbral orientativo del JLPT (60 %). Mira las secciones débiles.'; }
-  save();
-  const passAt=E.kind==='level'?80:E.kind==='fresh'?70:60;
+  rec.passed=passed; save();
+  renderExamResult(E, rec, secs, penal, msg);
+}
+// Frases libres: に y へ valen lo mismo tras un verbo de movimiento; sin puntuación
+const sentNorm = s => normKana(toKana(s,true)).replace(/へ/g,'に');
+function matchSentence(a, accepted){ const t=sentNorm(a); return accepted.some(x=>sentNorm(x.replace(/（[^）]*）/g,''))===t); }
+function examMarkValid(E, rec, secs, a, penal){
+  if (a.ok) return penal; a.ok=true; a.judged=true;
+  rec.ok=E.answers.filter(x=>x.ok).length; rec.score=Math.round(100*rec.ok/rec.total); if(secs[a.sec]) secs[a.sec].ok++;
+  if (a.key&&S.items[a.key]&&S.items[a.key].s>0&&S.items[a.key].s<9&&penal>0){ const r=S.items[a.key]; r.s=Math.min(9,r.s+1); r.w=Math.max(0,(r.w||0)-1); penal--; }
+  if (E.kind==='level' && !rec.passed && rec.score>=80){ rec.passed=true; S.levelPass[rec.level]=rec.score; if(S.level===rec.level&&S.level<MAX_LEVEL) S.level++; }
+  save(); return penal;
+}
+function renderExamResult(E, rec, secs, penal, msg){
+  const total=rec.total, ok=rec.ok, pct=rec.score; const passAt=E.kind==='level'?80:E.kind==='fresh'?70:60;
   const el=$('#main'); el.innerHTML='';
+  const rows=E.answers.filter(a=>!a.ok).map(a=>{ const st=h('span',{class:'small muted'}); 
+    const valid=h('button',{class:'btn sm ghost',title:'Mi respuesta era correcta',onclick:()=>{ penal=examMarkValid(E,rec,secs,a,penal); renderExamResult(E,rec,secs,penal,msg); toast('Contada como correcta'); }},'Era válida');
+    const ask=h('button',{class:'btn sm ghost',onclick:async()=>{ if(!sb||!USER){ st.textContent='Inicia sesión para preguntar a Claude.'; return; } ask.disabled=true; st.textContent='Claude lo está mirando…'; try{ const r=await callFunction('exam',{judge:true,es:a.es||'',answer:a.answer,given:a.given,level:tierOf(S.level).n}); if(r&&r.valid){ penal=examMarkValid(E,rec,secs,a,penal); toast('Claude: es correcta'); renderExamResult(E,rec,secs,penal,msg); } else { st.textContent='Claude: '+((r&&r.why)||'no es correcta.'); } }catch(e){ st.textContent='No se pudo consultar: '+(e.message||e); ask.disabled=false; } }},'Preguntar a Claude');
+    return h('tr',{}, h('td',{class:'jp wrap'},a.text||a.es||''), h('td',{class:'jp wrap',style:'color:var(--warn)'},a.given), h('td',{class:'jp wrap',style:'color:var(--ok)'},a.answer), h('td',{class:'wrap'}, a.typed?h('div',{class:'stack',style:'gap:4px'}, valid, ask, st):null)); });
   el.append(h('div',{class:'study stack'},
     h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},E.title), h('div',{class:'score '+(pct>=passAt?'pass':'fail')},pct+'%'), h('div',{class:'muted'},`${ok}/${total} · ${rec.minutes} min`), h('p',{},msg), penal?h('div',{class:'small muted'},`${penal} ${plural(penal,'ítem','ítems')} han bajado de nivel SRS y están pendientes ahora.`):null),
     h('div',{class:'result-grid'}, Object.entries(secs).map(([s,v])=>h('div',{class:'card'}, h('div',{class:'section-tag'},s), h('div',{class:'num',style:'font-weight:700;font-size:1.2rem'},`${v.ok}/${v.n}`), h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))),
-    h('div',{class:'card'}, h('h3',{},'Revisión de fallos'), h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Pregunta'),h('th',{},'Tu respuesta'),h('th',{},'Correcta'))), h('tbody',{}, E.answers.filter(a=>!a.ok).map(a=>h('tr',{}, h('td',{class:'jp wrap'},a.text||a.es||''), h('td',{class:'jp wrap',style:'color:var(--warn)'},a.given), h('td',{class:'jp wrap',style:'color:var(--ok)'},a.answer)))), E.answers.every(a=>a.ok)?h('tr',{},h('td',{colspan:3},'Sin fallos. Impecable.')):null))),
+    h('div',{class:'card'}, h('h3',{},'Revisión de fallos'), E.answers.some(a=>!a.ok&&a.typed)?h('p',{class:'small muted',style:'margin:2px 0 8px'},'En las frases libres puede haber más de una traducción correcta. Si la tuya lo era, pulsa «Era válida» o pregúntale a Claude.'):null, h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Pregunta'),h('th',{},'Tu respuesta'),h('th',{},'Correcta'),h('th',{},''))), h('tbody',{}, rows, rows.length?null:h('tr',{},h('td',{colspan:4},'Sin fallos. Impecable.')))))),
     h('div',{class:'row'}, penal?h('button',{class:'btn warn',onclick:()=>startReviews()},'Repasar los fallos ahora'):null, h('button',{class:'btn primary',onclick:()=>go('hoy')},'Volver a Hoy'))
   ));
   window.scrollTo(0,0);
