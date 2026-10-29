@@ -11,7 +11,9 @@
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Dojo 日本語</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap"></noscript>
 </head>
 <body>
 <style>
@@ -2782,6 +2784,7 @@ const DEFAULT_STATE = () => ({
 let S = DEFAULT_STATE();
 let sb=null, USER=null, saveT=null, remoteBusy=false, pendingSave=false, OFFLINE=false;
 const withTimeout=(p,ms)=>Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('sin respuesta del servidor')),ms))]);
+function hasStoredSession(){ try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&/^sb-.*-auth-token$/.test(k)) return true; } }catch(e){} return false; }
 function loadLocal(){ try{ const raw=localStorage.getItem('dojo.state'); if(raw){ const o=JSON.parse(raw); S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; S.gen={}; } }catch(e){} }
 function saveLocal(){ try{ const {gen,...rest}=S; localStorage.setItem('dojo.state', JSON.stringify(rest)); }catch(e){} }
 // Dueño del estado local: si entra otra cuenta en este dispositivo, no se mezcla con el progreso de la anterior
@@ -2838,11 +2841,11 @@ function mergeRemote(remote){
 async function initDb(){
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
   if (!window.supabase){ // no cargó la librería (sin conexión): si este dispositivo ya tenía sesión, se trabaja en local y se sube al volver la red
-    AUTH_PENDING=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); } else setSyncLabel('Sin conexión'); render(); return; }
+    AUTH_PENDING=false; AUTH_OPT=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); } else setSyncLabel('Sin conexión'); render(); return; }
   try{
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     let session=null; try{ ({ data:{ session } } = await withTimeout(sb.auth.getSession(), 8000)); }catch(e){ console.warn('getSession', e); }
-    USER = session ? session.user : null; AUTH_PENDING=false;
+    USER = session ? session.user : null; AUTH_PENDING=false; AUTH_OPT=false;
     sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; const u=sess?sess.user:null; if (u && u.id!==was){ USER=u; AUTH_PENDING=false; setTimeout(onSignedIn,0); } else if (!u && USER && ev==='SIGNED_OUT'){ USER=null; render(); } });
     if (USER) await onSignedIn(); else { setSyncLabel('Sin sesión'); render(); }
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }
@@ -3633,7 +3636,8 @@ function importReadingCard(){
   return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Importar texto'), h('p',{class:'small muted',style:'margin:0'},'Cualquier texto japonés se convierte en una lectura con furigana, glosario al tocar, traducción y preguntas. Se guarda en tu cuenta.'), title, ta, h('div',{class:'row'}, btn, h('span',{class:'sp'})), status);
 }
 
-function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING && !OFFLINE; }
+let AUTH_OPT=false;
+function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING && !OFFLINE && !AUTH_OPT; }
 let AUTH_PENDING=true;
 function renderLoginWall(){
   const el=$('#main'); el.innerHTML=''; $('#sidenav').innerHTML=''; $('#tabnav').innerHTML=''; const mh=$('#mobilehead'); if(mh) mh.innerHTML='';
@@ -3842,7 +3846,8 @@ function collapseSettingsOnMobile(){ if(!window.matchMedia('(max-width:860px)').
 function boot(){
   loadLocal(); loadGenLocal(); loadUserReadingsLocal(); updateStreak();
   const hash=location.hash.replace('#',''); if (VIEWS.some(v=>v.id===hash)) VIEW=hash;
-  if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
+  if (CONFIG.SUPABASE_URL && localOwner() && hasStoredSession()) { AUTH_OPT=true; AUTH_PENDING=false; render(); } // ya había sesión en este dispositivo: se pinta al instante y la cuenta se comprueba por detrás
+  else if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
   window.addEventListener('hashchange',()=>{ const id=location.hash.replace('#',''); if(VIEWS.some(v=>v.id===id)&&id!==VIEW) go(id); });
   initDb();
   if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)); }catch(e){} }

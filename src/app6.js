@@ -181,7 +181,8 @@ function collapseSettingsOnMobile(){ if(!window.matchMedia('(max-width:860px)').
 function boot(){
   loadLocal(); loadGenLocal(); loadUserReadingsLocal(); updateStreak();
   const hash=location.hash.replace('#',''); if (VIEWS.some(v=>v.id===hash)) VIEW=hash;
-  if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
+  if (CONFIG.SUPABASE_URL && localOwner() && hasStoredSession()) { AUTH_OPT=true; AUTH_PENDING=false; render(); } // ya había sesión en este dispositivo: se pinta al instante y la cuenta se comprueba por detrás
+  else if (CONFIG.SUPABASE_URL) { const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'muted',style:'text-align:center;margin-top:20vh'},'Cargando…')); } else render();
   window.addEventListener('hashchange',()=>{ const id=location.hash.replace('#',''); if(VIEWS.some(v=>v.id===id)&&id!==VIEW) go(id); });
   initDb();
   if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw',e)); }catch(e){} }

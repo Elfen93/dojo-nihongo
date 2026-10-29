@@ -64,6 +64,7 @@ const DEFAULT_STATE = () => ({
 let S = DEFAULT_STATE();
 let sb=null, USER=null, saveT=null, remoteBusy=false, pendingSave=false, OFFLINE=false;
 const withTimeout=(p,ms)=>Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('sin respuesta del servidor')),ms))]);
+function hasStoredSession(){ try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&/^sb-.*-auth-token$/.test(k)) return true; } }catch(e){} return false; }
 function loadLocal(){ try{ const raw=localStorage.getItem('dojo.state'); if(raw){ const o=JSON.parse(raw); S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; S.gen={}; } }catch(e){} }
 function saveLocal(){ try{ const {gen,...rest}=S; localStorage.setItem('dojo.state', JSON.stringify(rest)); }catch(e){} }
 // Dueño del estado local: si entra otra cuenta en este dispositivo, no se mezcla con el progreso de la anterior
@@ -120,11 +121,11 @@ function mergeRemote(remote){
 async function initDb(){
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
   if (!window.supabase){ // no cargó la librería (sin conexión): si este dispositivo ya tenía sesión, se trabaja en local y se sube al volver la red
-    AUTH_PENDING=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); } else setSyncLabel('Sin conexión'); render(); return; }
+    AUTH_PENDING=false; AUTH_OPT=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); } else setSyncLabel('Sin conexión'); render(); return; }
   try{
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     let session=null; try{ ({ data:{ session } } = await withTimeout(sb.auth.getSession(), 8000)); }catch(e){ console.warn('getSession', e); }
-    USER = session ? session.user : null; AUTH_PENDING=false;
+    USER = session ? session.user : null; AUTH_PENDING=false; AUTH_OPT=false;
     sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; const u=sess?sess.user:null; if (u && u.id!==was){ USER=u; AUTH_PENDING=false; setTimeout(onSignedIn,0); } else if (!u && USER && ev==='SIGNED_OUT'){ USER=null; render(); } });
     if (USER) await onSignedIn(); else { setSyncLabel('Sin sesión'); render(); }
   }catch(e){ console.warn(e); AUTH_PENDING=false; setSyncLabel('Error de conexión'); render(); }

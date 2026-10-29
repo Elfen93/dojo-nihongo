@@ -1,4 +1,4 @@
-const CACHE='dojo-v5';
+const CACHE='dojo-v6';
 const ASSETS=['./','./index.html','./config.js','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/garden.svg'];
 // Librería de la cuenta: se guarda en caché para poder abrir la app sin conexión
 const CDN=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js'];
@@ -12,8 +12,14 @@ self.addEventListener('fetch',e=>{
     return;
   }
   if (u.origin!==location.origin) return;
-  // red primero para la app (solo se guardan respuestas correctas), caché como respaldo; la portada solo para navegaciones
-  e.respondWith(fetch(e.request).then(r=>{ if(r.ok){ const copy=r.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy)); } return r; }).catch(()=>caches.match(e.request).then(r=>r||(e.request.mode==='navigate'?caches.match('./index.html'):Response.error()))));
+  // Caché primero y actualización por detrás: la app abre al instante y la versión nueva se ve en la siguiente apertura.
+  e.respondWith(caches.open(CACHE).then(async c=>{
+    const cached=await c.match(e.request);
+    const net=fetch(e.request).then(r=>{ if(r.ok) c.put(e.request,r.clone()); return r; }).catch(()=>null);
+    if (cached){ e.waitUntil(net); return cached; }
+    const r=await net; if (r) return r;
+    return (e.request.mode==='navigate'?await c.match('./index.html'):null)||Response.error();
+  }));
 });
 // Notificaciones push
 self.addEventListener('push', e => {

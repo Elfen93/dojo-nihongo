@@ -194,7 +194,8 @@ function importReadingCard(){
   return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Importar texto'), h('p',{class:'small muted',style:'margin:0'},'Cualquier texto japonés se convierte en una lectura con furigana, glosario al tocar, traducción y preguntas. Se guarda en tu cuenta.'), title, ta, h('div',{class:'row'}, btn, h('span',{class:'sp'})), status);
 }
 
-function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING && !OFFLINE; }
+let AUTH_OPT=false;
+function needsLogin(){ return !!CONFIG.SUPABASE_URL && !USER && !AUTH_PENDING && !OFFLINE && !AUTH_OPT; }
 let AUTH_PENDING=true;
 function renderLoginWall(){
   const el=$('#main'); el.innerHTML=''; $('#sidenav').innerHTML=''; $('#tabnav').innerHTML=''; const mh=$('#mobilehead'); if(mh) mh.innerHTML='';
