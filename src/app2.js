@@ -57,7 +57,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
-  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, days:{}, gen:{},
+  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], days:{}, gen:{},
   settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
   sync:{}, log:[]
 });
@@ -103,6 +103,8 @@ function mergeRemote(remote){
   }
   M.readings={}; for (const [k,v] of Object.entries(R.readings||{})) if(v&&fresh(v.date)) M.readings[k]=v;
   for (const [k,v] of Object.entries(L.readings||{})) if(v&&fresh(v.date)&&(!M.readings[k]||(v.date||0)>(M.readings[k].date||0))) M.readings[k]=v;
+  M.listen={}; for (const [k,v] of Object.entries(R.listen||{})) if(v&&fresh(v.date)) M.listen[k]=v; for (const [k,v] of Object.entries(L.listen||{})) if(v&&fresh(v.date)&&(!M.listen[k]||(v.date||0)>(M.listen[k].date||0))) M.listen[k]=v;
+  const wr={}; [...(L.writings||[]),...(R.writings||[])].filter(w=>w&&fresh(w.date)).forEach(w=>{ wr[w.date]=w; }); M.writings=Object.values(wr).sort((a,b)=>a.date-b.date).slice(-50);
   M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
   M.gen=L.gen||{}; M.pace=null;
   const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
@@ -160,7 +162,7 @@ async function callFunction(name, body){
 // Registro diario
 function day(k=todayKey()){ return S.days[k] = S.days[k] || {r:0,l:0,rd:0,ex:0,rc:0}; }
 function bump(field, n=1){ const d=day(); d[field]=(d[field]||0)+n; updateStreak(); save(); }
-function dayCounts(d){ return (d.r>=20||d.l>=5||d.ex>0||d.rd>0); }
+function dayCounts(d){ return (d.r>=20||d.l>=5||d.ex>0||d.rd>0||d.di>=5||d.wr>0||d.li>0); }
 function updateStreak(){
   const keys=Object.keys(S.days).filter(k=>dayCounts(S.days[k])).sort();
   let n=0; const t=new Date(); t.setHours(0,0,0,0);

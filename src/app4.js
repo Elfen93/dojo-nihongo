@@ -107,12 +107,13 @@ function qContext(v, pool){ const same=pool.filter(x=>x.kind==='v'&&x!==v&&x.p==
 function qGrammar(g, pool){ const bank=(typeof EXAM_GRAMMAR!=='undefined'?EXAM_GRAMMAR:[]).find(x=>x.g===g.id); const ex=bank?{j:bank.j,s:bank.s,h:bank.h}:rnd(g.ex); const c=parseCloze(ex.j); const others=pool.filter(x=>x.kind==='g'&&x!==g).flatMap(x=>x.ex.map(e=>parseCloze(e.j).answers[0])).filter(a=>a&&a!==c.answers[0]); const near=others.filter(a=>Math.abs(a.length-c.answers[0].length)<=3); const ds=uniq(pick(near.length>=3?near:others,6)).slice(0,3); if(ds.length<3) return null; return {sec:'文法形式', type:'mc', text:c.pre+'（　　）'+c.post, es:ex.s, prompt:'Elige la forma correcta', options:shuffle([c.answers[0],...ds]), answer:c.answers[0], key:keyOf(g)}; }
 function qOrder(o){ const star=1+Math.floor(Math.random()*2); return {sec:'並び替え', type:'order', o, star, prompt:'¿Qué parte va en la posición ★?', options:shuffle(o.parts), answer:o.parts[star], es:o.es}; }
 function qProduction(v){ return {sec:'producción', type:'typed', prompt:'Escribe en japonés (kana):', es:v.m.join(', ')+(v.p?' · '+posLabel(v.p):''), check:a=>matchKana(a,[v.r]), answer:v.r+(hasKanji(v.w)?'（'+v.w+'）':''), key:keyOf(v)}; }
+function qListening(pool, usedLi){ const all=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=S.level&&x.es&&!usedLi.has(x.j)); const bank=all.filter(x=>!usedBank.has(x.j)).length>=4?all.filter(x=>!usedBank.has(x.j)):all; if(bank.length<4) return null; const s=rnd(bank); usedLi.add(s.j); const ds=pick(bank.filter(x=>x!==s&&x.es!==s.es),3).map(x=>x.es); if(ds.length<3) return null; return {sec:'聴解', type:'mc', audio:s.j, text:'', prompt:'Escucha la frase y elige lo que significa', options:shuffle([s.es,...ds]), answer:s.es, key:null}; }
 function qReading(r){ return r.q.map((q,i)=>({sec:'読解', type:'mc', reading:r, text:q.q, prompt:'Lee el texto y responde', options:q.o.slice(), answer:q.o[q.a], key:null})); }
 function buildExam(kind){
   let pool, n, title, minutes;
-  if (kind==='level'){ pool=itemsOfLevel(S.level); n={kr:4,or:3,ctx:3,gr:5,ord:2,prod:5,rd:0}; title=`Examen de nivel ${S.level}`; minutes=20; }
-  else if (kind==='weekly'){ pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:6,or:4,ctx:5,gr:6,ord:3,prod:6,rd:1}; title='Examen semanal'; minutes=30; }
-  else { pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:2}; title='Simulacro JLPT'; minutes=60; }
+  if (kind==='level'){ pool=itemsOfLevel(S.level); n={kr:4,or:3,ctx:3,gr:5,ord:2,prod:5,rd:0,li:2}; title=`Examen de nivel ${S.level}`; minutes=20; }
+  else if (kind==='weekly'){ pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:6,or:4,ctx:5,gr:6,ord:3,prod:6,rd:1,li:3}; title='Examen semanal'; minutes=30; }
+  else { pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:2,li:6}; title='Simulacro JLPT'; minutes=60; }
   // ítems más débiles primero, mezcla con aleatorios
   const weak=pool.slice().sort((a,b)=>leechScore(S.items[keyOf(b)]||{})-leechScore(S.items[keyOf(a)]||{}));
   const hasBank=v=>(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).some(x=>x.lv<=S.level&&x.v.includes(v.w));
@@ -125,8 +126,9 @@ function buildExam(kind){
   const maxLv=Math.max(S.level,2); let ords=ORDER_QS.filter(o=>o.lv<=maxLv && (kind!=='level'||o.lv===S.level)); if(!ords.length) ords=ORDER_QS.filter(o=>o.lv<=maxLv); pick(ords,n.ord).forEach(o=>qs.push(qOrder(o)));
   take(qProduction,n.prod,shuffle(vs));
   if (n.rd){ const rs=READINGS.filter(r=>r.lv<=S.level); pick(rs,n.rd).forEach(r=>qs.push(...qReading(r))); }
+  const usedLi=new Set(); for (let i=0;i<(n.li||0);i++){ const q=qListening(pool, usedLi); if(q) qs.push(q); }
   // orden por secciones como el JLPT
-  const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
+  const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','聴解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
   return {kind,title,qs,minutes,i:0,answers:[],start:now(),deadline:now()+minutes*6e4};
 }
 let EXAM=null, examTimer=null;
@@ -140,7 +142,7 @@ async function startFreshExam(statusEl){
     const r=await callFunction('exam',{vocab:shuffle(vs).slice(0,250).map(v=>v.w+'/'+v.r), grammar:shuffle(gs).slice(0,120).map(g=>g.t), kanji:ks.map(k=>k.k), counts:{kr:6,or:4,ctx:5,gr:6,prod:6}, level:tierOf(S.level).n});
     const qs=(r&&r.qs||[]).map(q=>{ if(!q||!q.sec) return null; if(q.sec==='producción'){ if(!q.answer||!q.es) return null; const acc=[q.answer,...(q.alt||[])]; return {sec:'producción',type:'typed',prompt:'Escribe en japonés (kana):',es:q.es,check:a=>matchKana(a,acc),answer:q.answer,key:null}; } if(!Array.isArray(q.options)||q.options.length<2||!q.options.includes(q.answer)) return null; return {sec:q.sec,type:'mc',text:q.text||'',under:q.under||'',es:q.es||'',prompt:{'漢字読み':'¿Cómo se lee la palabra subrayada?','表記':'¿Cómo se escribe la palabra subrayada?','文脈規定':'Elige la palabra que encaja en el hueco','文法形式':'Elige la forma correcta'}[q.sec]||'Elige', options:shuffle(q.options.slice()), answer:q.answer, key:null}; }).filter(Boolean);
     if(qs.length<10) throw new Error('respuesta incompleta ('+qs.length+' preguntas)');
-    const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
+    const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','聴解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
     EXAM={kind:'fresh',title:'Examen con frases nuevas',qs,minutes:Math.max(15,qs.length),i:0,answers:[],start:now(),deadline:now()+Math.max(15,qs.length)*6e4};
     clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000);
     renderExam();
@@ -156,6 +158,7 @@ function renderExam(){
   card.append(h('div',{class:'row between'}, h('span',{class:'section-tag'}, q.sec), h('span',{class:'small muted'}, E.title)));
   if (q.reading){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].reading!==q.reading}, h('summary',{}, q.reading.title), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2'}, plainReading(q.reading)))); }
   card.append(h('div',{class:'small muted'}, q.prompt));
+  if (q.audio){ card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:()=>speak(q.audio)},'音 Escuchar'))); if(!q._played){ q._played=true; setTimeout(()=>speak(q.audio),400); } }
   if (q.type==='order'){ const o=q.o; const parts=o.parts.map((p,i)=> i===q.star? h('span',{class:'slot star'},'★') : h('span',{class:'slot'},'＿')); card.append(h('div',{class:'exam-q',lang:'ja'}, o.pre, ...parts, o.post)); }
   else if (q.text){ const t=q.under? h('span',{html:esc(q.text).replace(esc(q.under),'<u>'+esc(q.under)+'</u>')}) : q.text; card.append(h('div',{class:'exam-q',lang:'ja'}, t)); }
   if (q.es && q.type!=='typed' && E.kind!=='mock') card.append(h('div',{class:'small muted'}, h('details',{}, h('summary',{class:'small'},'Traducción (ayuda)'), q.es)));
@@ -176,7 +179,7 @@ function renderExam(){
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
   const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS

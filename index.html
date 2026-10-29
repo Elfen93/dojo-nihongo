@@ -2497,7 +2497,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
-  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, days:{}, gen:{},
+  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], days:{}, gen:{},
   settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
   sync:{}, log:[]
 });
@@ -2543,6 +2543,8 @@ function mergeRemote(remote){
   }
   M.readings={}; for (const [k,v] of Object.entries(R.readings||{})) if(v&&fresh(v.date)) M.readings[k]=v;
   for (const [k,v] of Object.entries(L.readings||{})) if(v&&fresh(v.date)&&(!M.readings[k]||(v.date||0)>(M.readings[k].date||0))) M.readings[k]=v;
+  M.listen={}; for (const [k,v] of Object.entries(R.listen||{})) if(v&&fresh(v.date)) M.listen[k]=v; for (const [k,v] of Object.entries(L.listen||{})) if(v&&fresh(v.date)&&(!M.listen[k]||(v.date||0)>(M.listen[k].date||0))) M.listen[k]=v;
+  const wr={}; [...(L.writings||[]),...(R.writings||[])].filter(w=>w&&fresh(w.date)).forEach(w=>{ wr[w.date]=w; }); M.writings=Object.values(wr).sort((a,b)=>a.date-b.date).slice(-50);
   M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
   M.gen=L.gen||{}; M.pace=null;
   const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
@@ -2600,7 +2602,7 @@ async function callFunction(name, body){
 // Registro diario
 function day(k=todayKey()){ return S.days[k] = S.days[k] || {r:0,l:0,rd:0,ex:0,rc:0}; }
 function bump(field, n=1){ const d=day(); d[field]=(d[field]||0)+n; updateStreak(); save(); }
-function dayCounts(d){ return (d.r>=20||d.l>=5||d.ex>0||d.rd>0); }
+function dayCounts(d){ return (d.r>=20||d.l>=5||d.ex>0||d.rd>0||d.di>=5||d.wr>0||d.li>0); }
 function updateStreak(){
   const keys=Object.keys(S.days).filter(k=>dayCounts(S.days[k])).sort();
   let n=0; const t=new Date(); t.setHours(0,0,0,0);
@@ -3009,12 +3011,13 @@ function qContext(v, pool){ const same=pool.filter(x=>x.kind==='v'&&x!==v&&x.p==
 function qGrammar(g, pool){ const bank=(typeof EXAM_GRAMMAR!=='undefined'?EXAM_GRAMMAR:[]).find(x=>x.g===g.id); const ex=bank?{j:bank.j,s:bank.s,h:bank.h}:rnd(g.ex); const c=parseCloze(ex.j); const others=pool.filter(x=>x.kind==='g'&&x!==g).flatMap(x=>x.ex.map(e=>parseCloze(e.j).answers[0])).filter(a=>a&&a!==c.answers[0]); const near=others.filter(a=>Math.abs(a.length-c.answers[0].length)<=3); const ds=uniq(pick(near.length>=3?near:others,6)).slice(0,3); if(ds.length<3) return null; return {sec:'文法形式', type:'mc', text:c.pre+'（　　）'+c.post, es:ex.s, prompt:'Elige la forma correcta', options:shuffle([c.answers[0],...ds]), answer:c.answers[0], key:keyOf(g)}; }
 function qOrder(o){ const star=1+Math.floor(Math.random()*2); return {sec:'並び替え', type:'order', o, star, prompt:'¿Qué parte va en la posición ★?', options:shuffle(o.parts), answer:o.parts[star], es:o.es}; }
 function qProduction(v){ return {sec:'producción', type:'typed', prompt:'Escribe en japonés (kana):', es:v.m.join(', ')+(v.p?' · '+posLabel(v.p):''), check:a=>matchKana(a,[v.r]), answer:v.r+(hasKanji(v.w)?'（'+v.w+'）':''), key:keyOf(v)}; }
+function qListening(pool, usedLi){ const all=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=S.level&&x.es&&!usedLi.has(x.j)); const bank=all.filter(x=>!usedBank.has(x.j)).length>=4?all.filter(x=>!usedBank.has(x.j)):all; if(bank.length<4) return null; const s=rnd(bank); usedLi.add(s.j); const ds=pick(bank.filter(x=>x!==s&&x.es!==s.es),3).map(x=>x.es); if(ds.length<3) return null; return {sec:'聴解', type:'mc', audio:s.j, text:'', prompt:'Escucha la frase y elige lo que significa', options:shuffle([s.es,...ds]), answer:s.es, key:null}; }
 function qReading(r){ return r.q.map((q,i)=>({sec:'読解', type:'mc', reading:r, text:q.q, prompt:'Lee el texto y responde', options:q.o.slice(), answer:q.o[q.a], key:null})); }
 function buildExam(kind){
   let pool, n, title, minutes;
-  if (kind==='level'){ pool=itemsOfLevel(S.level); n={kr:4,or:3,ctx:3,gr:5,ord:2,prod:5,rd:0}; title=`Examen de nivel ${S.level}`; minutes=20; }
-  else if (kind==='weekly'){ pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:6,or:4,ctx:5,gr:6,ord:3,prod:6,rd:1}; title='Examen semanal'; minutes=30; }
-  else { pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:2}; title='Simulacro JLPT'; minutes=60; }
+  if (kind==='level'){ pool=itemsOfLevel(S.level); n={kr:4,or:3,ctx:3,gr:5,ord:2,prod:5,rd:0,li:2}; title=`Examen de nivel ${S.level}`; minutes=20; }
+  else if (kind==='weekly'){ pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:6,or:4,ctx:5,gr:6,ord:3,prod:6,rd:1,li:3}; title='Examen semanal'; minutes=30; }
+  else { pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:2,li:6}; title='Simulacro JLPT'; minutes=60; }
   // ítems más débiles primero, mezcla con aleatorios
   const weak=pool.slice().sort((a,b)=>leechScore(S.items[keyOf(b)]||{})-leechScore(S.items[keyOf(a)]||{}));
   const hasBank=v=>(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).some(x=>x.lv<=S.level&&x.v.includes(v.w));
@@ -3027,8 +3030,9 @@ function buildExam(kind){
   const maxLv=Math.max(S.level,2); let ords=ORDER_QS.filter(o=>o.lv<=maxLv && (kind!=='level'||o.lv===S.level)); if(!ords.length) ords=ORDER_QS.filter(o=>o.lv<=maxLv); pick(ords,n.ord).forEach(o=>qs.push(qOrder(o)));
   take(qProduction,n.prod,shuffle(vs));
   if (n.rd){ const rs=READINGS.filter(r=>r.lv<=S.level); pick(rs,n.rd).forEach(r=>qs.push(...qReading(r))); }
+  const usedLi=new Set(); for (let i=0;i<(n.li||0);i++){ const q=qListening(pool, usedLi); if(q) qs.push(q); }
   // orden por secciones como el JLPT
-  const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
+  const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','聴解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
   return {kind,title,qs,minutes,i:0,answers:[],start:now(),deadline:now()+minutes*6e4};
 }
 let EXAM=null, examTimer=null;
@@ -3042,7 +3046,7 @@ async function startFreshExam(statusEl){
     const r=await callFunction('exam',{vocab:shuffle(vs).slice(0,250).map(v=>v.w+'/'+v.r), grammar:shuffle(gs).slice(0,120).map(g=>g.t), kanji:ks.map(k=>k.k), counts:{kr:6,or:4,ctx:5,gr:6,prod:6}, level:tierOf(S.level).n});
     const qs=(r&&r.qs||[]).map(q=>{ if(!q||!q.sec) return null; if(q.sec==='producción'){ if(!q.answer||!q.es) return null; const acc=[q.answer,...(q.alt||[])]; return {sec:'producción',type:'typed',prompt:'Escribe en japonés (kana):',es:q.es,check:a=>matchKana(a,acc),answer:q.answer,key:null}; } if(!Array.isArray(q.options)||q.options.length<2||!q.options.includes(q.answer)) return null; return {sec:q.sec,type:'mc',text:q.text||'',under:q.under||'',es:q.es||'',prompt:{'漢字読み':'¿Cómo se lee la palabra subrayada?','表記':'¿Cómo se escribe la palabra subrayada?','文脈規定':'Elige la palabra que encaja en el hueco','文法形式':'Elige la forma correcta'}[q.sec]||'Elige', options:shuffle(q.options.slice()), answer:q.answer, key:null}; }).filter(Boolean);
     if(qs.length<10) throw new Error('respuesta incompleta ('+qs.length+' preguntas)');
-    const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
+    const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','聴解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
     EXAM={kind:'fresh',title:'Examen con frases nuevas',qs,minutes:Math.max(15,qs.length),i:0,answers:[],start:now(),deadline:now()+Math.max(15,qs.length)*6e4};
     clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000);
     renderExam();
@@ -3058,6 +3062,7 @@ function renderExam(){
   card.append(h('div',{class:'row between'}, h('span',{class:'section-tag'}, q.sec), h('span',{class:'small muted'}, E.title)));
   if (q.reading){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].reading!==q.reading}, h('summary',{}, q.reading.title), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2'}, plainReading(q.reading)))); }
   card.append(h('div',{class:'small muted'}, q.prompt));
+  if (q.audio){ card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:()=>speak(q.audio)},'音 Escuchar'))); if(!q._played){ q._played=true; setTimeout(()=>speak(q.audio),400); } }
   if (q.type==='order'){ const o=q.o; const parts=o.parts.map((p,i)=> i===q.star? h('span',{class:'slot star'},'★') : h('span',{class:'slot'},'＿')); card.append(h('div',{class:'exam-q',lang:'ja'}, o.pre, ...parts, o.post)); }
   else if (q.text){ const t=q.under? h('span',{html:esc(q.text).replace(esc(q.under),'<u>'+esc(q.under)+'</u>')}) : q.text; card.append(h('div',{class:'exam-q',lang:'ja'}, t)); }
   if (q.es && q.type!=='typed' && E.kind!=='mock') card.append(h('div',{class:'small muted'}, h('details',{}, h('summary',{class:'small'},'Traducción (ayuda)'), q.es)));
@@ -3078,7 +3083,7 @@ function renderExam(){
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
   const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS
@@ -3162,17 +3167,17 @@ function checkReadingDone(r){ if(Object.keys(READER.answers).length<r.q.length) 
 function addReadingVocab(r){ let n=0; const re=/\[([^|\]]+)\|/g; let m; while((m=re.exec(r.t))){ const v=(VOCAB_BY_WORD[m[1]]||[])[0]; if(v){ const k=keyOf({...v,kind:'v'}); if(!S.items[k]||S.items[k].s===0){ S.items[k]={s:1,due:now()+4*H,c:0,w:0,lrn:now()}; n++; } } } save(); toast(n?`${n} palabras añadidas a tus repasos`:'Todas las palabras del texto ya estaban en tu SRS'); }
 
 // ===================== Vistas =====================
-const VIEWS=[{id:'hoy',t:'Hoy',ic:'今'},{id:'lecciones',t:'Lecciones',ic:'学'},{id:'repasos',t:'Repasos',ic:'復'},{id:'lectura',t:'Lectura',ic:'読'},{id:'examenes',t:'Exámenes',ic:'試'},{id:'progreso',t:'Progreso',ic:'進'},{id:'ajustes',t:'Ajustes',ic:'設'}];
+const VIEWS=[{id:'hoy',t:'Hoy',ic:'今'},{id:'lecciones',t:'Lecciones',ic:'学'},{id:'repasos',t:'Repasos',ic:'復'},{id:'lectura',t:'Lectura',ic:'読'},{id:'examenes',t:'Exámenes',ic:'試'},{id:'practica',t:'Práctica',ic:'練'},{id:'progreso',t:'Progreso',ic:'進'},{id:'ajustes',t:'Ajustes',ic:'設'}];
 let VIEW='hoy';
-function go(id){ stopSpeak(); if(SESSION){ if(SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler); clearTimeout(SESSION.autoT); } if(EXAM) examKeysOff(EXAM); VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); document.body.classList.remove('focus'); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
+function go(id){ stopSpeak(); if(PRACT&&PRACT.kh){ document.removeEventListener('keydown',PRACT.kh); } PRACT={mode:null}; if(SESSION){ if(SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler); clearTimeout(SESSION.autoT); } if(EXAM) examKeysOff(EXAM); VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); document.body.classList.remove('focus'); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
 function renderNav(){
   const due=dueItems().length, la=lessonsAvailable();
   const mk=v=>h('button',{class:VIEW===v.id?'active':'',onclick:()=>go(v.id)}, h('span',{class:'ic'},v.ic), h('span',{},v.t), v.id==='repasos'&&due?h('span',{class:'badge'+(due>100?' warn':'')},due):null, v.id==='lecciones'&&la.items.length?h('span',{class:'badge ok'},Math.min(la.items.length,99)):null);
   const side=$('#sidenav'); side.innerHTML=''; side.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},'Dojo 日本語')), ...VIEWS.map(mk), h('div',{class:'foot'}, h('div',{},`Nivel ${S.level} · ${tierOf(S.level).n}`), h('div',{class:'synclabel'},syncLabel)));
   const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Progreso','aria-label':'Progreso',onclick:()=>go('progreso')},'進'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes','aria-label':'Ajustes',onclick:()=>go('ajustes')},'設')); }
-  const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
+  const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes','practica'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
 }
-function render(){ if (needsLogin()) { renderLoginWall(); return; } document.body.classList.remove('login-mode'); document.body.classList.remove('focus'); renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
+function render(){ if (needsLogin()) { renderLoginWall(); return; } document.body.classList.remove('login-mode'); document.body.classList.remove('focus'); renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,practica:renderPractica,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
 
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
@@ -3218,6 +3223,7 @@ function renderHoy(){
     h('div',{}, h('div',{class:'row between small'},h('span',{},'Kanji y vocabulario'),h('span',{class:'num muted'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
     h('div',{}, h('div',{class:'row between small'},h('span',{},'Gramática'),h('span',{class:'num muted'},`${d.lg||0} / ${grammarGoalToday()}`)), h('div',{class:'bar'},h('i',{style:'width:'+(grammarGoalToday()?Math.min(100,Math.round(100*(d.lg||0)/grammarGoalToday())):100)+'%'}))),
     pace.days?h('div',{class:'small muted'}, `Gramática hasta ${S.settings.targetTier||'N4'}: ${pace.total-pace.remaining} de ${pace.total}. Ritmo para el ${fmtDate(new Date(S.settings.target+'T09:00:00'))}: ${pace.perWeek} puntos por semana.`):pace.past?h('div',{class:'small muted'}, `La fecha objetivo (${fmtDate(new Date(S.settings.target+'T09:00:00'))}) ya pasó. Pon la siguiente convocatoria en Ajustes.`):null));
+  const lastLi=Math.max(0,...Object.values(S.listen||{}).map(x=>x.date||0),...(S.writings||[]).map(w=>w.date||0)); if (learnedKeys().length>=40 && now()-lastLi>7*D) el.append(h('div',{class:'card',style:'margin-top:14px'}, h('div',{class:'eyebrow'},'Escucha y escritura'), h('div',{style:'margin-top:4px;font-weight:600'},'Llevas más de una semana sin practicar el oído ni la escritura'), h('p',{class:'small muted',style:'margin:2px 0 0'},'El JLPT tiene 聴解 y el japonés real exige escribir. Un dictado de 10 frases o una redacción corta hoy.'), h('button',{class:'btn sm',style:'margin-top:8px',onclick:()=>go('practica')},'Ir a Práctica')));
   const tip=tipsFor()[0]; if (tip && tip.b!=='Todo en orden') el.append(h('div',{class:'card',style:'margin-top:14px'}, h('div',{class:'eyebrow'},'Un consejo'), h('div',{style:'margin-top:4px;font-weight:600'},tip.b), h('p',{class:'small muted',style:'margin:2px 0 0'},tip.p), tip.act?h('button',{class:'btn sm',style:'margin-top:8px',onclick:tip.act[1]},tip.act[0]):null));
   if (isGenerated(S.level) && !levelHasContent(S.level)) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},`Nivel ${S.level} (${tierOf(S.level).n}) sin contenido todavía`), h('p',{class:'small muted'},'Los niveles N3 a N1 se generan cuando llegas a ellos.'), h('button',{class:'btn primary',onclick:()=>go('lecciones')},'Generar el nivel')));
 }
@@ -3272,10 +3278,10 @@ function renderExamenes(){
   const learnedIts=learnedKeys().map(k=>ITEMS.get(k)); const nv=learnedIts.filter(i=>i.kind==='v').length, ng=learnedIts.filter(i=>i.kind==='g').length, freshOk=nv>=30&&ng>=8;
   el.append(h('div',{class:'topline'}, h('h1',{},'Exámenes'), h('span',{class:'small muted'},'Formato JLPT. Las frases de los exámenes salen de un banco aparte que no aparece en las lecciones.')));
   el.append(h('div',{class:'grid c2'},
-    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Semanal · obligatorio'), h('p',{class:'small',style:'margin:0'},'30 preguntas, 30 min, sobre todo lo aprendido. Si lo dejas pasar, se bloquean las lecciones.'), h('div',{class:'small muted'},w.text), h('button',{class:'btn primary',disabled:!w.available,onclick:()=>startExam('weekly')},'Hacer examen semanal')),
+    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Semanal · obligatorio'), h('p',{class:'small',style:'margin:0'},'Unas 33 preguntas, 30 min, sobre todo lo aprendido, con 聴解 (escucha). Si lo dejas pasar, se bloquean las lecciones.'), h('div',{class:'small muted'},w.text), h('button',{class:'btn primary',disabled:!w.available,onclick:()=>startExam('weekly')},'Hacer examen semanal')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},`Nivel ${S.level}`), h('p',{class:'small',style:'margin:0'},'22 preguntas sobre el nivel actual. Hace falta un 80 % para subir.'), h('div',{class:'small muted'},le.text), h('button',{class:'btn primary',disabled:!le.ready,onclick:()=>startExam('level')},'Hacer examen de nivel')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Frases nuevas · Claude'), h('p',{class:'small',style:'margin:0'},'27 preguntas escritas en el momento con tu vocabulario y gramática aprendidos, en frases que no has visto nunca. El reto real.'), h('div',{class:'small muted',id:'fresh-status'},freshOk?'Disponible':`Se activa con 30 palabras (llevas ${nv}) y 8 puntos gramaticales (llevas ${ng})`), h('button',{class:'btn primary',disabled:!freshOk,onclick:()=>startFreshExam($('#fresh-status'))},'Generar examen nuevo')),
-    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Simulacro JLPT'), h('p',{class:'small',style:'margin:0'},'Unas 60 preguntas, 60 min, sin ayudas. Para medirte antes del examen real.'), h('div',{class:'small muted'},learnedKeys().length<60?'Se activa con 60 ítems aprendidos':'Disponible'), h('button',{class:'btn',disabled:learnedKeys().length<60,onclick:()=>startExam('mock')},'Hacer simulacro'))));
+    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Simulacro JLPT'), h('p',{class:'small',style:'margin:0'},'Unas 70 preguntas, 60 min, sin ayudas, con lectura y escucha. Para medirte antes del examen real.'), h('div',{class:'small muted'},learnedKeys().length<60?'Se activa con 60 ítems aprendidos':'Disponible'), h('button',{class:'btn',disabled:learnedKeys().length<60,onclick:()=>startExam('mock')},'Hacer simulacro'))));
   const ex=S.exams.slice().reverse();
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Historial'), ex.length?h('div',{class:'tscroll'},h('table',{}, h('thead',{},h('tr',{},h('th',{},'Fecha'),h('th',{},'Tipo'),h('th',{},'Nivel'),h('th',{},'Nota'),h('th',{},'Secciones'))), h('tbody',{}, ex.slice(0,20).map(e=>h('tr',{}, h('td',{},fmtDate(e.date)), h('td',{},{weekly:'Semanal',level:'Nivel',mock:'Simulacro',fresh:'Frases nuevas'}[e.kind]||e.kind), h('td',{class:'num'},e.level), h('td',{},h('b',{style:'color:'+(e.score>=80?'var(--ok)':e.score>=60?'var(--gold)':'var(--warn)')},e.score+'%')), h('td',{class:'small'}, Object.entries(e.secs||{}).map(([s,v])=>`${s} ${v.ok}/${v.n}`).join(' · '))))))):h('p',{class:'small muted'},'Todavía no has hecho ningún examen.')));
 }
@@ -3285,7 +3291,7 @@ function renderProgreso(){
   const STAGE_GROUP_LABEL={aprendiz:'Aprendiz',guru:'Gurú',maestro:'Maestro',iluminado:'Iluminado',quemado:'Quemado'};
   el.append(h('div',{class:'stages'}, Object.entries(counts).map(([k,n])=>h('div',{class:'card',title:STAGE_GROUP_LABEL[k]},h('div',{class:'n'},n),h('div',{class:'l'},STAGE_GROUP_LABEL[k]||k)))));
   const days=Object.keys(S.days).sort().slice(-14);
-  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Últimas dos semanas'), h('div',{class:'tscroll'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Día'),h('th',{},'Repasos'),h('th',{},'Precisión'),h('th',{},'Lecciones'),h('th',{},'Lecturas'),h('th',{},'Exámenes'))), h('tbody',{}, days.length?days.map(k=>{const d=S.days[k];return h('tr',{},h('td',{},k),h('td',{class:'num'},d.r||0),h('td',{class:'num'},d.r?Math.round(100*(d.rc||0)/d.r)+'%':'—'),h('td',{class:'num'},d.l||0),h('td',{class:'num'},d.rd||0),h('td',{class:'num'},d.ex||0));}):h('tr',{},h('td',{colspan:6},'Aún no hay actividad.')))))));
+  el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Últimas dos semanas'), h('div',{class:'tscroll'},h('table',{},h('thead',{},h('tr',{},h('th',{},'Día'),h('th',{},'Repasos'),h('th',{},'Precisión'),h('th',{},'Lecciones'),h('th',{},'Lecturas'),h('th',{},'Dictado'),h('th',{},'Redacc.'),h('th',{},'Exámenes'))), h('tbody',{}, days.length?days.map(k=>{const d=S.days[k];return h('tr',{},h('td',{},k),h('td',{class:'num'},d.r||0),h('td',{class:'num'},d.r?Math.round(100*(d.rc||0)/d.r)+'%':'—'),h('td',{class:'num'},d.l||0),h('td',{class:'num'},d.rd||0),h('td',{class:'num'},d.di||0),h('td',{class:'num'},d.wr||0),h('td',{class:'num'},d.ex||0));}):h('tr',{},h('td',{colspan:8},'Aún no hay actividad.')))))));
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Próximas 24 h'), forecastChart(), h('div',{class:'small muted'}, `Aprendidos: ${learnedKeys().length} · Quemados: ${Object.values(S.items).filter(r=>r.s>=9).length}`)));
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Consejos'), h('div',{class:'tips',style:'margin-top:6px'}, tipsFor().map(t=>h('div',{class:'tip'}, h('div',{class:'b'}, h('b',{},t.b), h('p',{},t.p), t.act?h('button',{class:'btn sm',style:'margin-top:6px',onclick:t.act[1]},t.act[0]):null))))));
   const lch=leeches(); if (lch.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('div',{class:'row between'},h('h3',{},'Sanguijuelas'),h('button',{class:'btn sm',onclick:()=>startReviews(true)},'Repasarlas')), h('p',{class:'small muted',style:'margin:4px 0 8px'},'Ítems que fallas una y otra vez.'), h('div',{class:'row'}, lch.slice(0,10).map(it=>h('span',{class:'pill jp '+it.kind}, it.kind==='k'?it.k:it.kind==='v'?it.w:it.t)))));
@@ -3550,6 +3556,119 @@ function adminCard(){
   box.append(list, h('div',{class:'row'}, email, note, h('button',{class:'btn primary',onclick:async()=>{ const v=email.value.trim().toLowerCase(); if(!v.includes('@')){ toast('Correo no válido'); return; } try{ await adminAdd(v,note.value.trim()); email.value=''; note.value=''; toast('Cuenta autorizada'); refresh(); }catch(e){ toast('Error: '+e.message); } }},'Autorizar')));
   refresh(); return box;
 }
+
+// ===================== Práctica: escucha y escritura =====================
+// Cuenta caracteres japoneses (kana, kanji, ー), sin espacios ni puntuación
+const jaLen = s => (String(s||'').match(/[぀-ヿ一-龯々ー]/g)||[]).length;
+// Frases de una lectura con su versión en kana (para dictado)
+function readingSentences(r){
+  const kana=r.t.replace(/\[([^|\]]+)\|([^|\]]*)\|[^\]]*\]/g,(m,w,rd)=>rd||w), plain=plainReading(r);
+  const split=t=>t.replace(/\\n|\r?\n/g,'').split('。').map(s=>s.trim()).filter(s=>s.length>=6).map(s=>s+'。');
+  const a=split(plain), b=split(kana); return a.map((s,i)=>({j:s,k:b[i]||s,lv:r.lv,es:'',src:r.title})).filter(x=>!/「|」/.test(x.j)||x.j.length<40);
+}
+function dictationPool(){ const out=[]; for(const r of allReadings()){ if((r.lv||1)>S.level) continue; out.push(...readingSentences(r)); } return out; }
+// Comparación carácter a carácter (kana): porcentaje de acierto y marcado de diferencias
+function kanaDiff(a,b){ a=[...normKana(a)]; b=[...normKana(b)]; const m=a.length,n=b.length; const d=Array.from({length:m+1},()=>Array(n+1).fill(0)); for(let i=0;i<=m;i++) d[i][0]=i; for(let j=0;j<=n;j++) d[0][j]=j; for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); let i=m,j=n; const marks=[]; while(i>0||j>0){ if(i>0&&j>0&&a[i-1]===b[j-1]&&d[i][j]===d[i-1][j-1]){ marks.unshift({c:b[j-1],ok:true}); i--; j--; } else if(j>0&&(i===0||d[i][j]===d[i][j-1]+1)){ marks.unshift({c:b[j-1],ok:false}); j--; } else if(i>0&&(j===0||d[i][j]===d[i-1][j]+1)){ i--; } else { marks.unshift({c:b[j-1],ok:false}); i--; j--; } } return {pct:n?Math.max(0,Math.round(100*(1-d[m][n]/n))):0, marks}; }
+let PRACT={mode:null};
+function renderPractica(){
+  const el=$('#main'); el.innerHTML='';
+  if (PRACT.mode==='dictado') return renderDictado();
+  if (PRACT.mode==='escucha') return renderEscucha();
+  if (PRACT.mode==='redaccion') return renderRedaccion();
+  const d=day(); const ws=(S.writings||[]).slice(-1)[0]; const minW=writingMin();
+  el.append(h('div',{class:'topline'}, h('h1',{},'Práctica'), h('span',{class:'small muted'},'Escucha y escritura: lo que el SRS no entrena.')));
+  el.append(h('div',{class:'grid c3'},
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Dictado'), h('p',{class:'small',style:'margin:0'},'Oyes una frase de las lecturas (sin verla) y la escribes en kana. Se corrige carácter a carácter.'), h('div',{class:'small muted'},`Hoy: ${d.di||0} ${plural(d.di||0,'frase')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'dictado',n:0,sum:0,plays:0}; nextDictation(); }},'Empezar (10 frases)')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Comprensión auditiva'), h('p',{class:'small',style:'margin:0'},'Una lectura entera solo con el oído: escuchas el texto y respondes a las preguntas sin leer.'), h('div',{class:'small muted'},`${Object.keys(S.listen||{}).length} ${plural(Object.keys(S.listen||{}).length,'texto escuchado','textos escuchados')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'escucha',id:null}; renderPractica(); }},'Elegir texto')),
+    h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Redacción'), h('p',{class:'small',style:'margin:0'},`Un tema, un mínimo de ${minW} caracteres y corrección de Claude: errores, versión natural y nota.`), h('div',{class:'small muted'},ws?`Última: ${fmtDate(ws.date)} · ${ws.score!=null?ws.score+'%':'sin corregir'}`:'Todavía ninguna'), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(),text:'',result:null}; renderPractica(); }},'Escribir'))));
+  const ws10=(S.writings||[]).slice(-10).reverse();
+  if (ws10.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Redacciones'), h('div',{class:'list',style:'margin-top:8px'}, ws10.map(w=>h('button',{class:'item',onclick:()=>{ PRACT={mode:'redaccion',topic:w.topic,text:w.text,result:w.result||null,saved:true}; renderPractica(); }}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},w.topic.t), h('div',{class:'small muted'},`${fmtDate(w.date)} · ${jaLen(w.text)} caracteres`)), h('span',{class:'badge '+(w.score>=70?'ok':'soft')}, w.score!=null?w.score+'%':'—'))))));
+  el.append(h('div',{class:'card soft',style:'margin-top:12px'}, h('h3',{},'Recursos gratuitos para escuchar y escribir'), h('ul',{class:'small',style:'margin:8px 0 0;padding-left:18px'},
+    h('li',{}, h('a',{href:'https://www.jlpt.jp/e/samples/forlearners.html',target:'_blank',rel:'noopener'},'JLPT: preguntas de muestra oficiales'), ' con audio de 聴解 de cada nivel. Es el formato exacto del examen.'),
+    h('li',{}, h('a',{href:'https://www3.nhk.or.jp/news/easy/',target:'_blank',rel:'noopener'},'NHK News Web Easy'), ': noticias con audio y furigana. Escucha primero, lee después; pega el texto en Lectura para el glosario.'),
+    h('li',{}, h('a',{href:'https://tadoku.org/japanese/en/free-books-en/',target:'_blank',rel:'noopener'},'Tadoku'), ': libros graduados gratis (niveles 0 a 5), muchos con audio.'),
+    h('li',{}, h('a',{href:'https://www.erin.jpf.go.jp/',target:'_blank',rel:'noopener'},'Erin\'s Challenge (Fundación Japón)'), ': vídeos con diálogos reales y transcripción, N5 a N4.'),
+    h('li',{}, h('a',{href:'https://langcorrect.com/',target:'_blank',rel:'noopener'},'LangCorrect'), ' y ', h('a',{href:'https://hinative.com/',target:'_blank',rel:'noopener'},'HiNative'), ': correcciones de redacciones por hablantes nativos, para contrastar con la corrección de aquí.'))));
+}
+// ---------- Dictado ----------
+function nextDictation(){
+  const P=PRACT; if(P.n>=10){ finishDictation(); return; }
+  const pool=dictationPool().filter(x=>!(P.used||[]).includes(x.j)); if(!pool.length){ toast('No hay frases disponibles en tu nivel'); PRACT={mode:null}; renderPractica(); return; }
+  P.cur=rnd(pool); (P.used=P.used||[]).push(P.cur.j); P.plays=0; P.answer=null; renderDictado(); setTimeout(()=>speak(P.cur.j),300);
+}
+function renderDictado(){
+  const P=PRACT, el=$('#main'); el.innerHTML=''; document.body.classList.add('focus'); const c=P.cur;
+  const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Salir del dictado?',()=>{ PRACT={mode:null}; go('practica'); })},'✕ Salir'), h('span',{class:'sp'}), h('span',{class:'num'},`${P.n+1}/10`), h('span',{class:'badge soft'},'Dictado'));
+  const card=h('div',{class:'prompt-card enter kind-g'}, h('div',{class:'ask'},'Escucha y escribe en kana'), h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:()=>{ P.plays++; speak(c.j); }},'音 Escuchar otra vez')), h('div',{class:'small muted'},`De «${c.src}»`));
+  const wrap=h('div',{class:'study'}, head, card);
+  if (P.answer==null){
+    const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
+    const submit=()=>{ const v=input.value.trim(); if(!v) return; P.answer=toKana(v,true); const r=kanaDiff(P.answer,c.k); P.last=r; P.sum+=r.pct; S.stats=S.stats||{}; const st=S.stats.di=S.stats.di||{c:0,w:0}; if(r.pct>=85) st.c++; else st.w++; bump('di'); renderDictado(); };
+    input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
+    wrap.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Corregir',onclick:submit},'→')), h('div',{class:'kbd',style:'margin-top:6px;text-align:center'},'Puedes escucharla las veces que quieras. Enter para corregir.'));
+    setTimeout(()=>input.focus(),0);
+  } else {
+    const r=P.last; const fb=h('div',{class:'feedback'}, h('div',{class:'verdict '+(r.pct>=85?'ok':'ko')}, `${r.pct} % de acierto`, h('span',{class:'muted',style:'font-weight:400'},` · escuchada ${P.plays+1} ${plural(P.plays+1,'vez','veces')}`)));
+    const dl=h('dl'); const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
+    add('Tu dictado', h('span',{class:'jp'},P.answer));
+    add('Correcto', h('span',{class:'jp'}, r.marks.map(m=>m.ok?m.c:h('b',{style:'color:var(--warn)'},m.c))));
+    add('Con kanji', h('span',{class:'jp'}, c.j, ' ', spkBtn(c.j)));
+    fb.append(dl); const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:()=>{ P.n++; nextDictation(); }},'Siguiente (Enter)'); fb.append(next); wrap.append(fb);
+    const hd=e=>{ if(e.key==='Enter'&&PRACT===P&&P.answer!=null){ e.preventDefault(); document.removeEventListener('keydown',hd); P.n++; nextDictation(); } }; document.addEventListener('keydown',hd); P.kh=hd; setTimeout(()=>next.focus(),0);
+  }
+  el.append(wrap); window.scrollTo(0,0);
+}
+function finishDictation(){ const P=PRACT; const avg=Math.round(P.sum/Math.max(1,P.n)); PRACT={mode:null}; document.body.classList.remove('focus'); const el=$('#main'); el.innerHTML=''; el.append(h('div',{class:'study stack'}, h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},'Dictado terminado'), h('div',{class:'score '+(avg>=85?'pass':'fail')},avg+'%'), h('p',{class:'muted'}, avg>=85?'Buen oído. Sube la velocidad de la voz en Ajustes para hacerlo más difícil.':'Por debajo del 85 %: vuelve a escuchar las frases falladas en voz alta, repitiéndolas tú también (shadowing).')), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:()=>go('practica')},'Volver a Práctica')))); window.scrollTo(0,0); }
+// ---------- Comprensión auditiva ----------
+function renderEscucha(){
+  const P=PRACT, el=$('#main'); el.innerHTML='';
+  if (!P.id){
+    el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Comprensión auditiva')));
+    const list=h('div',{class:'list'});
+    allReadings().filter(r=>(r.lv||1)<=S.level).forEach(r=>{ const done=(S.listen||{})[r.id]; list.append(h('button',{class:'item'+(done?' done':''),onclick:()=>{ P.id=r.id; P.answers={}; renderEscucha(); }}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t jp'},r.title), h('div',{class:'small muted'},r.sub+' · nivel '+r.lv)), done?h('span',{class:'badge ok'},done.score+'%'):h('span',{class:'badge soft'},'Nuevo'))); });
+    el.append(list); return;
+  }
+  const r=allReadings().find(x=>x.id===P.id); const sents=readingSentences(r);
+  el.append(h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>{ stopSpeak(); P.id=null; renderEscucha(); }},'← Textos'), h('span',{class:'sp'}), h('button',{class:'btn sm',onclick:()=>speak(plainReading(r))},'音 Todo / parar')));
+  el.append(h('h1',{class:'jp'},r.title), h('div',{class:'muted small'},r.sub));
+  el.append(h('div',{class:'card'}, h('div',{class:'eyebrow'},'Escucha por frases'), h('div',{class:'row',style:'margin-top:8px'}, sents.map((s,i)=>h('button',{class:'btn sm',onclick:()=>speak(s.j)},String(i+1)))), h('p',{class:'small muted',style:'margin:8px 0 0'},'El texto está oculto. Responde solo con lo que oigas; al terminar podrás leerlo.')));
+  const qa=h('div',{class:'stack',style:'margin-top:12px'});
+  r.q.forEach((q,qi)=>{ const box=h('div',{class:'card'}, h('div',{class:'row'}, h('div',{class:'jp',style:'font-weight:600;flex:1'},(qi+1)+'. '+q.q), spkBtn(q.q))); const ch=h('div',{class:'choices text one'}); q.o.forEach((o,oi)=>ch.append(h('button',{lang:'ja',onclick:()=>{ if(P.answers[qi]!=null) return; P.answers[qi]=oi; [...ch.children].forEach((b,i)=>{ b.disabled=true; if(i===q.a) b.classList.add('right'); else if(i===oi) b.classList.add('wrong'); }); if(Object.keys(P.answers).length>=r.q.length){ const ok=r.q.filter((x,i)=>P.answers[i]===x.a).length; const score=Math.round(100*ok/r.q.length); S.listen=S.listen||{}; S.listen[r.id]={score,date:now()}; bump('li'); toast(`Escucha completada: ${score}%`); $('#li-text').hidden=false; } }},o))); box.append(ch); qa.append(box); });
+  el.append(h('h2',{},'Preguntas'), qa, h('div',{id:'li-text',class:'card soft',hidden:true,style:'margin-top:12px'}, h('div',{class:'eyebrow'},'Texto'), h('div',{class:'jp',style:'margin-top:6px;line-height:2'},plainReading(r)), h('div',{class:'small muted',style:'margin-top:8px'},r.es)));
+  window.scrollTo(0,0);
+}
+// ---------- Redacción ----------
+const WRITING_TOPICS = {
+  N5:[{t:'Preséntate',d:'Tu nombre, de dónde eres, qué estudias o en qué trabajas, qué te gusta.'},{t:'Mi día',d:'Qué haces un día normal, de la mañana a la noche, con horas.'},{t:'Mi familia',d:'Quiénes son, qué hacen, cómo son.'},{t:'El fin de semana pasado',d:'Qué hiciste, con quién, qué tal estuvo (pasado).'},{t:'Mi comida favorita',d:'Qué es, dónde la comes, por qué te gusta.'},{t:'Mi casa',d:'Dónde está, cómo es, qué hay en cada habitación.'},{t:'Un correo a un amigo',d:'Invítalo a hacer algo el sábado: dónde, a qué hora, por qué.'},{t:'Mi ciudad',d:'Qué hay, qué no hay, qué recomiendas.'}],
+  N4:[{t:'Por qué estudio japonés',d:'Cuándo empezaste, qué te cuesta, qué quieres conseguir.'},{t:'Un viaje',d:'Un viaje que hiciste: adónde, qué viste, qué comiste, qué pasó.'},{t:'Consejos para un amigo que viene a tu país',d:'Qué debe hacer, qué no debe hacer (〜たほうがいい、〜てはいけない).'},{t:'Si tuviera más tiempo',d:'Qué harías (〜たら、〜ば).'},{t:'Un problema y su solución',d:'Algo que te pasó y cómo lo resolviste.'},{t:'Mi trabajo o mis estudios',d:'Qué haces, qué te gusta y qué no, qué quieres cambiar.'},{t:'Una persona importante para mí',d:'Quién es, cómo es, qué has aprendido de ella.'},{t:'Opinión: ¿ciudad o campo?',d:'Ventajas y desventajas, y tu opinión (〜と思う、〜し〜し).'}],
+  N3:[{t:'Un cambio en tu vida',d:'Qué cambió, por qué, cómo te sientes ahora (〜ようになる、〜ば〜ほど).'},{t:'Carta de queja educada',d:'A un hotel o tienda: qué pasó y qué pides (keigo básico).'},{t:'Opinión: trabajar desde casa',d:'Argumentos a favor y en contra, conclusión.'},{t:'Una costumbre de tu país',d:'Explícasela a un japonés: origen, cómo se hace, qué significa.'},{t:'Un libro, película o serie',d:'Resumen breve y tu valoración, sin destripar.'},{t:'Algo que te arrepientes de no haber hecho',d:'(〜ばよかった、〜べきだった).'}],
+  N2:[{t:'Ventajas e inconvenientes de las redes sociales',d:'Estructura: introducción, dos argumentos por lado, conclusión.'},{t:'Un problema social de tu país',d:'Causas, consecuencias y una propuesta.'},{t:'Carta formal de solicitud',d:'Pide una beca, un puesto o una colaboración (keigo).'},{t:'¿Qué significa aprender un idioma de adulto?',d:'Reflexión con ejemplos propios.'},{t:'Describe un proceso',d:'Cómo se hace algo paso a paso (receta, trámite, trabajo).'}],
+  N1:[{t:'Ensayo: tecnología y soledad',d:'Tesis, argumentos con matices, contraargumento y conclusión.'},{t:'Crítica de una decisión política',d:'Expón, analiza y valora con lenguaje formal.'},{t:'Relato breve',d:'Un relato con narrador, diálogo y un giro (lenguaje literario).'},{t:'Informe para tu empresa',d:'Situación, análisis y recomendación (文書体).'}],
+};
+const WRITING_MIN = {N5:120, N4:200, N3:300, N2:400, N1:600};
+function writingMin(){ return WRITING_MIN[tierOf(S.level).n]||200; }
+function pickTopic(){ const tier=tierOf(S.level).n; const tiers=['N5','N4','N3','N2','N1']; const pool=tiers.slice(0,tiers.indexOf(tier)+1).flatMap(t=>WRITING_TOPICS[t].map(x=>({...x,tier:t}))); const recent=(S.writings||[]).slice(-6).map(w=>w.topic.t); const fresh=pool.filter(x=>!recent.includes(x.t)&&x.tier===tier); const pick1=rnd(fresh.length?fresh:pool); const gs=shuffle(learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='g')).slice(0,2).map(g=>g.t); return {...pick1, use:gs, min:writingMin()}; }
+function renderRedaccion(){
+  const P=PRACT, el=$('#main'); el.innerHTML=''; const tp=P.topic;
+  el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Redacción'), h('button',{class:'btn sm',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(),text:'',result:null}; renderPractica(); }},'Otro tema')));
+  el.append(h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Tema · ${tp.tier||''} · mínimo ${tp.min} caracteres`), h('h2',{},tp.t), h('p',{class:'small',style:'margin:0'},tp.d), tp.use&&tp.use.length?h('div',{class:'small muted'},'Intenta usar: ', tp.use.map(t=>h('span',{class:'pill g jp',style:'margin:2px'},t))):null));
+  const counter=h('span',{class:'num small muted'});
+  const ta=h('textarea',{id:'wr-text',lang:'ja',placeholder:'Escribe aquí en japonés con tu teclado japonés (kanji y kana). Sin límite máximo.',style:'min-height:220px;font-family:var(--f-jp);font-size:1.1rem'}); ta.value=P.text||'';
+  const upd=()=>{ const n=jaLen(ta.value); counter.textContent=`${n} / mín. ${tp.min} caracteres`; counter.style.color=n>=tp.min?'var(--ok)':'var(--muted)'; btn.disabled=n<tp.min; saveBtn.disabled=n<Math.floor(tp.min/2); P.text=ta.value; }; ta.addEventListener('input',upd);
+  const status=h('div',{class:'small muted'});
+  const btn=h('button',{class:'btn primary',onclick:async()=>{ if(!sb||!USER){ status.textContent='Inicia sesión para corregir con Claude.'; return; } btn.disabled=true; status.textContent='Claude está corrigiendo (30 a 60 segundos)…'; try{ const r=await callFunction('write',{text:ta.value,topic:tp.t+'. '+tp.d,level:tierOf(S.level).n,use:tp.use||[]}); if(!r||typeof r.score!=='number') throw new Error('respuesta incompleta'); P.result=r; saveWriting(P,r); status.textContent=''; renderPractica(); }catch(e){ status.textContent='No se pudo corregir: '+(e.message||e); btn.disabled=false; } }},'Corregir con Claude');
+  const saveBtn=h('button',{class:'btn',onclick:()=>{ saveWriting(P,null); toast('Guardada sin corregir'); PRACT={mode:null}; renderPractica(); }},'Guardar sin corregir');
+  el.append(h('div',{class:'card stack',style:'margin-top:12px'}, ta, h('div',{class:'row'}, counter, h('span',{class:'sp'}), saveBtn, btn), status)); upd();
+  const r=P.result; if (r){
+    const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('div',{class:'row between'}, h('h3',{},'Corrección'), h('span',{class:'score '+(r.score>=70?'pass':'fail'),style:'font-size:1.6rem'},r.score+'%')), r.comment?h('p',{style:'margin:0'},r.comment):null);
+    if (Array.isArray(r.errors)&&r.errors.length) box.append(h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Escribiste'),h('th',{},'Mejor'),h('th',{},'Por qué'))), h('tbody',{}, r.errors.map(e=>h('tr',{}, h('td',{class:'jp wrap',style:'color:var(--warn)'},e.orig||''), h('td',{class:'jp wrap',style:'color:var(--ok)'},e.fix||''), h('td',{class:'wrap small'},e.why||'')))))));
+    else box.append(h('div',{class:'small muted'},'Sin errores señalados.'));
+    if (r.corrected) box.append(h('div',{}, h('div',{class:'eyebrow'},'Versión natural'), h('div',{class:'jp',style:'margin-top:6px;line-height:2;white-space:pre-wrap'},r.corrected), h('div',{class:'row',style:'margin-top:6px'}, spkBtn(r.corrected))));
+    if (r.level) box.append(h('div',{class:'small muted'},'Nivel estimado de este texto: '+r.level));
+    el.append(box);
+  }
+}
+function saveWriting(P,r){ S.writings=S.writings||[]; const rec={date:now(),topic:P.topic,text:P.text,score:r?r.score:null,result:r?{score:r.score,comment:r.comment||'',errors:(r.errors||[]).slice(0,30),corrected:r.corrected||'',level:r.level||''}:null}; const i=S.writings.findIndex(w=>w.topic.t===P.topic.t&&w.text===P.text); if(i>=0) S.writings[i]=rec; else S.writings.push(rec); if(S.writings.length>50) S.writings=S.writings.slice(-50); if(!P.saved) bump('wr'); P.saved=true; save(); }
 
 
 </script>
