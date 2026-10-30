@@ -1,0 +1,47 @@
+{
+ "nota": "Textos de referencia del corrector de redacciones con el rango de nota esperado (estimado por una persona). Tras cambiar prompts o fórmula, corregir cada uno y comprobar que la nota cae dentro de 'expect'.",
+ "cases": [
+  {
+   "id": "paris-con-errores",
+   "level": "N5",
+   "topic": "Mi ciudad. Qué hay, qué no hay, qué recomiendas.",
+   "min": 120,
+   "use": [
+    "〜に",
+    "〜の"
+   ],
+   "expect": [
+    60,
+    66
+   ],
+   "text": "私の町\n\n私の町はパリです。 行ったことがありますか？パリはとてもにぎやかな町です。　パリの一番名物は、クレプです. 毎日ぼくのいとことクレプ屋からおいしいおやつ買いました。\nパリでたくさん大切なところがありますルーブルとか、エッフェルタワーとかけど私の一番好き所はパリの川岸です。あの所で、夏のときパリ人はおどります。だからパリへ行ったら一緒に川岸にいきましょう。"
+  },
+  {
+   "id": "paris-sin-errores",
+   "level": "N5",
+   "topic": "Mi ciudad. Qué hay, qué no hay, qué recomiendas.",
+   "min": 120,
+   "use": [
+    "〜に",
+    "〜の"
+   ],
+   "expect": [
+    92,
+    100
+   ],
+   "text": "私の町\n\n私の町はパリです。行ったことがありますか？パリはとてもにぎやかな町です。パリの一番の名物はクレープです。毎日、従妹とクレープ屋さんでおいしいおやつを買いました。\nパリにはルーブル美術館やエッフェル塔など有名な場所がたくさんありますが、私の一番好きな場所はパリの川岸です。夏の時期には、パリの人たちがそこで踊ります。だから、パリへ行ったら一緒に川岸へ行きましょう。"
+  },
+  {
+   "id": "tanaka-cortes",
+   "level": "N5",
+   "topic": "Invitar a un amigo al cine",
+   "min": 120,
+   "use": [],
+   "expect": [
+    78,
+    86
+   ],
+   "text": "田中さん！\nおはようございます、今週土曜日なにしてますか？新しい映画見たいです。一緒に行きませんか？従妹は私にすごくいい映画と言ました。田中さんは映画好きですか？時間があったら、土曜日七時午後、梅田に来ることができますか？映画館の名前は“都北”です。今週もきっぷがとても安いです、だからチャンスです。じゃあまた土曜日"
+  }
+ ]
+}
