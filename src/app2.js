@@ -163,7 +163,7 @@ async function pullRemote(){
     if (data && data.state) mergeRemote(data.state); else { S.updated=now(); saveRemote(); }
     const g=await sb.from('gen_levels').select('lv,data').eq('user_id',USER.id); if(!g.error && g.data) for(const row of g.data){ S.gen[row.lv]=row.data; } registerGenerated();
     const ur=await sb.from('user_readings').select('id,data').eq('user_id',USER.id); if(!ur.error && ur.data){ for(const row of ur.data) USER_READINGS[row.id]=row.data; saveUserReadingsLocal(); }
-    await pullGlossary();
+    await pullGlossary(); pullReviewed();
     setSyncLabel('Sincronizado con tu cuenta');
   }catch(e){ console.warn(e); setSyncLabel('Sin conexión: guardado solo aquí'); }
 }
@@ -248,5 +248,6 @@ async function checkAllowed(){
 }
 async function adminList(){ const r=await sb.rpc('admin_list_users'); if(r.error) throw r.error; return r.data||[]; }
 async function adminAdd(email,note){ const r=await sb.rpc('admin_add_user',{p_email:email,p_note:note||null}); if(r.error) throw r.error; }
+async function adminSetReviewer(email,on){ const r=await sb.rpc('admin_set_reviewer',{p_email:email,p_on:!!on}); if(r.error) throw r.error; }
 async function adminSetEditor(email,on){ const r=await sb.rpc('admin_set_glossary_editor',{p_email:email,p_on:!!on}); if(r.error) throw r.error; }
 async function adminRemove(email){ const r=await sb.rpc('admin_remove_user',{p_email:email}); if(r.error) throw r.error; }

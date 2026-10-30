@@ -32,7 +32,7 @@ function renderLectura(){
     r.g&&r.g.length ? h('div',{class:'small muted'}, 'Gramática que aparece: ', r.g.map(id=>ITEMS.get('g|'+id)).filter(Boolean).map(g=>h('span',{class:'pill g jp',style:'margin:2px'},g.t))) : null,
     h('h2',{},'Preguntas'), qa,
     r.notes&&r.notes.length ? h('div',{class:'card soft'}, h('div',{class:'eyebrow'},'Notas'), h('ul',{class:'small',style:'margin:6px 0 0;padding-left:18px'}, r.notes.map(n=>h('li',{},n)))) : null,
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>addReadingVocab(r)},'Añadir palabras nuevas a mis repasos'), r.user?h('button',{class:'btn sm warn ghost',onclick:()=>confirmBox('¿Borrar esta lectura importada?',()=>{deleteUserReading(r.id);READER.id=null;renderLectura();})},'Borrar'):null)
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>addReadingVocab(r)},'Añadir palabras nuevas a mis repasos'), r.user?null:reportBtn('r|'+r.id,r.title), r.user?h('button',{class:'btn sm warn ghost',onclick:()=>confirmBox('¿Borrar esta lectura importada?',()=>{deleteUserReading(r.id);READER.id=null;renderLectura();})},'Borrar'):null)
   ));
   window.scrollTo(0,0);
 }
@@ -207,6 +207,7 @@ function itemSheet(it){
   if (it.kind==='k') body.append(h('div',{class:'big-jp',style:'text-align:center'},it.k), h('div',{style:'text-align:center'},it.m.join(', ')), h('div',{class:'small muted',style:'text-align:center'},'On: '+((it.on||[]).join('・')||'—')+' · Kun: '+((it.kun||[]).join('・')||'—')), it.mn?h('div',{class:'small'},it.mn):null, h('div',{class:'small jp'}, vocabWithKanji(it.k).slice(0,5).map(v=>v.w+'（'+v.r+'）').join('、')));
   else if (it.kind==='v') body.append(h('div',{class:'big-jp',style:'text-align:center;font-size:2.2rem'},it.w), h('div',{style:'text-align:center'},h('span',{class:'jp'},it.r),' · ',it.m.join(', ')), it.ex?h('div',{class:'small'}, h('div',{class:'jp'},it.ex), h('div',{class:'muted'},it.es||'')):null);
   else body.append(grammarSheet(it));
+  if (it.kind!=='g') body.append(reviewRow(k, it.kind==='k'?it.k:it.w));
   body.append(h('div',{class:'row small muted',style:'justify-content:center'}, h('span',{},STAGE_NAMES[rec.s]), rec.s>0&&rec.s<9?h('span',{},'· próximo repaso '+fmtRel(rec.due)):null, total?h('span',{},`· ${acc} % de acierto (${rec.c||0}/${total})`):null));
   const burnBtn = rec.s>=9 ? h('button',{class:'btn sm ghost',onclick:()=>{ S.items[k]={...rec,s:1,due:now(),ls:now()}; save(); box.remove(); veil.remove(); toast('Vuelve a los repasos'); render(); }},'Desquemar') : h('button',{class:'btn sm ghost',onclick:()=>{ S.items[k]={...rec,s:9,due:Infinity,lrn:rec.lrn||now(),ls:now()}; save(); box.remove(); veil.remove(); toast('Quemado: no volverá a salir'); render(); }},'Ya lo sé (quemar)');
   const box=h('div',{class:'card stack',style:'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;max-width:420px;width:calc(100% - 32px);max-height:80vh;overflow:auto'}, body, h('div',{class:'row'}, burnBtn, h('span',{class:'sp'}), spkBtn(it.kind==='g'?parseCloze(it.ex[0].j).pre+parseCloze(it.ex[0].j).answers[0]+parseCloze(it.ex[0].j).post:(it.w||it.k)), h('button',{class:'btn sm',onclick:()=>{box.remove();veil.remove();}},'Cerrar')));

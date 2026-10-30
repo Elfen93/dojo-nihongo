@@ -232,6 +232,7 @@ function grammarSheet(it, opts={}){
       rs.forEach(r=>{ const tgt=r.id&&ITEMS.get('g|'+r.id); det.append(h('div',{style:'margin-bottom:8px'}, tgt?h('button',{class:'pill g jp',onclick:()=>itemSheet(tgt)},r.t):h('b',{class:'jp'},r.t), h('div',{class:'small'},r.d))); }); }
     root.append(det);
   }
+  root.append(reviewRow(keyOf(it),it.t));
   return root;
 }
 function itemDetails(it, p){
@@ -267,7 +268,7 @@ function feedbackPanel(c){
     S.items[k]={...old,s:9,due:Infinity,lrn:old.lrn||now(),ls:now()}; s.queue=s.queue.filter(q=>q.k!==k);
     if (r.left.size){ r.left.clear(); s.done++; s.correct++; if(s.mode==='lesson') bump(r.it.kind==='g'?'lg':'l'); else if(s.mode==='review'){ bump('r'); bump('rc'); } }
     s.undo=null; save(); if(s.mode==='review') markClearedIfEmpty(); toast('Quemado: no volverá a salir'); nextCard(); };
-  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:(c.f==='km'||c.f==='vm')?()=>{ const t=(c.answer||'').trim().toLowerCase(); if(!t) return; addAlt(c.k+'#m',t).then(shared=>toast(shared?'Añadido al glosario común':'Anotado: esa respuesta también vale')); markAsCorrect(); }:c.f==='vp'?()=>{ const t=normKana(toKana(c.answer||'',true)); if(!t) return; const k=c.k; addAlt(k,t).then(shared=>{ if(shared) toast('Añadido al glosario común'); }); undoLast(); if(SESSION&&SESSION.cur){ SESSION.cur.syn={w:t,r:t,custom:true}; renderStudy(); } }:markAsCorrect},c.f==='vp'?'Mi palabra también era válida (sin penalizar)':(c.f==='km'||c.f==='vm')?'Mi respuesta también era válida':'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), reportBtn(c.k,it.kind==='k'?it.k:it.kind==='v'?it.w:it.t), !ok?h('button',{class:'btn sm ghost',onclick:(c.f==='km'||c.f==='vm')?()=>{ const t=(c.answer||'').trim().toLowerCase(); if(!t) return; addAlt(c.k+'#m',t).then(shared=>toast(shared?'Añadido al glosario común':'Anotado: esa respuesta también vale')); markAsCorrect(); }:c.f==='vp'?()=>{ const t=normKana(toKana(c.answer||'',true)); if(!t) return; const k=c.k; addAlt(k,t).then(shared=>{ if(shared) toast('Añadido al glosario común'); }); undoLast(); if(SESSION&&SESSION.cur){ SESSION.cur.syn={w:t,r:t,custom:true}; renderStudy(); } }:markAsCorrect},c.f==='vp'?'Mi palabra también era válida (sin penalizar)':(c.f==='km'||c.f==='vm')?'Mi respuesta también era válida':'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
   const sess=SESSION; const handler=e=>{ if(e.key==='Enter' && SESSION===sess && sess.cur===c && sess.phase==='feedback'){ e.preventDefault(); nextCard(); } };
   if (SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler);
   SESSION.enterHandler=handler; document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);

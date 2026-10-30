@@ -72,6 +72,7 @@ function renderLesson(){
   } else {
     card.append(h('div',{class:'ask g',style:'text-align:center'},'Gramática nueva'), grammarSheet(it));
   }
+  if (it.kind!=='g') card.append(reviewRow(keyOf(it), it.kind==='k'?it.k:it.w));
   el.append(h('div',{class:'study stack'}, head, card,
     h('div',{class:'row'}, L.i>0?h('button',{class:'btn',onclick:()=>{L.i--;renderLesson();}},'← Anterior'):null, h('button',{class:'btn ghost sm',onclick:()=>{ const k=keyOf(it); S.items[k]={s:9,due:Infinity,c:0,w:0,lrn:now(),ls:now()}; save(); L.batch.splice(L.i,1); toast('Quemado: no volverá a salir'); const inBatch=new Set(L.batch.map(keyOf)); const next=lessonsAvailable(L.track||'kv').items.find(x=>!inBatch.has(keyOf(x))&&keyOf(x)!==k); if(next) L.batch.splice(L.i,0,next); if(!L.batch.length){ LESSON=null; go('lecciones'); return; } if(L.i>=L.batch.length) L.i=L.batch.length-1; renderLesson(); }},'Ya lo sé'), h('span',{class:'sp'}),
       L.i<L.batch.length-1 ? h('button',{class:'btn primary',onclick:()=>{L.i++;renderLesson();window.scrollTo(0,0);}},'Siguiente →') : h('button',{class:'btn leaf',onclick:()=>{const b=L.batch;LESSON=null;startSession('lesson',b,{track:L.track});}},'Empezar el test de la lección'))));
