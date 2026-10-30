@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n3-ni-mo-kakawarazu",j:"病気[にもかかわらず]、彼は仕事を続けた。",s:"A pesar de estar enfermo, él siguió trabajando.",h:"にもかかわらず"},
+{g:"n3-ni-hokanaranai",j:"それは愛情の表れ[にほかならない]。",s:"Eso no es sino una muestra de cariño.",h:"にほかならない"},
+{g:"n3-ni-soui-nai",j:"これは偽物[に相違ない]。",s:"Esto es sin duda una falsificación.",h:"に相違ない"},
+{g:"n3-temo-kamawanai",j:"ここに座っ[てもかまいませんか]。",s:"¿Le importa que me siente aquí?",h:"座る"},
+{g:"n3-te-wa-naranai",j:"子どもを一人にし[てはならない]。",s:"No se debe dejar solos a los niños.",h:"する"},
+{g:"n3-te-bakari-wa-irarenai",j:"親に頼っ[てばかりはいられない]。",s:"No puedo depender siempre de mis padres.",h:"頼る"},
+{g:"n3-te-kara-to-iu-mono",j:"運動を始め[てからというもの]、体調がいい。",s:"Desde que empecé a hacer ejercicio, me encuentro bien.",h:"始める"},
+{g:"n3-te-touzen",j:"忙しければ、疲れ[て当然]だ。",s:"Si estás ocupado, es natural que estés cansado.",h:"疲れる"},
+{g:"n3-te-demo",j:"無理を[してでも]、この仕事を終わらせる。",s:"Terminaré este trabajo aunque tenga que forzarme.",h:"する"},
+{g:"n3-ta-kekka",j:"悩ん[だ末に]、結婚を決めた。",s:"Tras muchas dudas, decidí casarme.",h:"悩む"},
+{g:"n3-ta-bakari-ni",j:"傘を忘れ[たばかりに]、びしょぬれになった。",s:"Por haberme olvidado el paraguas, me calé hasta los huesos.",h:"忘れる"},
+{g:"n3-ta-tokoro-ga",j:"電話し[たところが]、誰も出なかった。",s:"Llamé, pero no contestó nadie.",h:"する"},
+{g:"n3-ta-mono-da",j:"祖母はよく昔話を話してくれ[たものだ]。",s:"Mi abuela solía contarme cuentos antiguos.",h:"くれる"},
+{g:"n3-you-to-suru",j:"子どもは野菜を食べよ[うとしない]。",s:"El niño se niega a comer verduras.",h:"食べる"},
+{g:"n3-you-to-omoeba",j:"勝と[うと思えば]、勝てた。",s:"Si hubiera querido ganar, habría podido.",h:"勝つ"},
+{g:"n3-nara-noni",j:"雨が降らなかっ[たなら]、行けたのに。",s:"Si no hubiera llovido, habría podido ir.",h:"降る"},
+{g:"n3-nai-uchi-ni",j:"冷めない[うちに]、食べてください。",s:"Coma antes de que se enfríe.",h:"冷めない"},
+{g:"n3-naide-sumu",j:"急が[ないで済む]ように、早く出発した。",s:"Salí pronto para no tener que correr.",h:"急ぐ"},
+{g:"n3-sai-ni",j:"帰国する[際に]、友だちが見送ってくれた。",s:"Al volver a mi país, mis amigos me despidieron.",h:"際に"},
+{g:"n3-ni-shite-wa",j:"学生[にしては]、お金を持っている。",s:"Para ser un estudiante, tiene dinero.",h:"にしては"}
+);

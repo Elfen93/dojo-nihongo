@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n3-toshite-mo",j:"たとえ[雨が降ったとしても]、試合は行われる。",s:"Aunque llueva, el partido se jugará.",h:"降る, pasado"},
+{g:"n3-ni-kuwaete",j:"暑さ[に加えて]、湿度も高い。",s:"Además del calor, la humedad es alta.",h:"に加えて"},
+{g:"n3-ni-hanshite",j:"天気予報[に反して]、一日中晴れていた。",s:"Contra el pronóstico, estuvo despejado todo el día.",h:"に反して"},
+{g:"n3-ni-kakete-wa",j:"記憶力[にかけては]、彼女は誰にも負けない。",s:"En memoria, ella no pierde con nadie.",h:"にかけては"},
+{g:"n3-ni-kawatte",j:"部長[に代わって]、田中さんが会議に出た。",s:"Tanaka asistió a la reunión en lugar del jefe.",h:"に代わって"},
+{g:"n3-ni-suginai",j:"それは[偶然にすぎない]。",s:"Eso no es más que una casualidad.",h:"偶然"},
+{g:"n3-ni-kagiru",j:"暑い日はプールで[泳ぐに限る]。",s:"Los días de calor lo mejor es nadar en la piscina.",h:"泳ぐ"},
+{g:"n3-ni-kagirazu",j:"若者[に限らず]、お年寄りも使っている。",s:"No solo los jóvenes, también los mayores lo usan.",h:"に限らず"},
+{g:"n3-ni-watatte",j:"長い期間[にわたって]、調査が行われた。",s:"Se hizo una investigación durante un largo periodo.",h:"にわたって"},
+{g:"n3-ni-sotte",j:"先生のアドバイス[に沿って]、練習した。",s:"Practiqué siguiendo el consejo del profesor.",h:"に沿って"},
+{g:"n3-ni-oujite",j:"季節[に応じて]、服を替える。",s:"Cambio de ropa según la estación.",h:"に応じて"},
+{g:"n3-ni-motozuite",j:"経験[に基づいて]、アドバイスする。",s:"Aconsejo basándome en la experiencia.",h:"に基づいて"},
+{g:"n3-ni-atatte",j:"留学する[に当たって]、保険に入った。",s:"Al ir a estudiar al extranjero, contraté un seguro.",h:"留学する"},
+{g:"n3-ni-tsuki",j:"改装中[につき]、しばらく休みます。",s:"Por reformas, cerraremos un tiempo.",h:"につき"},
+{g:"n3-tame",j:"大雨の[ため]、試合は中止になった。",s:"Por la fuerte lluvia, se suspendió el partido.",h:"ため"},
+{g:"n3-sei-de",j:"風邪を引いた[せいで]、試験を休んだ。",s:"Por culpa del resfriado falté al examen.",h:"せいで"},
+{g:"n3-okage-de",j:"あなたの[おかげで]、助かりました。",s:"Gracias a usted me salvé.",h:"おかげで"},
+{g:"n3-kuse-ni",j:"お金がある[くせに]、ちっとも使わない。",s:"Teniendo dinero, no gasta nada.",h:"くせに"},
+{g:"n3-sae",j:"疲れて、歩くこと[さえ]できない。",s:"Estoy tan cansado que no puedo ni caminar.",h:"さえ"},
+{g:"n3-sura",j:"自分の名前[すら]言えなかった。",s:"No pudo decir ni su propio nombre.",h:"すら"}
+);

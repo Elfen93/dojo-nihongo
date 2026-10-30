@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n3-koso",j:"これ[こそ]、私が探していた本だ。",s:"Este es precisamente el libro que buscaba.",h:"こそ"},
+{g:"n3-kara-koso",j:"難しい[からこそ]、挑戦する価値がある。",s:"Precisamente porque es difícil, vale la pena intentarlo.",h:"からこそ"},
+{g:"n3-kara-niwa",j:"約束した[からには]、守るべきだ。",s:"Ya que lo prometiste, debes cumplirlo.",h:"からには"},
+{g:"n3-kara-to-itte",j:"安い[からといって]、買いすぎてはいけない。",s:"Aunque sea barato, no hay que comprar de más.",h:"からといって"},
+{g:"n3-kara-shite",j:"見た目[からして]、おいしそうだ。",s:"Ya por el aspecto se ve rico.",h:"からして"},
+{g:"n3-kara-suru-to",j:"経験[からすれば]、この方法が一番だ。",s:"Desde mi experiencia, este método es el mejor.",h:"からすれば"},
+{g:"n3-ippou-de",j:"子どもを育てる[一方で]、仕事も続けている。",s:"Cría a sus hijos y a la vez sigue trabajando.",h:"一方で"},
+{g:"n3-ippou-da",j:"仕事が増える[一方だ]。",s:"El trabajo no hace más que aumentar.",h:"一方だ"},
+{g:"n3-ue-de",j:"家族と相談した[上で]、決めます。",s:"Lo decidiré tras consultarlo con mi familia.",h:"相談した上で"},
+{g:"n3-ue-ni",j:"道が混んでいた[上に]、雨まで降り出した。",s:"Había atasco y encima se puso a llover.",h:"上に"},
+{g:"n3-ijou-wa",j:"決めた[以上は]、迷わずに進もう。",s:"Ya que lo hemos decidido, avancemos sin dudar.",h:"以上は"},
+{g:"n3-irai",j:"結婚して[以来]、一度も旅行していない。",s:"Desde que me casé no he viajado ni una vez.",h:"結婚して以来"},
+{g:"n3-kawari-ni",j:"日曜日に働く[かわりに]、月曜日は休みます。",s:"A cambio de trabajar el domingo, libro el lunes.",h:"かわりに"},
+{g:"n3-kiri",j:"借りた本を返した[きり]、一度も図書館に行っていない。",s:"Devolví el libro y no he vuelto a ir a la biblioteca.",h:"きり"},
+{g:"n3-kiru",j:"重くて、一人では持ち[きれない]。",s:"Pesa tanto que no puedo llevarlo yo solo.",h:"きれない"},
+{g:"n3-gimi",j:"売り上げが減り[気味]だ。",s:"Las ventas tienden a bajar.",h:"気味"},
+{g:"n3-ge",j:"犬が寂し[げ]に鳴いている。",s:"El perro aúlla con aire solitario.",h:"げ"},
+{g:"n3-gachi",j:"説明書を読まずに失敗し[がち]だ。",s:"Es frecuente fallar por no leer las instrucciones.",h:"がち"},
+{g:"n3-ppoi",j:"白[っぽい]シャツを着ている。",s:"Lleva una camisa blanquecina.",h:"っぽい"},
+{g:"n3-darake",j:"傷[だらけ]の手をしている。",s:"Tiene las manos llenas de heridas.",h:"だらけ"}
+);

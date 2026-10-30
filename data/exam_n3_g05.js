@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n3-sasuga",j:"[さすが]日本一の店だ。",s:"Como era de esperar, es la mejor tienda de Japón.",h:"さすが"},
+{g:"n3-ittai",j:"[いったい]いつまで待たせるつもりだ。",s:"¿Hasta cuándo piensas hacerme esperar?",h:"いったい"},
+{g:"n3-yohodo",j:"これは[よほど]のことがない限り、変わらない。",s:"Esto no cambia salvo que ocurra algo realmente grande.",h:"よほど"},
+{g:"n3-semete",j:"[せめて]電話ぐらいしてください。",s:"Al menos llame por teléfono.",h:"せめて"},
+{g:"n3-tatoe",j:"[たとえ]失敗しても、後悔しない。",s:"Aunque fracase, no me arrepentiré.",h:"たとえ"},
+{g:"n3-koto-naku",j:"一度も会う[ことなく]、別れた。",s:"Nos separamos sin habernos visto ni una vez.",h:"会う"},
+{g:"n3-koto-ni-wa-naranai",j:"食べ物の[ことになると]、彼女はうるさい。",s:"Cuando se trata de comida, ella es exigente.",h:"ことになると"},
+{g:"n3-koto-niwa",j:"練習しない[ことには]、上手にならない。",s:"Si no practicas, no mejoras.",h:"しない"},
+{g:"n3-koto-darou",j:"卒業式は素晴らしい[ことだろう]。",s:"La ceremonia de graduación será magnífica.",h:"ことだろう"},
+{g:"n3-mono-dewa-nai",j:"他人の物を勝手に使う[ものではない]。",s:"No se debe usar sin permiso las cosas de otros.",h:"使う"},
+{g:"n3-mono-ga-aru",j:"この町には、独特の[ものがある]。",s:"Esta ciudad tiene algo único.",h:"ものがある"},
+{g:"n3-mono-nara",j:"戻れる[ものなら]、あのころに戻りたい。",s:"Si pudiera volver, volvería a aquella época.",h:"戻れる"},
+{g:"n3-mono-wo",j:"少し我慢すれば、うまくいった[ものを]。",s:"Con un poco de paciencia habría salido bien.",h:"ものを"},
+{g:"n3-to-wa-kagiranai",j:"努力すれば必ず成功する[とは限らない]。",s:"Esforzarse no siempre garantiza el éxito.",h:"とは限らない"},
+{g:"n3-to-wa-ienai",j:"日本語が上手[とは言えない]。",s:"No se puede decir que hable bien japonés.",h:"とは言えない"},
+{g:"n3-to-iu-no-wa",j:"日本語が分かる[ということは]、通訳ができますね。",s:"Si entiende japonés, entonces puede interpretar.",h:"ということは"},
+{g:"n3-to-iu-wake",j:"だから、行きたくない[というわけだ]。",s:"Así que, eso es, no quiere ir.",h:"というわけだ"},
+{g:"n3-ni-shite-mo",j:"雨が降る[にしても]、行きます。",s:"Aunque llueva, iré.",h:"にしても"},
+{g:"n3-ni-totte-wa",j:"日本人[にとっても]、この漢字は難しい。",s:"Incluso para un japonés, este kanji es difícil.",h:"にとっても"},
+{g:"n3-ni-yoru",j:"この絵は有名な画家[によって]描かれた。",s:"Este cuadro fue pintado por un pintor famoso.",h:"によって"}
+);

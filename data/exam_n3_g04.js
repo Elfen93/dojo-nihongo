@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n3-you-ga-nai",j:"名前も住所も知らず、探し[ようがない]。",s:"No sé ni su nombre ni su dirección, así que no hay modo de buscarlo.",h:"ようがない"},
+{g:"n3-you-dewa",j:"挨拶もできない[ようでは]、社会では通用しない。",s:"Si ni siquiera sabes saludar, no te valdrá en la sociedad.",h:"ようでは"},
+{g:"n3-aida",j:"留守の[間に]、荷物が届いた。",s:"Mientras no estaba, llegó el paquete.",h:"間に"},
+{g:"n3-chuu-juu",j:"授業[中|ちゅう]に、携帯を使ってはいけない。",s:"No se debe usar el móvil durante la clase.",h:"ちゅう"},
+{g:"n3-dake-ni",j:"有名な店[だけに]、いつも混んでいる。",s:"Siendo una tienda famosa, siempre está llena.",h:"だけに"},
+{g:"n3-dake-atte",j:"長年住んでいる[だけあって]、この町に詳しい。",s:"Como lleva años viviendo aquí, conoce bien la ciudad.",h:"だけあって"},
+{g:"n3-nado-nante",j:"宝くじが当たる[なんて]、夢のようだ。",s:"Que me toque la lotería, parece un sueño.",h:"なんて"},
+{g:"n3-ba-yokatta",j:"早く寝れ[ばよかった]。",s:"Ojalá me hubiera acostado antes.",h:"寝る"},
+{g:"n3-hodo",j:"今日は昨日[ほど]寒くない。",s:"Hoy no hace tanto frío como ayer.",h:"ほど"},
+{g:"n3-hokanai",j:"失敗したら、あきらめる[ほかない]。",s:"Si fracaso, solo me queda renunciar.",h:"あきらめる"},
+{g:"n3-hodo-wa-nai",j:"母の料理[ほど]おいしいものはない。",s:"No hay nada tan rico como la cocina de mi madre.",h:"ほど"},
+{g:"n3-mo-ba-mo",j:"彼は[歌もうまければ]、踊りも上手だ。",s:"Él canta bien y además baila bien.",h:"うまければ"},
+{g:"n3-you-ni-mieru",j:"空が暗くて、夜の[ように見える]。",s:"El cielo está tan oscuro que parece de noche.",h:"見える"},
+{g:"n3-shieki-ukemi",j:"母に部屋の掃除を[させられた]。",s:"Mi madre me obligó a limpiar la habitación.",h:"する"},
+{g:"n3-keigo-business",j:"先日は、ありがとう[ございました]。",s:"Gracias por el otro día.",h:"ある, cortés"},
+{g:"n3-kaette",j:"説明を聞いたら、[かえって]分からなくなった。",s:"Tras oír la explicación, entendí aún menos.",h:"かえって"},
+{g:"n3-sekkaku",j:"[せっかく]ここまで来たのだから、最後までやろう。",s:"Ya que hemos llegado hasta aquí, hagámoslo hasta el final.",h:"せっかく"},
+{g:"n3-wazawaza",j:"[わざわざ]電話してくれなくてもいいのに。",s:"No hacía falta que te molestaras en llamar.",h:"わざわざ"},
+{g:"n3-masaka",j:"[まさか]雨が降るとは思わなかった。",s:"No imaginé que fuera a llover.",h:"まさか"},
+{g:"n3-douse",j:"[どうせ]負けるなら、全力で戦おう。",s:"Si vamos a perder de todos modos, luchemos con todo.",h:"どうせ"}
+);

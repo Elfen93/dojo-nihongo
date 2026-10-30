@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n3-muke",j:"若者[向け]の雑誌を買った。",s:"Compré una revista para jóvenes.",h:"向け"},
+{g:"n3-kke",j:"この店、前にも来た[っけ]。",s:"¿Habíamos venido antes a esta tienda?",h:"っけ"},
+{g:"n3-zu-ni-wa-irarenai",j:"面白くて、[笑わずにはいられなかった]。",s:"Era tan gracioso que no pude evitar reírme.",h:"笑う"},
+{g:"n3-nai-koto-wa-nai",j:"やれ[ないことはない]けど、時間がかかる。",s:"No es que no se pueda hacer, pero lleva tiempo.",h:"やれる"},
+{g:"n3-nai-wake-ni-wa-ikanai",j:"大事な会議だから、出席し[ないわけにはいかない]。",s:"Es una reunión importante, así que tengo que asistir.",h:"出席する"},
+{g:"n3-zaru-wo-enai",j:"彼の意見は正しいと認め[ざるを得ない]。",s:"No tengo más remedio que admitir que su opinión es correcta.",h:"認める"},
+{g:"n3-beki",j:"約束は守る[べきだ]。",s:"Las promesas se deben cumplir.",h:"守る"},
+{g:"n3-wari-ni",j:"安い[わりに]、品質がいい。",s:"Para ser barato, tiene buena calidad.",h:"わりに"},
+{g:"n3-te-kara-denai-to",j:"全部読ん[でからでないと]、意見は言えない。",s:"No puedo opinar sin haberlo leído todo.",h:"読む"},
+{g:"n3-te-shouganai",j:"暑[くてしょうがない]から、窓を開けた。",s:"Hacía un calor insoportable, así que abrí la ventana.",h:"暑い"},
+{g:"n3-te-tamaranai",j:"足が痛[くてたまらない]。",s:"Me duele tanto el pie que no lo aguanto.",h:"痛い"},
+{g:"n3-te-naranai",j:"子どもの成長が嬉し[くてならない]。",s:"Estoy rebosante de alegría por el crecimiento de mi hijo.",h:"嬉しい"},
+{g:"n3-te-wa-repeticion",j:"同じ道を行っ[ては]戻っている。",s:"Va y vuelve por el mismo camino una y otra vez.",h:"行く"},
+{g:"n3-te-hajimete",j:"母になっ[てはじめて]、母の苦労が分かった。",s:"Solo al ser madre entendí las penas de mi madre.",h:"なる"},
+{g:"n3-ppanashi",j:"テレビをつけ[っぱなし]にして出かけた。",s:"Salí dejando la tele puesta.",h:"つける"},
+{g:"n3-kkonai",j:"一人で全部食べられ[っこない]。",s:"Es imposible que me lo coma todo yo solo.",h:"食べられる"},
+{g:"n3-saichuu",j:"勉強している[最中]に、停電になった。",s:"En plena sesión de estudio se fue la luz.",h:"最中"},
+{g:"n3-shidai",j:"準備ができ[次第]、出発しましょう。",s:"En cuanto esté lista la preparación, salgamos.",h:"できる"},
+{g:"n3-bakari-da",j:"病状は悪くなる[ばかりだ]。",s:"El estado de la enfermedad no hace más que empeorar.",h:"なる"},
+{g:"n3-mai",j:"失敗は繰り返す[まい]と決めた。",s:"Decidí no repetir el error.",h:"繰り返す"}
+);
