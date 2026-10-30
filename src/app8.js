@@ -2,15 +2,15 @@
 // Cada destreza tiene su propia estimación (en unidades de "nivel" de la app, 1 a 19). Tras cada respuesta sube o baja
 // según la probabilidad que había de acertar; la siguiente pregunta es la más cercana a la estimación actual.
 const PL_SKILLS = {
-  vocab:{t:'Vocabulario y kanji',quota:7,w:1}, gram:{t:'Gramática',quota:7,w:1}, lect:{t:'Lectura',quota:5,w:1},
+  vocab:{t:'Vocabulario y kanji',quota:8,w:1}, gram:{t:'Gramática',quota:8,w:1}, lect:{t:'Lectura',quota:5,w:1},
   esc:{t:'Escucha',quota:5,w:0.8}, prod:{t:'Producción',quota:6,w:1}, escr:{t:'Escritura',quota:1,w:0.5}
 };
 const PL_START=3, PL_SCALE=1.5;
 const clampN=(x,a,b)=>Math.max(a,Math.min(b,x));
 function plProb(theta,d,guess){ return guess+(1-guess)/(1+Math.exp(-(theta-d)/PL_SCALE)); }
 // Estimación bayesiana (media a posteriori sobre una rejilla de niveles): no se estanca cuando el alumno está muy por encima o por debajo
-const PL_GRID=Array.from({length:77},(_,i)=>0.5+i*0.25);
-function plInit(sk){ const lim=sk.max+1; sk.post=PL_GRID.map(g=>g>lim?0:Math.exp(-0.5*((g-5)/5)**2)); plNorm(sk); }
+const PL_GRID=Array.from({length:135},(_,i)=>0.5+i*0.25);
+function plInit(sk){ const lim=sk.max+1; sk.post=PL_GRID.map(g=>g>lim?0:Math.exp(-0.5*((g-8)/10)**2)); plNorm(sk); }
 function plNorm(sk){ const s=sk.post.reduce((a,x)=>a+x,0)||1; sk.post=sk.post.map(x=>x/s); const m=PL_GRID.reduce((a,g,i)=>a+g*sk.post[i],0); sk.theta=clampN(m,1,sk.max+1); sk.sd=Math.sqrt(PL_GRID.reduce((a,g,i)=>a+(g-m)**2*sk.post[i],0)); }
 function plUpdate(sk, d, guess, score, unknown){
   if(!sk.post) plInit(sk); const gs=unknown?0:guess;
@@ -20,7 +20,7 @@ function lvLabel(th){ return th<=3.5?'N5':th<=13.5?'N4':'N3'; }
 function withLevel(n, fn){ const old=S.level; S.level=n; try{ return fn(); } finally{ S.level=old; } }
 function plPools(){
   const items=[...ITEMS.values()];
-  const v=items.filter(i=>i.kind==='v'&&i.lv>=1&&i.lv<=19), g=items.filter(i=>i.kind==='g'&&i.lv>=1&&i.lv<=19);
+  const v=items.filter(i=>i.kind==='v'&&i.lv>=1&&i.lv<=33), g=items.filter(i=>i.kind==='g'&&i.lv>=1&&i.lv<=33);
   const sents=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.es), orders=(typeof ORDER_QS!=='undefined'?ORDER_QS:[]);
   const mx=a=>a.reduce((m,x)=>Math.max(m,x.lv||1),1);
   return {v,g,sents,orders,reads:READINGS.filter(r=>!r.user&&r.q&&r.q.length), max:{vocab:mx(v),gram:Math.max(mx(g),mx(orders)),lect:mx(READINGS),esc:mx(sents),prod:mx(v),escr:10}};
@@ -56,7 +56,7 @@ function plNextSkill(E){
   const soft=cand.filter(([k])=>!(k==='lect'&&E.answers.length<4)); return rnd(soft.length?soft:cand)[0];
 }
 function plNext(E){
-  for (let t=0;t<6;t++){ const k=plNextSkill(E); if(!k) return null; const s=E.skills[k]; const q=plGen(E,k,s.theta+(Math.random()*1.2-0.6)); if(q) return q; s.stop=true; }
+  for (let t=0;t<6;t++){ const k=plNextSkill(E); if(!k) return null; const s=E.skills[k]; const q=plGen(E,k,s.theta+(Math.random()*1.2-0.6)+(s.n>=2&&s.theta>5?1.5:0)); if(q) return q; s.stop=true; }
   return null;
 }
 function plAnswer(E, q, ok, unknown){
@@ -86,23 +86,23 @@ async function finishPlacement(E){
   for (const [k,s] of Object.entries(E.skills)){ if(s.n===0) continue; res[k]=Math.round(s.theta*10)/10; sum+=s.theta*PL_SKILLS[k].w; sw+=PL_SKILLS[k].w; }
   const overall=Math.round(sum/Math.max(sw,0.1)*10)/10;
   // Solo se da por sabido lo que está claramente por debajo de tu nivel en vocabulario y en gramática (margen de 1,5 niveles)
-  const cut=x=>x==null?overall-1.5:x-1.5; const rec=clampN(Math.floor(Math.min(cut(res.vocab),cut(res.gram)))+1,1,13);
+  const cut=x=>x==null?overall-1.5:x-1.5; const rec=clampN(Math.floor(Math.min(cut(res.vocab),cut(res.gram)))+1,1,33);
   const graded=E.answers.filter(a=>a.skill!=='escr'); const rec0={date:now(),theta:res,overall,rec,answered:graded.length,ok:graded.filter(a=>a.ok).length};
   S.placements=S.placements||[]; S.placements.push(rec0); S.placements=S.placements.slice(-10); save();
   renderPlacementResult(rec0, wnote);
 }
 function plBar(label, th){
-  const pct=clampN((th-1)/18*100,0,100);
+  const pct=clampN((th-1)/32*100,0,100);
   return h('div',{}, h('div',{class:'row between small'}, h('span',{},label), h('span',{class:'num muted'},`${lvLabel(th)} · nivel ${th.toFixed(1)}`)),
     h('div',{class:'bar plbar'}, h('i',{style:'width:'+pct+'%'})));
 }
 function renderPlacementResult(r, wnote){
   const el=$('#main'); el.innerHTML='';
   const entries=Object.entries(r.theta).sort((a,b)=>a[1]-b[1]); const weakest=entries[0]&&PL_SKILLS[entries[0][0]].t, strongest=entries.length>1&&PL_SKILLS[entries[entries.length-1][0]].t;
-  const tooHigh=r.overall>=14;
+  const tooHigh=r.overall>=30;
   const known=[...ITEMS.values()].filter(i=>i.lv<r.rec&&!(S.items[keyOf(i)]&&S.items[keyOf(i)].s>=5)).length;
   el.append(h('div',{class:'study stack'},
-    h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},'Resultado del test de nivel'), h('div',{class:'score pass'},lvLabel(r.overall)), h('div',{class:'muted'},`nivel ${r.overall.toFixed(1)} de 19 · ${r.ok}/${r.answered} aciertos`), tooHigh?h('p',{class:'small muted',style:'margin:8px 0 0'},'Superas el contenido de N4 de la app; el vocabulario de N3 se genera al llegar a ese nivel.'):null),
+    h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},'Resultado del test de nivel'), h('div',{class:'score pass'},lvLabel(r.overall)), h('div',{class:'muted'},`nivel ${r.overall.toFixed(1)} de 33 · ${r.ok}/${r.answered} aciertos`), tooHigh?h('p',{class:'small muted',style:'margin:8px 0 0'},'Superas el contenido de N3 de la app; N2 y N1 llegarán después.'):null),
     h('div',{class:'card stack'}, h('h3',{},'Por destreza'), ...Object.entries(PL_SKILLS).filter(([k])=>r.theta[k]!=null).map(([k,m])=>plBar(m.t,r.theta[k])), weakest&&strongest&&weakest!==strongest?h('div',{class:'small muted'},`Más fuerte: ${strongest}. A reforzar: ${weakest}.`):null, wnote?h('div',{class:'small muted'},wnote):null),
     h('div',{class:'card stack'}, h('h3',{},`Empezar en el nivel ${r.rec}`), h('div',{class:'small muted'},known?`${known} ítems de los niveles anteriores se marcan como conocidos (Gurú I) y vuelven en repasos espaciados.`:'No hay ítems por marcar.'),
       h('div',{class:'row'}, S.level<r.rec||known?h('button',{class:'btn primary',onclick:()=>applyPlacement(r)},'Aplicar resultado'):null, h('button',{class:'btn',onclick:()=>go('examenes')},'Ahora no')))));

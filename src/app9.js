@@ -14,7 +14,7 @@ function weekInfo(){
 function caminoSvg(){
   const slots=36; const items=[...ITEMS.values()].filter(i=>i.lv<=TIERS.find(t=>t.n===(S.settings.targetTier||'N4')).to||true);
   const guru=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>=5).length, burned=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>=9).length;
-  const total=Math.max(1,[...ITEMS.values()].filter(i=>i.lv<=13).length);
+  const total=Math.max(1,[...ITEMS.values()].filter(i=>i.lv<=33).length);
   const filled=guru>0?Math.max(1,Math.min(slots,Math.floor(slots*guru/total))):0;
   const W=360,H=250; const pts=[]; for(let i=0;i<slots;i++){ const t=i/(slots-1); const x=34+t*290+Math.sin(t*Math.PI*3)*30*(1-t*0.25); const y=218-t*158+Math.cos(t*Math.PI*2.4)*16; pts.push([x,y]); }
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tu camino: ${filled} de ${slots} tramos" class="camino-svg">`;
@@ -57,7 +57,7 @@ function caminoSection(){
   const goalSel=h('select',{'aria-label':'Días por semana',onchange:e=>{ S.settings.weekGoal=+e.target.value; S.settingsAt=now(); save(); render(); }}, [2,3,4,5,6,7].map(n=>h('option',{value:n,selected:n===w.goal},`${n} días por semana`)));
   const cuaderno=cuadernoItems();
   return h('div',{class:'stack'},
-    h('div',{class:'card camino'}, head, h('div',{class:'camino-art',html:c.svg}), h('div',{class:'small muted',style:'text-align:center'},`${c.filled} de ${c.slots} tramos del camino hasta el final de N4`)),
+    h('div',{class:'card camino'}, head, h('div',{class:'camino-art',html:c.svg}), h('div',{class:'small muted',style:'text-align:center'},`${c.filled} de ${c.slots} tramos del camino hasta el final de N3`)),
     h('div',{class:'card stack'}, h('div',{class:'row between'}, h('h3',{},'Esta semana'), goalSel), dots, h('div',{class:'small muted'}, w.ok?`Compromiso cumplido: ${w.done} de ${w.goal} días.`:`Llevas ${w.done} de ${w.goal} días. Cada día cuenta, a tu ritmo.`+(w.met?` · ${w.met} ${plural(w.met,'semana cumplida','semanas cumplidas')}`:''))),
     cuaderno.length?h('div',{class:'card stack'}, h('h3',{},'Cuaderno'), h('div',{class:'cuaderno'}, cuaderno.map(([d,t])=>h('div',{class:'cq'}, h('span',{class:'small muted num'},fmtDate(d)), h('span',{},t))))):null,
     (S.placements||[]).length?h('div',{class:'card stack'}, h('h3',{},'Tu último test de nivel'), ...Object.entries(PL_SKILLS).filter(([k])=>S.placements.slice(-1)[0].theta[k]!=null).map(([k,m])=>plBar(m.t,S.placements.slice(-1)[0].theta[k]))):null);

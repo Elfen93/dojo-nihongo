@@ -5,7 +5,7 @@ App personal de japonés (N5 → N1) que mezcla WaniKani (kanji y vocabulario co
 - Progreso guardado en Supabase (Postgres) por usuario, sincronizado entre dispositivos.
 - Instalable como app (PWA) en móvil y ordenador; funciona sin conexión y sincroniza al volver.
 - Sincronización con WaniKani (directa desde el navegador) y Bunpro (a través de una función de Supabase).
-- Niveles N3, N2 y N1 preparados por nivel al llegar a ellos.
+- N5, N4 y N3 completos y escritos a mano (619 kanji, 1.480 palabras, 328 puntos de gramática, 70 lecturas). N2 y N1 se preparan por nivel al llegar a ellos.
 
 ## Puesta en marcha (una sola vez)
 
