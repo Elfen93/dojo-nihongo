@@ -2,7 +2,7 @@
 // Cada destreza tiene su propia estimación (en unidades de "nivel" de la app, 1 a 19). Tras cada respuesta sube o baja
 // según la probabilidad que había de acertar; la siguiente pregunta es la más cercana a la estimación actual.
 const PL_SKILLS = {
-  vocab:{t:'Vocabulario y kanji',quota:8,w:1}, gram:{t:'Gramática',quota:8,w:1}, lect:{t:'Lectura',quota:5,w:1},
+  vocab:{t:'Vocabulario y kanji',quota:8,w:1}, gram:{t:'Gramática',quota:8,w:1}, lect:{t:'Lectura',quota:6,w:1},
   esc:{t:'Escucha',quota:5,w:0.8}, prod:{t:'Producción',quota:6,w:1}, escr:{t:'Escritura',quota:1,w:0.5}
 };
 const PL_START=3, PL_SCALE=1.5;
@@ -36,7 +36,8 @@ function plGen(E, skill, target){
     if (Math.random()<0.7||!P.orders.length){ for (const g of plNear(P.g,target,used,x=>'g:'+keyOf(x))){ const q=qGrammar(g,P.g.filter(x=>Math.abs(x.lv-g.lv)<=3)); if(q) return done(q,'g:'+keyOf(g),g.lv); } }
     const o=plNear(P.orders,target,used,x=>'o:'+x.parts.join(''))[0]; if(o){ const q=qOrder(o); return done(q,'o:'+o.parts.join(''),o.lv); }
   } else if (skill==='lect'){
-    for (const r of plNear(P.reads,target,used,x=>'r:'+x.id)){ const qi=Math.floor(Math.random()*r.q.length), q0=r.q[qi]; const q={sec:'読解',type:'mc',reading:r,text:q0.q,prompt:'Lee el texto y responde',options:shuffle(q0.o.slice()),answer:q0.o[q0.a],key:null}; return done(q,'r:'+r.id,r.lv); }
+    // un texto = varias preguntas: dos de comprensión (una de detalle/vocabulario y otra de inferencia/idea) y una de producción con una palabra del texto
+    for (const r of plNear(P.reads,target,used,x=>'r:'+x.id)){ const set=plReadingSet(r); if(!set.length) continue; used.add('r:'+r.id); E.queue=set.slice(1); return set[0]; }
   } else if (skill==='esc'){
     const s=plNear(P.sents,target,used,x=>'s:'+x.j)[0]; if(s){ const ds=pick(P.sents.filter(x=>x!==s&&x.es!==s.es&&Math.abs(x.lv-s.lv)<=3),3).map(x=>x.es); if(ds.length===3) return done({sec:'聴解',type:'mc',audio:s.j,text:'',prompt:'Escucha la frase y elige lo que significa',options:shuffle([s.es,...ds]),answer:s.es,key:null},'s:'+s.j,s.lv); }
   } else if (skill==='prod'){
@@ -45,6 +46,30 @@ function plGen(E, skill, target){
     const topic=WRITING_TOPICS.N5[Math.floor(Math.random()*WRITING_TOPICS.N5.length)]; return done({sec:'作文',type:'write',topic:topic.t,desc:topic.d,tmin:60,prompt:'Escribe en japonés',key:null},'w',4);
   }
   return null;
+}
+const READ_OFF={detalle:-1,vocabulario:0,idea:0,inferencia:1};
+function plReadingSet(r){
+  const qs=(r.q||[]).slice(); if(qs.length<2) return [];
+  const A=qs.filter(x=>x.t==='detalle'||x.t==='vocabulario'), B=qs.filter(x=>x.t==='inferencia'||x.t==='idea');
+  const first=A.length?rnd(A):qs[0], second=(B.length?rnd(B):qs.find(x=>x!==first));
+  const mk=q0=>({sec:'読解',type:'mc',reading:r,text:q0.q,prompt:'Lee el texto y responde',options:shuffle(q0.o.slice()),answer:q0.o[q0.a],key:null,skill:'lect',d:r.lv+(READ_OFF[q0.t]||0),guess:0.25});
+  const out=[mk(first),mk(second)]; const cz=readingCloze(r); if(cz) out.push(cz); return out;
+}
+// Producción ligada al texto: una frase con una palabra en blanco que se escribe en kana
+function readingCloze(r){
+  const re=/\[([^\]|]*)\|([^\]|]*)\|([^\]]*)\]/g; const vocab=new Map(VOCAB_ALL.map(v=>[v.w,v]));
+  const cands=[];
+  for (const s of String(r.t||'').split(/(?<=。)/)){
+    if(!s.trim()||s.length>150||/\[[A-ZＡ-Ｚ]\|/.test(s)) continue;
+    for (const m of s.matchAll(re)){
+      const [full,surf,rd,gl]=m; const ans=rd||surf;
+      if(!gl||/[(\/]/.test(gl)||gl.length>30||!/^[ぁ-んァ-ヶー]+$/.test(ans)||!(hasKanji(surf)||[...surf].length>=3)) continue;
+      const v=vocab.get(surf); cands.push({s,full,surf,ans,gl,score:(v?0:2)+Math.abs((v?v.lv:r.lv)-r.lv)/6+Math.random()});
+    }
+  }
+  if(!cands.length) return null; cands.sort((a,b)=>a.score-b.score); const c=cands[0];
+  const text=c.s.replace(re,(f,sf)=>f===c.full?'＿＿＿':sf).trim();
+  return {sec:'読解',type:'typed',reading:r,prompt:'Completa la frase con la palabra del texto (en kana):',text,es:'«'+c.gl+'»',check:a=>matchKana(a,[c.ans]),answer:c.ans+(c.ans!==c.surf?'（'+c.surf+'）':''),key:null,skill:'prod',d:r.lv,guess:0};
 }
 function plNextSkill(E){
   const open=Object.entries(E.skills).filter(([k,s])=>s.n<s.quota && !s.stop); if(!open.length) return null;
@@ -56,6 +81,7 @@ function plNextSkill(E){
   const soft=cand.filter(([k])=>!(k==='lect'&&E.answers.length<4)); return rnd(soft.length?soft:cand)[0];
 }
 function plNext(E){
+  if (E.queue&&E.queue.length) return E.queue.shift();
   for (let t=0;t<6;t++){ const k=plNextSkill(E); if(!k) return null; const s=E.skills[k]; const q=plGen(E,k,s.theta+(Math.random()*1.2-0.6)+(s.n>=2&&s.theta>5?1.5:0)); if(q) return q; s.stop=true; }
   return null;
 }
@@ -69,7 +95,7 @@ function startPlacement(){
   const pools=plPools(); const skills={}; for(const [k,m] of Object.entries(PL_SKILLS)){ skills[k]={theta:PL_START,n:0,hist:[],quota:m.quota,max:pools.max[k]||13,stop:false}; plInit(skills[k]); }
   const signed=!!(sb&&USER); if(!signed){ skills.escr.stop=true; }
   const total=Object.values(skills).reduce((a,s)=>a+(s.stop?0:s.quota),0);
-  EXAM={kind:'placement',title:'Test de nivel',dynamic:true,qs:[],i:0,answers:[],start:now(),deadline:now()+180*6e4,total,skills,pools,used:new Set()};
+  EXAM={kind:'placement',title:'Test de nivel',dynamic:true,qs:[],i:0,answers:[],start:now(),deadline:now()+180*6e4,total,skills,pools,used:new Set(),queue:[]};
   clearInterval(examTimer); const q=plNext(EXAM); if(!q){ EXAM=null; toast('No hay preguntas suficientes'); return; } EXAM.qs.push(q); renderExam();
 }
 async function finishPlacement(E){
