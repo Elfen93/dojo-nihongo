@@ -27,7 +27,14 @@ function renderPractica(){
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Comprensión auditiva'), h('div',{class:'small muted'},`${Object.keys(S.listen||{}).length} ${plural(Object.keys(S.listen||{}).length,'texto escuchado','textos escuchados')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'escucha',id:null}; renderPractica(); }},'Elegir texto')),
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Redacción · grado ${writingGrade()} de 10 (${WRITING_GRADES[writingGrade()].tier})`), h('div',{class:'small muted'},`${writingRange()[0]} a ${writingRange()[1]} caracteres`), h('div',{class:'small muted'},(writingGrade()<10?`${writingPassCount()}/${WR_NEED} para subir`:'Grado máximo')+(ws?` · última ${ws.score!=null?ws.score+' %':'sin corregir'}`:'')), writingLowStreak()?h('div',{class:'small',style:'color:var(--warn)'},'Repite el mismo tema.'):null, h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(true),text:'',result:null}; renderPractica(); }},'Escribir'))));
   const ws10=(S.writings||[]).slice(-10).reverse();
-  if (ws10.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Redacciones'), h('div',{class:'list',style:'margin-top:8px'}, ws10.map(w=>h('button',{class:'item',onclick:()=>{ PRACT={mode:'redaccion',topic:w.topic,text:w.text,result:w.result||null,saved:true}; renderPractica(); }}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},w.topic.t), h('div',{class:'small muted'},`${fmtDate(w.date)} · ${jaLen(w.text)} caracteres`)), h('span',{class:'badge '+(w.score>=70?'ok':'soft')}, w.score!=null?w.score+'%':'—'))))));
+  if (ws10.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Redacciones'), h('div',{class:'list',style:'margin-top:8px'}, ws10.map(w=>h('div',{class:'row',style:'align-items:stretch;gap:6px'}, h('button',{class:'item',style:'flex:1;min-width:0',onclick:()=>{ PRACT={mode:'redaccion',topic:w.topic,text:w.text,result:w.result||null,saved:true}; renderPractica(); }}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},w.topic.t), h('div',{class:'small muted'},`${fmtDate(w.date)} · ${jaLen(w.text)} caracteres`)), h('span',{class:'badge '+(w.score>=70?'ok':'soft')}, w.score!=null?w.score+'%':'—')), h('button',{class:'btn sm ghost',title:'Borrar esta redacción',onclick:()=>deleteWriting(w)},'Borrar'))))));
+}
+function deleteWriting(w){
+  confirmBox('¿Borrar esta redacción y su corrección? No se puede deshacer.',()=>{
+    S.wrDel=uniq([...(S.wrDel||[]),w.date]); S.writings=(S.writings||[]).filter(x=>x.date!==w.date); S.settingsAt=now(); save();
+    if (PRACT&&PRACT.mode==='redaccion'&&PRACT.text===w.text) PRACT={mode:null};
+    toast('Redacción borrada'); renderPractica();
+  });
 }
 // ---------- Dictado ----------
 function nextDictation(){
@@ -127,7 +134,7 @@ function renderRedaccion(){
     if (Array.isArray(r.tips)&&r.tips.length) box.append(h('details',{class:'gs-more',open:true}, h('summary',{},`Sugerencias, no restan nota (${r.tips.length})`), h('div',{class:'stack',style:'gap:8px;margin-top:8px'}, r.tips.map(e=>errCard(e,true)))));
     if (r.corrected) box.append(h('div',{}, h('div',{class:'eyebrow'},'Versión natural'), h('div',{class:'jp',style:'margin-top:6px;line-height:2;white-space:pre-wrap'},r.corrected), h('div',{class:'row',style:'margin-top:6px'}, spkBtn(r.corrected))));
     if (r.level) box.append(h('div',{class:'small muted'},'Nivel estimado de este texto: '+r.level));
-    box.append(h('div',{class:'row',style:'justify-content:flex-end'}, reportBtn('w|'+(P.topic&&P.topic.t||'redaccion'), 'Corrección de redacción: '+((P.topic&&P.topic.t)||''))));
+    box.append(h('div',{class:'row',style:'justify-content:flex-end'}, (()=>{ const rec=(S.writings||[]).find(w=>w.topic.t===P.topic.t&&w.text===P.text); return rec?h('button',{class:'btn sm ghost',onclick:()=>deleteWriting(rec)},'Borrar redacción'):null; })(), reportBtn('w|'+(P.topic&&P.topic.t||'redaccion'), 'Corrección de redacción: '+((P.topic&&P.topic.t)||''))));
     el.append(box);
   }
 }

@@ -57,7 +57,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
-  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], alts:{}, exDel:[], placements:[], days:{}, gen:{},
+  v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], wrDel:[], alts:{}, exDel:[], placements:[], days:{}, gen:{},
   settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'', weekGoal:4, hanko:'' },
   sync:{}, log:[]
 });
@@ -109,7 +109,8 @@ function mergeRemote(remote){
   M.readings={}; for (const [k,v] of Object.entries(R.readings||{})) if(v&&fresh(v.date)) M.readings[k]=v;
   for (const [k,v] of Object.entries(L.readings||{})) if(v&&fresh(v.date)&&(!M.readings[k]||(v.date||0)>(M.readings[k].date||0))) M.readings[k]=v;
   M.listen={}; for (const [k,v] of Object.entries(R.listen||{})) if(v&&fresh(v.date)) M.listen[k]=v; for (const [k,v] of Object.entries(L.listen||{})) if(v&&fresh(v.date)&&(!M.listen[k]||(v.date||0)>(M.listen[k].date||0))) M.listen[k]=v;
-  const wr={}; [...(L.writings||[]),...(R.writings||[])].filter(w=>w&&fresh(w.date)).forEach(w=>{ wr[w.date]=w; }); M.writings=Object.values(wr).sort((a,b)=>a.date-b.date).slice(-50);
+  M.wrDel=uniq([...(L.wrDel||[]),...(R.wrDel||[])]).slice(-200);
+  const wr={}; [...(L.writings||[]),...(R.writings||[])].filter(w=>w&&fresh(w.date)&&!M.wrDel.includes(w.date)).forEach(w=>{ wr[w.date]=w; }); M.writings=Object.values(wr).sort((a,b)=>a.date-b.date).slice(-50);
   { const pl={}; [...(L.placements||[]),...(R.placements||[])].filter(x=>x&&fresh(x.date)).forEach(x=>{ pl[x.date]=x; }); M.placements=Object.values(pl).sort((a,b)=>a.date-b.date).slice(-10); }
   M.alts={}; for (const src of (newer?[newer.alts||{}]:[R.alts||{},L.alts||{}])) for (const [k,a] of Object.entries(src)) M.alts[k]=uniq([...(M.alts[k]||[]),...(Array.isArray(a)?a:[])]);
   M.wgrade=newer?(newer.wgrade||1):Math.max(L.wgrade||1,R.wgrade||1);
