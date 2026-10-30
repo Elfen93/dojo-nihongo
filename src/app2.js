@@ -5,8 +5,8 @@ const tierOf = lv => TIERS.find(t=>lv>=t.from&&lv<=t.to) || TIERS[TIERS.length-1
 const tierByName = n => TIERS.find(t=>t.n===n);
 
 // Catálogo: ítems integrados (N5/N4) + esqueleto N3–N1 (completado por generación)
-const KANJI_ALL = [...KANJI, ...KANJI_N4, ...(typeof KANJI_N3!=='undefined'?KANJI_N3:[])].filter(k=>k.lv>0);
-const VOCAB_ALL = [...VOCAB_N5, ...VOCAB_N4A, ...VOCAB_N4B, ...(typeof VOCAB_N3!=='undefined'?VOCAB_N3:[])].filter(v=>v.lv>0);
+const KANJI_ALL = [...KANJI, ...KANJI_N4, ...(typeof KANJI_N3!=='undefined'?KANJI_N3:[]), ...(typeof KANJI_N2!=='undefined'?KANJI_N2:[])].filter(k=>k.lv>0);
+const VOCAB_ALL = [...VOCAB_N5, ...VOCAB_N4A, ...VOCAB_N4B, ...(typeof VOCAB_N3!=='undefined'?VOCAB_N3:[]), ...(typeof VOCAB_N2!=='undefined'?VOCAB_N2:[])].filter(v=>v.lv>0);
 const GRAMMAR_ALL = [...GRAMMAR_N5, ...GRAMMAR_N4A, ...GRAMMAR_N4B, ...(typeof GRAMMAR_EXTRA!=='undefined'?GRAMMAR_EXTRA:[]), ...(typeof GRAMMAR_N3!=='undefined'?GRAMMAR_N3:[])];
 // Reparto del esqueleto en niveles
 (function assignRoadmap(){
