@@ -210,6 +210,30 @@ function quickFeedback(c){
   s.enterHandler=handler; document.addEventListener('keydown',handler);
   return fb;
 }
+
+// Ficha completa de un punto de gramática: estructura, detalles, explicación, nota, ejemplos y comparaciones
+function grammarSheet(it, opts={}){
+  const X=(typeof GRAM_EXT!=='undefined'&&GRAM_EXT[it.id])||{};
+  const sec=(t,...kids)=>h('div',{style:'margin-top:14px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},t), ...kids);
+  const exRow=(j,es)=>h('div',{class:'ex'}, h('div',{class:'jp'}, j, ' ', spkBtn(j)), h('div',{class:'small muted'}, es));
+  const root=h('div',{class:'gsheet'});
+  root.append(h('div',{class:'mid-jp',style:'text-align:center;font-weight:700'},it.t), it.s?h('div',{class:'small muted jp',style:'text-align:center'},it.s):null);
+  if (X.cat||X.reg) root.append(h('div',{class:'row',style:'justify-content:center;margin-top:6px'}, X.cat?h('span',{class:'badge soft'},X.cat):null, X.reg?h('span',{class:'badge soft'},X.reg):null));
+  const about=(X.about&&X.about.length)?X.about:[it.e||''];
+  root.append(sec('Acerca de', ...about.map(p=>h('p',{style:'margin:0 0 8px'},p))));
+  if (X.ojo) root.append(h('div',{class:'mn',style:'margin-top:10px'}, h('b',{class:'small'},'¡Ojo! '), X.ojo));
+  const exs=[...(it.ex||[]).map(e=>{ const c=parseCloze(e.j); return [c.pre+c.answers[0]+c.post, e.s]; }), ...((X.m||[]).map(e=>[e.j,e.s]))];
+  root.append(sec('Ejemplos', ...exs.map(([j,es])=>exRow(j,es))));
+  const rel=X.r||[];
+  if (rel.length){
+    const groups=[['sin','Sinónimos'],['ant','Antónimos'],['rel','Relacionados']];
+    const det=h('details',{class:'sec',style:'margin-top:14px'}, h('summary',{},'Comparaciones'));
+    for (const [k,label] of groups){ const rs=rel.filter(r=>r.k===k); if(!rs.length) continue; det.append(h('div',{class:'small muted',style:'margin:8px 0 4px'},label));
+      rs.forEach(r=>{ const tgt=r.id&&ITEMS.get('g|'+r.id); det.append(h('div',{style:'margin-bottom:8px'}, tgt?h('button',{class:'pill g jp',onclick:()=>itemSheet(tgt)},r.t):h('b',{class:'jp'},r.t), h('div',{class:'small'},r.d))); }); }
+    root.append(det);
+  }
+  return root;
+}
 function itemDetails(it, p){
   const dl=h('dl');
   const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
