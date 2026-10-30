@@ -144,7 +144,7 @@ VOCAB_N5.push(
 {w:"まず",r:"まず",m:["primero"],lv:2,p:"adv",ex:"まず、手を洗ってください。",es:"Primero lávese las manos."},
 {w:"また",r:"また",m:["otra vez", "además"],lv:2,p:"adv",ex:"また来てください。",es:"Vuelva otra vez."},
 {w:"もちろん",r:"もちろん",m:["por supuesto"],lv:2,p:"adv",ex:"もちろん行きます。",es:"Por supuesto que voy."},
-{w:"やっぱり",r:"やっぱり",m:["como esperaba", "al final"],lv:2,p:"adv",ex:"やっぱり日本が好きです。",es:"Como pensaba, me gusta Japón."},
+{w:"やっぱり",r:"やっぱり",m:["como esperaba", "como pensaba", "como era de esperar", "al final"],lv:2,p:"adv",ex:"やっぱり日本が好きです。",es:"Como pensaba, me gusta Japón."},
 {w:"きっと",r:"きっと",m:["seguro que"],lv:2,p:"adv",ex:"きっと来ます。",es:"Seguro que viene."},
 {w:"ほとんど",r:"ほとんど",m:["casi todo", "casi nada"],lv:2,p:"adv",ex:"ほとんど分かりました。",es:"Entendí casi todo."},
 {w:"ちょうど",r:"ちょうど",m:["justo"],lv:2,p:"adv",ex:"ちょうど十時です。",es:"Son las diez en punto."},
