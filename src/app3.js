@@ -166,10 +166,12 @@ function renderStudy(){
   card.append(h('div',{class:'ask '+p.kind}, FACET_LABEL[c.f]));
   if (c.f==='gc'){
     const cl=p.cloze;
-    card.append(h('div',{class:'mid-jp',lang:'ja'}, cl.pre, h('span',{class:'blank'}, s.phase==='ask'?'　　　':cl.answers[0]), cl.post));
-    card.append(h('div',{class:'muted'}, p.ex.s));
-    if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Pista: ', h('span',{class:'jp'},p.ex.h)));
-    card.append(h('div',{class:'small'}, h('span',{class:'pill g'}, p.it.t), p.reg?h('span',{class:'badge soft',style:'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
+    card.append(h('div',{class:'mid-jp',lang:'ja'}, ...furiText(cl.pre), h('span',{class:'blank'}, s.phase==='ask'?'　　　':cl.answers[0]), ...furiText(cl.post)));
+    const ask=s.phase==='ask'; const hidden=ask&&!S.settings.showTrans; const trans=h('div',{class:'muted',style:hidden?'display:none':''}, p.ex.s);
+    card.append(trans);
+    if (hidden) card.append(h('button',{class:'btn sm ghost',onclick:e=>{ trans.style.display=trans.style.display==='none'?'':'none'; e.currentTarget.textContent=trans.style.display==='none'?'Ver traducción':'Ocultar traducción'; }},'Ver traducción'));
+    if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Pista: ', h('span',{class:'jp'},...furiText(p.ex.h))));
+    card.append(h('div',{class:'small'}, ask?null:h('span',{class:'pill g'}, p.it.t), p.reg?h('span',{class:'badge soft',style:ask?'':'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
   } else if (c.f==='vp'){
     card.append(h('div',{class:'big-es'}, p.mainEs));
     if (p.hint) card.append(h('div',{class:'small',style:'color:var(--accent);font-weight:600'}, p.hint));
@@ -230,15 +232,41 @@ function loadExt(){
     document.head.append(s);
   });
 }
-// Furigana por palabra, bajo demanda: FURI[texto] = "kanji|lectura;kanji|lectura"
+// Furigana según lo aprendido: visible mientras algún kanji de la palabra no esté en Gurú; después, solo al pasar el ratón o tocar
 const furiCache={};
+const furiMode=()=>(S.settings&&S.settings.furiMode)||'auto';
+const kanjiLearned=ch=>{ const r=S.items['k|'+ch]; return !!r&&r.s>=5; };
+const tokenLearned=sf=>[...sf].filter(hasKanji).every(kanjiLearned);
+let GLOSS_IDX=null;
+function glossOf(sf){
+  if(!GLOSS_IDX){ GLOSS_IDX={}; for(const v of VOCAB_ALL){ const core=String(v.w).replace(/[ぁ-んー]+$/,''); if(core&&hasKanji(core)&&!GLOSS_IDX[core]) GLOSS_IDX[core]=(v.m||[]).slice(0,2).join(', '); } }
+  if(GLOSS_IDX[sf]) return GLOSS_IDX[sf];
+  if([...sf].length===1){ const k=(typeof KANJI_META!=='undefined'&&KANJI_META[sf])||ITEMS.get('k|'+sf); if(k) return (k.m||[]).slice(0,2).join(', '); }
+  const ks=[...sf].filter(hasKanji).map(c=>(typeof KANJI_META!=='undefined'&&KANJI_META[c])||ITEMS.get('k|'+c));
+  if(ks.length&&ks.every(Boolean)) return 'Kanji: '+ks.map(k=>k.k+' '+((k.m||[])[0]||'')).join(' · ');
+  return '';
+}
+function showWordBubble(el,sf,rd){
+  document.querySelectorAll('.fgbubble').forEach(x=>x.remove());
+  const g=glossOf(sf); const r=el.getBoundingClientRect();
+  const b=h('div',{class:'fgbubble'}, h('b',{class:'jp'},sf+'（'+rd+'）'), g?h('div',{},g):null);
+  document.body.append(b); const w=b.offsetWidth;
+  b.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px'; b.style.top=(r.bottom+window.scrollY+6)+'px';
+  const off=()=>{ b.remove(); document.removeEventListener('click',off,true); };
+  setTimeout(()=>document.addEventListener('click',off,true),0); setTimeout(off,6000);
+}
+// Furigana por palabra, bajo demanda: FURI[texto] = "kanji|lectura;kanji|lectura"
 function furiNodes(str){
-  const f=FURI[str]; if(!f) return [str];
+  const f=FURI[str]; if(!f||furiMode()==='never') return [str];
   let pairs=furiCache[str]; if(!pairs) pairs=furiCache[str]=f.split(';').map(x=>x.split('|'));
-  const out=[]; let cur=0;
-  for (const [sf,rd] of pairs){ const i=str.indexOf(sf,cur); if(i<0) continue; if(i>cur) out.push(str.slice(cur,i)); out.push(h('ruby',{class:'fg',onclick:e=>{ e.stopPropagation(); e.currentTarget.classList.toggle('on'); }}, sf, h('rt',{},rd))); cur=i+sf.length; }
+  const out=[]; let cur=0; const mode=furiMode();
+  for (const [sf,rd] of pairs){ const i=str.indexOf(sf,cur); if(i<0) continue; if(i>cur) out.push(str.slice(cur,i));
+    const learned=mode==='auto'&&tokenLearned(sf);
+    out.push(h('ruby',{class:'fg '+(learned?'ln':'un'),onclick:e=>{ e.stopPropagation(); showWordBubble(e.currentTarget,sf,rd); }}, sf, h('rt',{},rd))); cur=i+sf.length; }
   if(cur<str.length) out.push(str.slice(cur)); return out;
 }
+// Texto japonés cualquiera con furigana según lo aprendido
+function furiText(t){ const out=[]; let last=0; t=String(t||''); for (const m of t.matchAll(JP_RUN)){ if(m.index>last) out.push(t.slice(last,m.index)); out.push(...furiNodes(m[0])); last=m.index+m[0].length; } if(last<t.length) out.push(t.slice(last)); return out; }
 // Texto con los términos japoneses resaltados
 const JP_RUN=/[\u3040-\u30ff\u3400-\u9fff〜～々ー・]+/g;
 function richJp(text){
@@ -251,7 +279,7 @@ function grammarSheet(it, opts={}){
   const X=(typeof GRAM_EXT!=='undefined'&&GRAM_EXT[it.id])||{};
   const sec=(t,...kids)=>h('div',{class:'gs-sec'}, h('div',{class:'eyebrow'},t), ...kids);
   const root=h('div',{class:'gs'});
-  const plain=t=>{ const out=[]; let last=0; t=String(t||''); for (const m of t.matchAll(JP_RUN)){ if(m.index>last) out.push(t.slice(last,m.index)); out.push(...furiNodes(m[0])); last=m.index+m[0].length; } if(last<t.length) out.push(t.slice(last)); return out; };
+  const plain=furiText;
   if (EXT_STATE!==2) loadExt().then(()=>{ if(EXT_STATE===2&&root.isConnected) root.replaceWith(grammarSheet(it,opts)); });
   root.append(h('div',{class:'gs-head'}, h('div',{class:'gs-title'},...plain(it.t)), it.s?h('div',{class:'gs-formula'},...plain(it.s)):null,
     (X.cat||X.reg)?h('div',{class:'gs-chips'}, X.cat?h('span',{class:'badge soft'},tr(X.cat)):null, X.reg?h('span',{class:'badge soft'},tr(X.reg)):null):null,
@@ -283,7 +311,7 @@ function itemDetails(it, p){
   } else if (it.kind==='v'){
     add('Palabra', h('span',{class:'jp'}, it.w, ' ', h('span',{class:'muted'},'（'+it.r+'）'), ' ', spkBtn(it.w)));
     add('Significado', it.m.join(', ')); if (it.p) add('Tipo', posLabel(it.p));
-    if (it.ex) add('Ejemplo', h('div',{}, h('div',{class:'jp'}, it.ex, ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
+    if (it.ex) add('Ejemplo', h('div',{}, h('div',{class:'jp'}, ...furiText(it.ex), ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
     const kinfo=[...it.w].filter(hasKanji).map(ch=>KANJI_META[ch]).filter(Boolean); if(kinfo.length) add('Kanji', h('span',{class:'jp'}, kinfo.map(k=>k.k+' = '+k.m[0]).join(' · ')));
   } else {
     const ex=(p&&p.ex)||(it.ex||[])[0]||{j:'',s:''}; const cl=(p&&p.cloze)||parseCloze(ex.j);

@@ -68,7 +68,7 @@ function renderLesson(){
       h('div',{class:'big-es',style:'text-align:center;font-size:1.4rem'}, it.m.join(', ')), it.p?h('div',{class:'small muted',style:'text-align:center'},posLabel(it.p)):null);
     const ks=[...it.w].filter(hasKanji).map(ch=>KANJI_META[ch]||(ITEMS.get('k|'+ch))).filter(Boolean);
     if (ks.length) card.append(h('div',{class:'mn'}, h('b',{class:'small'},'Composición · '), h('span',{class:'jp'}, ks.map(k=>k.k+' ('+(k.m||[])[0]+')').join(' + '))));
-    if (it.ex) card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, it.ex, ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
+    if (it.ex) card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, ...furiText(it.ex), ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
   } else {
     card.append(h('div',{class:'ask g',style:'text-align:center'},'Gramática nueva'), grammarSheet(it));
   }
