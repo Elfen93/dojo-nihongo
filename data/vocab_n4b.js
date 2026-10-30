@@ -65,7 +65,7 @@ const VOCAB_N4B = [
 {w:"別",r:"べつ",m:["otro","aparte","distinto"],lv:11,p:"adj-na",ex:"別の店に行きましょう。",es:"Vamos a otra tienda."},
 {w:"別れる",r:"わかれる",m:["separarse","despedirse"],lv:11,p:"v1",ex:"駅で友だちと別れました。",es:"Me despedí de mi amigo en la estación."},
 {w:"方",r:"かた",m:["persona (formal)"],lv:11,p:"n",ex:"あの方はどなたですか。",es:"¿Quién es aquella persona?"},
-{w:"使い方",r:"つかいかた",m:["modo de uso"],lv:11,p:"n",ex:"この機械の使い方を教えてください。",es:"Explíqueme cómo se usa esta máquina."},
+{w:"使い方",r:"つかいかた",m:["modo de uso","modo de empleo","cómo se usa"],lv:11,p:"n",ex:"この機械の使い方を教えてください。",es:"Explíqueme cómo se usa esta máquina."},
 {w:"妹",r:"いもうと",m:["hermana menor"],lv:11,p:"n",ex:"妹は歌が上手です。",es:"Mi hermana menor canta bien."},
 {w:"味",r:"あじ",m:["sabor"],lv:11,p:"n",ex:"このスープは味が薄いです。",es:"Esta sopa está sosa."},
 {w:"趣味",r:"しゅみ",m:["afición","hobby"],lv:11,p:"n",ex:"趣味は何ですか。",es:"¿Cuál es tu afición?"},
