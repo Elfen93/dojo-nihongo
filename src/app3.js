@@ -24,6 +24,7 @@ function vocabSynonym(it, typed){
   return null;
 }
 // Palabras que el propio alumno ya marcó como válidas para este ítem
+const meaningAlts = it => (S.alts&&S.alts[keyOf(it)+'#m'])||[];
 function customAlt(it, typed){ const t=normKana(toKana(typed,true)); const list=(S.alts&&S.alts[keyOf(it)])||[]; return t&&list.includes(t)?{w:t,r:t,custom:true}:null; }
 function kanjiDistractors(v){
   const word=v.w; const chars=[...word].filter(c=>hasKanji(c));
@@ -36,9 +37,9 @@ function kanjiDistractors(v){
 // Construye la pregunta de una faceta
 function buildPrompt(it, facet){
   const p={it,facet};
-  if (facet==='km'){ p.kind='k'; p.main=it.k; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,it.m); p.correct=it.m.join(', '); }
+  if (facet==='km'){ p.kind='k'; p.main=it.k; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,[...it.m,...meaningAlts(it)]); p.correct=it.m.join(', '); }
   else if (facet==='kr'){ p.kind='k'; p.main=it.k; p.ask='Lectura (cualquiera)'; p.input='kana'; const acc=kanjiReadings(it); p.check=a=>matchKana(a,acc); p.correct=acc.join('・'); }
-  else if (facet==='vm'){ p.kind='v'; p.main=it.w; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,it.m); p.correct=it.m.join(', '); }
+  else if (facet==='vm'){ p.kind='v'; p.main=it.w; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,[...it.m,...meaningAlts(it)]); p.correct=it.m.join(', '); }
   else if (facet==='vr'){ p.kind='v'; p.main=it.w; p.ask='Lectura'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.correct=it.r; }
   else if (facet==='vp'){ p.kind='p'; p.mainEs=it.m.join(', '); p.sub=it.p?posLabel(it.p):''; p.ask='Escribe la palabra en japonés'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.synonym=a=>vocabSynonym(it,a)||customAlt(it,a); p.hint=(typeof VOCAB_HINT!=='undefined'&&VOCAB_HINT[it.w])||''; p.correct=it.r+(hasKanji(it.w)?'（'+it.w+'）':''); if (hasKanji(it.w)) { p.pick={correct:it.w, options:shuffle([it.w,...kanjiDistractors(it)])}; } }
   else if (facet==='gc'){ p.kind='g'; const ex = it._ex || rnd(it.ex); const c=parseCloze(ex.j); p.cloze=c; p.ex=ex; p.ask='Completa'; p.input='kana'; const acc=uniq([...c.answers, ...(ex.k?[ex.k]:[]), ...(typeof CLOZE_KANA!=='undefined'&&CLOZE_KANA[c.answers[0]]?[CLOZE_KANA[c.answers[0]]]:[])]); p.check=a=>{ const t=toKana(a,true); return acc.some(x=>normKana(x)===normKana(t)) || acc.some(x=>x===a.trim()); }; p.correct=c.answers[0]; }
@@ -241,7 +242,7 @@ function feedbackPanel(c){
     S.items[k]={...old,s:9,due:Infinity,lrn:old.lrn||now(),ls:now()}; s.queue=s.queue.filter(q=>q.k!==k);
     if (r.left.size){ r.left.clear(); s.done++; s.correct++; if(s.mode==='lesson') bump(r.it.kind==='g'?'lg':'l'); else if(s.mode==='review'){ bump('r'); bump('rc'); } }
     s.undo=null; save(); if(s.mode==='review') markClearedIfEmpty(); toast('Quemado: no volverá a salir'); nextCard(); };
-  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:c.f==='vp'?()=>{ const s=SESSION; const t=normKana(toKana(c.answer||'',true)); if(!t) return; const k=c.k; S.alts=S.alts||{}; S.alts[k]=uniq([...(S.alts[k]||[]),t]); S.settingsAt=S.settingsAt||0; save(); undoLast(); if(SESSION&&SESSION.cur){ SESSION.cur.syn={w:t,r:t,custom:true}; renderStudy(); } }:markAsCorrect},c.f==='vp'?'Mi palabra también era válida (sin penalizar)':'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:(c.f==='km'||c.f==='vm')?()=>{ const t=(c.answer||'').trim().toLowerCase(); if(!t) return; const k=c.k+'#m'; S.alts=S.alts||{}; S.alts[k]=uniq([...(S.alts[k]||[]),t]); S.settingsAt=S.settingsAt||0; save(); markAsCorrect(); toast('Anotado: esa respuesta también vale'); }:c.f==='vp'?()=>{ const s=SESSION; const t=normKana(toKana(c.answer||'',true)); if(!t) return; const k=c.k; S.alts=S.alts||{}; S.alts[k]=uniq([...(S.alts[k]||[]),t]); S.settingsAt=S.settingsAt||0; save(); undoLast(); if(SESSION&&SESSION.cur){ SESSION.cur.syn={w:t,r:t,custom:true}; renderStudy(); } }:markAsCorrect},c.f==='vp'?'Mi palabra también era válida (sin penalizar)':(c.f==='km'||c.f==='vm')?'Mi respuesta también era válida':'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
   const sess=SESSION; const handler=e=>{ if(e.key==='Enter' && SESSION===sess && sess.cur===c && sess.phase==='feedback'){ e.preventDefault(); nextCard(); } };
   if (SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler);
   SESSION.enterHandler=handler; document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);
