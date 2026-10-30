@@ -20,12 +20,14 @@ function renderPractica(){
   if (PRACT.mode==='dictado') return renderDictado();
   if (PRACT.mode==='escucha') return renderEscucha();
   if (PRACT.mode==='redaccion') return renderRedaccion();
+  if (PRACT.mode==='escritura') return renderEscritura();
   const d=day(); const ws=(S.writings||[]).slice(-1)[0]; const minW=writingMin();
   el.append(h('div',{class:'topline'}, h('h1',{},'Práctica')));
   el.append(h('div',{class:'grid c3'},
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Dictado'), h('div',{class:'small muted'},`Hoy: ${d.di||0} ${plural(d.di||0,'frase')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'dictado',n:0,sum:0,plays:0}; nextDictation(); }},'Empezar (10 frases)')),
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},'Comprensión auditiva'), h('div',{class:'small muted'},`${Object.keys(S.listen||{}).length} ${plural(Object.keys(S.listen||{}).length,'texto escuchado','textos escuchados')}`), h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'escucha',id:null}; renderPractica(); }},'Elegir texto')),
     h('div',{class:'card stack'}, h('div',{class:'eyebrow'},`Redacción · grado ${writingGrade()} de 10 (${WRITING_GRADES[writingGrade()].tier})`), h('div',{class:'small muted'},`${writingRange()[0]} a ${writingRange()[1]} caracteres`), h('div',{class:'small muted'},(writingGrade()<10?`${writingPassCount()}/${WR_NEED} para subir (nota de ${writingPass(writingGrade())} o más)`:'Grado máximo')+(ws?` · última ${ws.score!=null?ws.score+' %':'sin corregir'}`:'')), writingLowStreak()?h('div',{class:'small',style:'color:var(--warn)'},'Repite el mismo tema.'):null, h('button',{class:'btn primary',onclick:()=>{ PRACT={mode:'redaccion',topic:pickTopic(true),text:'',result:null}; renderPractica(); }},'Escribir'), h('button',{class:'btn sm ghost',onclick:chooseWritingGrade},'Cambiar de grado'))));
+  { const hand=S.hand||{}; const seen=Object.keys(hand).length; el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('div',{class:'eyebrow'},'Escritura a mano'), h('div',{class:'small muted'},`Dibuja el kanji de memoria y compáralo con el modelo. ${seen?`${seen} ${plural(seen,'kanji practicado','kanji practicados')}`:'Con los kanji que ya has empezado a aprender.'}`), h('button',{class:'btn primary',onclick:startHandwriting},'Empezar (8 kanji)'))); }
   const ws10=(S.writings||[]).slice(-10).reverse();
   if (ws10.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Redacciones'), h('div',{class:'list',style:'margin-top:8px'}, ws10.map(w=>h('div',{class:'row',style:'align-items:stretch;gap:6px'}, h('button',{class:'item',style:'flex:1;min-width:0',onclick:()=>{ PRACT={mode:'redaccion',topic:w.topic,text:w.text,result:w.result||null,saved:true}; renderPractica(); }}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},w.topic.t), h('div',{class:'small muted'},`${fmtDate(w.date)} · ${jaLen(w.text)} caracteres`)), h('span',{class:'badge '+(w.score>=70?'ok':'soft')}, w.score!=null?w.score+'%':'—')), h('button',{class:'btn sm ghost',title:'Borrar esta redacción',onclick:()=>deleteWriting(w)},'Borrar'))))));
 }
@@ -212,6 +214,10 @@ function renderGuia(){
          'La nota sale de una fórmula fija, no de una impresión: depende de cuántos errores hay (graves, medios y leves) respecto a la longitud del texto, de si cumple el tema y de si usas las estructuras pedidas.',
          'El mismo texto recibe siempre la misma corrección y la misma nota. La versión corregida que te devuelve la app puntúa 100.',
          'Si cambias aunque sea un carácter del texto, se vuelve a analizar y la nota puede variar unos puntos: una IA no es un examinador perfecto.')),
+    sec('Escritura a mano',
+      ul('En Práctica → Escritura a mano dibujas con el dedo (o el ratón) un kanji de memoria. Los kanji salen de los que ya has empezado a aprender, empezando por los que más tiempo llevan sin practicarse o los que más fallas.',
+         '«Ver modelo» muestra el kanji con el orden de los trazos numerado y animado, y compara cuántos trazos has hecho. Después te evalúas tú: «Lo escribí bien» o «Necesito repetirlo». «Calcar» deja una guía tenue mientras dibujas.',
+         'La app no puede juzgar por sí sola si tu trazo es correcto, así que la comparación visual la haces tú. Los datos de trazos son de KanjiVG (Ulrich Apel, CC BY-SA 3.0, kanjivg.tagaini.net).')),
     sec('Test de nivel',
       ul('Unas 30 preguntas de vocabulario y kanji, gramática, lectura, escucha, producción y una redacción corta (si has iniciado sesión).',
          'Se adapta a ti: si aciertas, la siguiente es más difícil; si fallas, más fácil. «No sé» cuenta como fallo, mejor que adivinar.',

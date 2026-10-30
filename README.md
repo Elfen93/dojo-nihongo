@@ -50,3 +50,7 @@ Si PowerShell bloquea el script: `Set-ExecutionPolicy -Scope Process Bypass` y v
 ## Desarrollo
 - `src/` código de la app por módulos; `data/` contenido (kanji, vocabulario, gramática, lecturas); `python3 build.py` genera `index.html`.
 - Para editar contenido, toca los archivos de `data/` y vuelve a construir.
+
+## Créditos de datos
+- Trazos de los kanji (`data/strokes.json`, `strokes.js`): [KanjiVG](https://kanjivg.tagaini.net) © Ulrich Apel, licencia Creative Commons Atribución-CompartirIgual 3.0. Los datos derivados (formato compactado) se distribuyen bajo la misma licencia.
+- Regenerar: `python3 tools/strokes.py <carpeta con los .svg de KanjiVG>`.
