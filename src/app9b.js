@@ -41,8 +41,9 @@ function reportDialog(key,label){
 }
 const reportBtn=(key,label)=>h('button',{class:'btn sm ghost',title:'Avisar de un error en este contenido',onclick:e=>{ e.stopPropagation(); reportDialog(key,label); }},'Señalar error');
 // Botones de revisión para una ficha: aviso para todos; marcar como revisado solo para revisores
-function reviewRow(key,label){
-  const row=h('div',{class:'row small',style:'justify-content:center;align-items:center;margin-top:8px'});
+const reviewInline=(key,label)=>reviewRow(key,label,true);
+function reviewRow(key,label,inline){
+  const row=h('div',{class:'row small',style:'justify-content:center;align-items:center'+(inline?'':';margin-top:8px')});
   const draw=()=>{ row.innerHTML=''; if(REVIEWED[key]) row.append(h('span',{class:'badge soft',title:'Revisado por una persona nativa'},'Revisado ✓'));
     row.append(reportBtn(key,label));
     if(CAN_REVIEW) row.append(h('button',{class:'btn sm ghost',onclick:async()=>{ await setReviewed(key,!REVIEWED[key]); draw(); }},REVIEWED[key]?'Quitar revisado':'Marcar revisado')); };

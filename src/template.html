@@ -370,6 +370,37 @@ details summary{cursor:pointer;font-weight:600}
   .reader{font-size:1.15rem}
 }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+
+/* Ficha de gramática */
+.gs{display:flex;flex-direction:column;gap:20px;text-align:left}
+.gs-head{text-align:center}
+.gs-title{font-family:var(--f-jp-display),var(--f-jp);font-size:1.55rem;font-weight:600;line-height:1.35}
+.gs-formula{display:inline-block;margin-top:10px;padding:7px 14px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-family:var(--f-jp);font-size:.98rem;font-weight:500}
+.gs-chips{display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.gs-chips .badge{padding:2px 10px}
+.gs-sec>.eyebrow{margin-bottom:8px}
+.gs-about p{margin:0 0 11px;line-height:1.7}
+.gs-about p:last-child{margin-bottom:0}
+.gs-term{font-family:var(--f-jp);color:var(--accent);font-weight:500}
+.gs-ojo{border-left:3px solid var(--gold,#c6b27e);background:var(--card2);border-radius:4px 12px 12px 4px;padding:11px 14px;line-height:1.6}
+.gs-ojo b{display:block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.gs-exs{display:flex;flex-direction:column;gap:8px}
+.gs-ex{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.gs-ex .n{color:var(--muted);font-size:.75rem;font-variant-numeric:tabular-nums;min-width:1.2em;padding-top:6px}
+.gs-ex .t{flex:1;min-width:0}
+.gs-ex .j{font-family:var(--f-jp);font-size:1.12rem;line-height:1.65}
+.gs-ex .j mark{background:transparent;color:var(--accent);font-weight:700;border-bottom:2px solid var(--accent-soft)}
+.gs-ex .es{font-size:.9rem;color:var(--muted);margin-top:2px;line-height:1.5}
+.gs-ex button{flex:none;min-height:34px;padding:4px 9px}
+.gs-more>summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.9rem;padding:6px 2px}
+.gs-more .gs-exs{margin-top:8px}
+.gs-rel{padding:11px 13px;border:1px solid var(--line);border-radius:14px;margin-top:8px;line-height:1.55}
+.gs-rel .top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.gs-rel .kind{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--muted)}
+.gs-rel .kind.sin{background:var(--accent-soft);color:var(--accent)}
+.gs-rel .kind.ant{background:var(--warn-soft,#f0e0d8);color:var(--warn,#a5604b)}
+.gs-rel .d{font-size:.92rem}
+.gs-review{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;align-items:center}
 </style>
 
 <div class="app">

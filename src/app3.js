@@ -211,28 +211,35 @@ function quickFeedback(c){
   return fb;
 }
 
+// Texto con los términos japoneses resaltados
+const JP_RUN=/[\u3040-\u30ff\u3400-\u9fff〜～々ー・]+/g;
+function richJp(text){
+  const out=[]; let last=0; text=String(text||'');
+  for (const m of text.matchAll(JP_RUN)){ if(m.index>last) out.push(text.slice(last,m.index)); out.push(h('span',{class:'gs-term'},m[0])); last=m.index+m[0].length; }
+  if(last<text.length) out.push(text.slice(last)); return out;
+}
 // Ficha completa de un punto de gramática: estructura, detalles, explicación, nota, ejemplos y comparaciones
 function grammarSheet(it, opts={}){
   const X=(typeof GRAM_EXT!=='undefined'&&GRAM_EXT[it.id])||{};
-  const sec=(t,...kids)=>h('div',{style:'margin-top:14px'}, h('div',{class:'eyebrow',style:'margin-bottom:6px'},t), ...kids);
-  const exRow=(j,es)=>h('div',{class:'ex'}, h('div',{class:'jp'}, j, ' ', spkBtn(j)), h('div',{class:'small muted'}, es));
-  const root=h('div',{class:'gsheet'});
-  root.append(h('div',{class:'mid-jp',style:'text-align:center;font-weight:700'},it.t), it.s?h('div',{class:'small muted jp',style:'text-align:center'},it.s):null);
-  if (X.cat||X.reg) root.append(h('div',{class:'row',style:'justify-content:center;margin-top:6px'}, X.cat?h('span',{class:'badge soft'},X.cat):null, X.reg?h('span',{class:'badge soft'},X.reg):null));
+  const sec=(t,...kids)=>h('div',{class:'gs-sec'}, h('div',{class:'eyebrow'},t), ...kids);
+  const root=h('div',{class:'gs'});
+  root.append(h('div',{class:'gs-head'}, h('div',{class:'gs-title'},it.t), it.s?h('div',{class:'gs-formula'},it.s):null,
+    (X.cat||X.reg)?h('div',{class:'gs-chips'}, X.cat?h('span',{class:'badge soft'},X.cat):null, X.reg?h('span',{class:'badge soft'},X.reg):null):null));
   const about=(X.about&&X.about.length)?X.about:[it.e||''];
-  root.append(sec('Acerca de', ...about.map(p=>h('p',{style:'margin:0 0 8px'},p))));
-  if (X.ojo) root.append(h('div',{class:'mn',style:'margin-top:10px'}, h('b',{class:'small'},'¡Ojo! '), X.ojo));
-  const exs=[...(it.ex||[]).map(e=>{ const c=parseCloze(e.j); return [c.pre+c.answers[0]+c.post, e.s]; }), ...((X.m||[]).map(e=>[e.j,e.s]))];
-  root.append(sec('Ejemplos', ...exs.map(([j,es])=>exRow(j,es))));
+  root.append(sec('Cómo se usa', h('div',{class:'gs-about'}, ...about.map(p=>h('p',{},...richJp(p))))));
+  if (X.ojo) root.append(h('div',{class:'gs-ojo'}, h('b',{},'Ojo'), ...richJp(X.ojo)));
+  const exs=[...(it.ex||[]).map(e=>{ const c=parseCloze(e.j); return {pre:c.pre,mid:c.answers[0],post:c.post,es:e.s}; }), ...((X.m||[]).map(e=>({pre:e.j,mid:'',post:'',es:e.s})))];
+  const row=(e,i)=>h('div',{class:'gs-ex'}, h('span',{class:'n'},i+1), h('div',{class:'t'}, h('div',{class:'j',lang:'ja'}, e.pre, e.mid?h('mark',{},e.mid):null, e.post), h('div',{class:'es'},e.es)), spkBtn(e.pre+e.mid+e.post));
+  const SHOW=4; const first=exs.slice(0,SHOW), rest=exs.slice(SHOW);
+  root.append(sec('Ejemplos', h('div',{class:'gs-exs'}, first.map((e,i)=>row(e,i))), rest.length?h('details',{class:'gs-more',style:'margin-top:8px'}, h('summary',{},`Ver ${rest.length} más`), h('div',{class:'gs-exs'}, rest.map((e,i)=>row(e,SHOW+i)))):null));
   const rel=X.r||[];
   if (rel.length){
-    const groups=[['sin','Sinónimos'],['ant','Antónimos'],['rel','Relacionados']];
-    const det=h('details',{class:'sec',style:'margin-top:14px'}, h('summary',{},'Comparaciones'));
-    for (const [k,label] of groups){ const rs=rel.filter(r=>r.k===k); if(!rs.length) continue; det.append(h('div',{class:'small muted',style:'margin:8px 0 4px'},label));
-      rs.forEach(r=>{ const tgt=r.id&&ITEMS.get('g|'+r.id); det.append(h('div',{style:'margin-bottom:8px'}, tgt?h('button',{class:'pill g jp',onclick:()=>itemSheet(tgt)},r.t):h('b',{class:'jp'},r.t), h('div',{class:'small'},r.d))); }); }
+    const KIND={sin:'Parecido',ant:'Opuesto',rel:'Relacionado'};
+    const det=h('details',{class:'gs-more'}, h('summary',{},`Compáralo con otros puntos (${rel.length})`));
+    rel.forEach(r=>{ const tgt=r.id&&ITEMS.get('g|'+r.id); det.append(h('div',{class:'gs-rel'}, h('div',{class:'top'}, h('span',{class:'kind '+r.k},KIND[r.k]||r.k), tgt?h('button',{class:'pill g jp',onclick:()=>itemSheet(tgt)},r.t):h('b',{class:'jp'},r.t)), h('div',{class:'d'},...richJp(r.d)))); });
     root.append(det);
   }
-  root.append(reviewRow(keyOf(it),it.t));
+  root.append(h('div',{class:'gs-review'}, reviewInline(keyOf(it),it.t)));
   return root;
 }
 function itemDetails(it, p){
