@@ -52,7 +52,7 @@ function cuadernoItems(){
 function caminoSection(){
   const w=weekInfo(); const c=caminoSvg();
   const name=S.settings.name?S.settings.name:'';
-  const head=h('div',{class:'camino-head'}, hankoEl(64), h('div',{style:'min-width:0'}, h('div',{class:'lvl'},name||'Tu camino'), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${w.total} ${plural(w.total,'día practicado','días practicados')}`)));
+  const head=h('div',{class:'camino-head'}, hankoEl(64), h('div',{style:'min-width:0'}, h('div',{class:'lvl'},name||'Tu camino'), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${w.total} ${plural(w.total,'día practicado','días practicados')}`), S.settings.hanko?null:h('div',{class:'small',style:'color:var(--accent);margin-top:2px'},'Toca el sello para elegir tu kanji')));
   const dots=h('div',{class:'weekdots'}, w.days.map((d,i)=>h('div',{class:'wd'+(d.on?' on':'')+(d.today?' today':'')+(d.future?' future':'')}, h('i',{}), h('span',{},WEEKDAYS[i]))));
   const goalSel=h('select',{'aria-label':'Días por semana',onchange:e=>{ S.settings.weekGoal=+e.target.value; S.settingsAt=now(); save(); render(); }}, [2,3,4,5,6,7].map(n=>h('option',{value:n,selected:n===w.goal},`${n} días por semana`)));
   const cuaderno=cuadernoItems();
