@@ -171,7 +171,7 @@ function renderStudy(){
     card.append(trans);
     if (hidden) card.append(h('button',{class:'btn sm ghost',onclick:e=>{ trans.style.display=trans.style.display==='none'?'':'none'; e.currentTarget.textContent=trans.style.display==='none'?'Ver traducción':'Ocultar traducción'; }},'Ver traducción'));
     if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Pista: ', h('span',{class:'jp'},...furiText(p.ex.h))));
-    card.append(h('div',{class:'small'}, ask?null:h('span',{class:'pill g'}, p.it.t), p.reg?h('span',{class:'badge soft',style:ask?'':'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
+    card.append(h('div',{class:'small'}, (ask||c.ok)?null:h('button',{class:'pill g jp',title:'Ver la ficha de este punto',onclick:()=>itemSheet(p.it)}, p.it.t, ' ›'), p.reg?h('span',{class:'badge soft',style:ask?'':'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
   } else if (c.f==='vp'){
     card.append(h('div',{class:'big-es'}, p.mainEs));
     if (p.hint) card.append(h('div',{class:'small',style:'color:var(--accent);font-weight:600'}, p.hint));
@@ -317,7 +317,7 @@ function itemDetails(it, p){
     const ex=(p&&p.ex)||(it.ex||[])[0]||{j:'',s:''}; const cl=(p&&p.cloze)||parseCloze(ex.j);
     add('Respuesta', h('span',{class:'jp'}, cl.answers.join(' / ')));
     add('Frase', h('div',{}, h('div',{class:'jp'}, cl.pre+cl.answers[0]+cl.post, ' ', spkBtn(cl.pre+cl.answers[0]+cl.post)), h('div',{class:'small muted'}, ex.s)));
-    add('Punto', h('span',{}, h('b',{class:'jp'},it.t), ' — ', h('span',{class:'jp'},it.s||'')));
+    add('Punto', h('span',{}, h('button',{class:'pill g jp',title:'Ver la ficha de este punto',onclick:()=>itemSheet(it)},it.t,' ›'), ' ', h('span',{class:'jp small muted'},it.s||'')));
     add('Explicación', it.e||'');
   }
   return dl;
