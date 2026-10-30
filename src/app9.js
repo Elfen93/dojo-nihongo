@@ -63,6 +63,13 @@ function caminoSection(){
     (S.placements||[]).length?h('div',{class:'card stack'}, h('h3',{},'Tu último test de nivel'), ...Object.entries(PL_SKILLS).filter(([k])=>S.placements.slice(-1)[0].theta[k]!=null).map(([k,m])=>plBar(m.t,S.placements.slice(-1)[0].theta[k]))):null);
 }
 
+// Flechas del teclado en las lecciones: ← anterior, → siguiente (y en la última, empezar el test)
+document.addEventListener('keydown',e=>{
+  if (!LESSON||SESSION||e.altKey||e.ctrlKey||e.metaKey) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')) return;
+  if (e.key==='ArrowLeft'){ if(LESSON.i>0){ e.preventDefault(); LESSON.i--; renderLesson(); } }
+  else if (e.key==='ArrowRight'){ e.preventDefault(); if(LESSON.i<LESSON.batch.length-1){ LESSON.i++; renderLesson(); window.scrollTo(0,0); } else { const b=LESSON.batch, t=LESSON.track; LESSON=null; startSession('lesson',b,{track:t}); } }
+});
 boot();
 // Descarga en segundo plano (sin ejecutar) las fichas ampliadas y el furigana, para que queden en caché
 (window.requestIdleCallback||setTimeout)(()=>{ try{ fetch('ext.js').catch(()=>{}); }catch(e){} }, {timeout:6000});
