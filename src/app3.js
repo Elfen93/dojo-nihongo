@@ -34,7 +34,7 @@ function kanjiDistractors(v){
   const out = uniq([...pick(share,2), ...shuffle(sameLen), ...shuffle(pool)].map(x=>x.w)).filter(w=>w!==word).slice(0,3);
   return out;
 }
-// Registro: la forma cortés (です・ます) y la simple de una respuesta valen igual salvo que la frase lo pida
+// Registro: la respuesta debe seguir el registro de la frase (cortés o casual); solo se detecta para avisar si te equivocas de registro
 const REG_PAIRS=[['ていませんでした','ていなかった'],['でいませんでした','でいなかった'],['ていました','ていた'],['でいました','でいた'],['ています','ている'],['でいます','でいる'],['ていません','ていない'],['でいません','でいない'],['ではありませんでした','ではなかった'],['じゃありませんでした','じゃなかった'],['ではありません','ではない'],['じゃありません','じゃない'],['でした','だった'],['でしょう','だろう'],['です','だ']];
 function regVariants(a){
   const out=[]; for (const [pol,pl] of REG_PAIRS){ if(a.endsWith(pol)){ out.push(a.slice(0,-pol.length)+pl); if(pol==='です'&&/い$/.test(a.slice(0,-2))) out.push(a.slice(0,-2)); break; } if(a.endsWith(pl)){ out.push(a.slice(0,-pl.length)+pol); break; } }
@@ -49,7 +49,7 @@ function buildPrompt(it, facet){
   else if (facet==='vm'){ p.kind='v'; p.main=it.w; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,[...it.m,...meaningAlts(it)]); p.correct=it.m.join(', '); }
   else if (facet==='vr'){ p.kind='v'; p.main=it.w; p.ask='Lectura'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.correct=it.r; }
   else if (facet==='vp'){ p.kind='p'; p.mainEs=it.m.join(', '); p.sub=it.p?posLabel(it.p):''; p.ask='Escribe la palabra en japonés'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.synonym=a=>vocabSynonym(it,a)||customAlt(it,a); p.hint=(typeof VOCAB_HINT!=='undefined'&&VOCAB_HINT[it.w])||''; p.correct=it.r+(hasKanji(it.w)?'（'+it.w+'）':''); if (hasKanji(it.w)) { p.pick={correct:it.w, options:shuffle([it.w,...kanjiDistractors(it)])}; } }
-  else if (facet==='gc'){ p.kind='g'; const ex = it._ex || rnd(it.ex); const c=parseCloze(ex.j); p.cloze=c; p.ex=ex; p.ask='Completa'; p.input='kana'; const acc=uniq([...c.answers, ...(ex.k?[ex.k]:[]), ...(typeof CLOZE_KANA!=='undefined'&&CLOZE_KANA[c.answers[0]]?[CLOZE_KANA[c.answers[0]]]:[])]); const alt=acc.flatMap(regVariants); const hit=(list,a)=>{ const t=toKana(a,true); return list.some(x=>normKana(x)===normKana(t)) || list.some(x=>x===a.trim()); }; p.check=a=>hit(acc,a)||hit(alt,a); p.viaReg=a=>!hit(acc,a)&&hit(alt,a); if (alt.length){ const polite=isPoliteAns(c.answers[0]); const rec=S.items[keyOf(it)]; if(!rec||rec.s<5) p.reg=polite?'cortés (です・ます)':'forma simple'; p.regPolite=polite; } p.correct=c.answers[0]; }
+  else if (facet==='gc'){ p.kind='g'; const ex = it._ex || rnd(it.ex); const c=parseCloze(ex.j); p.cloze=c; p.ex=ex; p.ask='Completa'; p.input='kana'; const acc=uniq([...c.answers, ...(ex.k?[ex.k]:[]), ...(typeof CLOZE_KANA!=='undefined'&&CLOZE_KANA[c.answers[0]]?[CLOZE_KANA[c.answers[0]]]:[])]); const alt=acc.flatMap(regVariants); const hit=(list,a)=>{ const t=toKana(a,true); return list.some(x=>normKana(x)===normKana(t)) || list.some(x=>x===a.trim()); }; p.check=a=>hit(acc,a); p.viaReg=a=>!hit(acc,a)&&hit(alt,a); if (alt.length){ const polite=isPoliteAns(c.answers[0]); const rec=S.items[keyOf(it)]; if(!rec||rec.s<5) p.reg=polite?'Registro: cortés':'Registro: casual'; p.regPolite=polite; } p.correct=c.answers[0]; }
   return p;
 }
 const POS = {n:'sustantivo',v5:'verbo (grupo 1)',v1:'verbo (grupo 2)',vk:'verbo irregular','adj-i':'adjetivo い','adj-na':'adjetivo な',adv:'adverbio','n-vs':'sustantivo / verbo する',adj:'adjetivo',exp:'expresión'};
@@ -201,7 +201,7 @@ function renderStudy(){
 }
 function evaluate(ans){
   const s=SESSION; if(!s||s.phase!=='ask') return; const c=s.cur, p=c.p; if(c.answer!==undefined) return; const ok=p.check(ans);
-  c.answer=ans; if(ok&&p.viaReg&&p.viaReg(ans)){ c.regNote=p.regPolite?'En esta frase se usa la forma cortés (です・ます); tu forma simple también vale.':'En esta frase se usa la forma simple; tu forma cortés también vale.'; c.full=true; }
+  c.answer=ans; if(!ok&&p.viaReg&&p.viaReg(ans)) c.regNote=p.regPolite?'Tu respuesta es correcta, pero en otro registro: esta frase pide la forma cortés (です・ます).':'Tu respuesta es correcta, pero en otro registro: esta frase pide la forma casual (sin です・ます).';
   const input=$('#ans'); if(input){ input.classList.add(ok?'right':'wrong'); input.disabled=true; }
   if (!ok && p.synonym){ const alt=p.synonym(ans); if(alt){ // palabra válida pero no la buscada: no se evalúa, se vuelve a preguntar
     c.syn=alt; c.answer=undefined; s.phase='ask'; renderStudy(); return; } }
