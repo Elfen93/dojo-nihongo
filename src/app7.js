@@ -121,29 +121,38 @@ function renderRedaccion(){
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, ta, h('div',{class:'row'}, counter, h('span',{class:'sp'}), saveBtn, btn), status)); upd();
   const r=P.result; if (r){
     const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('div',{class:'row between'}, h('h3',{},'Corrección'), h('span',{class:'score '+(r.score>=70?'pass':'fail'),style:'font-size:1.6rem'},r.score+'%')), r.comment?h('p',{style:'margin:0'},r.comment):null);
-    if (Array.isArray(r.errors)&&r.errors.length){ box.append(h('div',{class:'tscroll'}, h('table',{}, h('thead',{},h('tr',{},h('th',{},'Escribiste'),h('th',{},'Mejor'),h('th',{},'Por qué'))), h('tbody',{}, r.errors.map(e=>h('tr',{}, h('td',{class:'jp wrap',style:'color:var(--warn)'},e.orig||''), h('td',{class:'jp wrap',style:'color:var(--ok)'},e.fix||''), h('td',{class:'wrap small'},e.why||''))))))); box.append(studyLinks(r.errors)); }
+    const errCard=(e,tip)=>h('div',{class:'wr-err'+(tip?' tip':'')}, e.orig?h('div',{class:'o jp'},e.orig):null, e.fix?h('div',{class:'f jp'},(e.orig?'→ ':'')+e.fix):null, e.why?h('div',{class:'w small'},e.why):null);
+    if (Array.isArray(r.errors)&&r.errors.length){ box.append(h('div',{class:'eyebrow'},'Errores'), h('div',{class:'stack',style:'gap:8px'}, r.errors.map(e=>errCard(e,false)))); box.append(studyLinks(r.errors)); }
     else box.append(h('div',{class:'small muted'},'Sin errores señalados.'));
+    if (Array.isArray(r.tips)&&r.tips.length) box.append(h('details',{class:'gs-more',open:true}, h('summary',{},`Sugerencias, no restan nota (${r.tips.length})`), h('div',{class:'stack',style:'gap:8px;margin-top:8px'}, r.tips.map(e=>errCard(e,true)))));
     if (r.corrected) box.append(h('div',{}, h('div',{class:'eyebrow'},'Versión natural'), h('div',{class:'jp',style:'margin-top:6px;line-height:2;white-space:pre-wrap'},r.corrected), h('div',{class:'row',style:'margin-top:6px'}, spkBtn(r.corrected))));
     if (r.level) box.append(h('div',{class:'small muted'},'Nivel estimado de este texto: '+r.level));
+    box.append(h('div',{class:'row',style:'justify-content:flex-end'}, reportBtn('w|'+(P.topic&&P.topic.t||'redaccion'), 'Corrección de redacción: '+((P.topic&&P.topic.t)||''))));
     el.append(box);
   }
 }
 // Dónde estudiar lo que ha fallado: punto de la app (si existe) y recursos externos por tema
 function studyLinks(errors){
   const normT=s=>String(s||'').replace(/（[^）]*）|\([^)]*\)/g,'').replace(/[〜～\s()（）・、。\-ー]/g,'').toLowerCase();
-  const points=uniq(errors.map(e=>e.point).filter(Boolean)); if(!points.length) return null;
+  const seen=new Set(); const rows=[];
+  for (const e of errors){ const pt=e.point; if(!pt||seen.has(pt)) continue; seen.add(pt); rows.push({pt,kind:e.kind||'gramatica'}); }
+  if(!rows.length) return null;
   const box=h('div',{}, h('div',{class:'eyebrow'},'Dónde estudiar lo que has fallado'));
   const list=h('div',{class:'stack',style:'margin-top:6px'});
-  points.slice(0,8).forEach(pt=>{
-    const own=[...ITEMS.values()].find(i=>i.kind==='g'&&(normT(i.t)===normT(pt)||normT(i.t).includes(normT(pt))||(normT(pt).length>=3&&normT(pt).includes(normT(i.t)))));
-    const q=encodeURIComponent(pt);
-    list.append(h('div',{class:'row small',style:'align-items:center'}, h('b',{class:'jp'},pt), own?h('button',{class:'pill g jp',title:'Ver el punto en la app',onclick:()=>itemSheet(own)},'En la app: '+own.t):h('span',{class:'muted'},'(no está en el temario de la app)'),
-      h('a',{href:'https://bunpro.jp/grammar_points?search='+q,target:'_blank',rel:'noopener'},'Bunpro'), h('a',{href:'https://jlptsensei.com/?s='+q,target:'_blank',rel:'noopener'},'JLPT Sensei'), h('a',{href:'https://www.google.com/search?q='+encodeURIComponent(pt+' gramática japonesa'),target:'_blank',rel:'noopener'},'Buscar')));
+  rows.slice(0,8).forEach(({pt,kind})=>{
+    const a=(href,t)=>h('a',{href,target:'_blank',rel:'noopener'},t);
+    if (kind==='gramatica'){
+      const own=[...ITEMS.values()].find(i=>i.kind==='g'&&(normT(i.t)===normT(pt)||normT(i.t).includes(normT(pt))||(normT(pt).length>=3&&normT(pt).includes(normT(i.t)))));
+      list.append(h('div',{class:'row small',style:'align-items:center'}, h('b',{class:'jp'},pt), own?h('button',{class:'pill g jp',title:'Ver el punto en la app',onclick:()=>itemSheet(own)},'En la app: '+own.t):null,
+        a('https://bunpro.jp/grammar_points?search='+encodeURIComponent(pt),'Bunpro'), a('https://jlptsensei.com/?s='+encodeURIComponent(pt),'JLPT Sensei')));
+    } else {
+      list.append(h('div',{class:'row small',style:'align-items:center'}, h('b',{class:'jp'},pt), a('https://jisho.org/search/'+encodeURIComponent(pt),'Jisho'), a('https://www.google.com/search?q='+encodeURIComponent(pt+' japonés'),'Buscar')));
+    }
   });
   box.append(list);
   return box;
 }
-function saveWriting(P,r){ S.writings=S.writings||[]; const rec={date:now(),topic:P.topic,grade:P.topic.grade||writingGrade(),text:P.text,score:r?r.score:null,result:r?{score:r.score,comment:r.comment||'',errors:(r.errors||[]).slice(0,30).map(e=>({orig:e.orig||'',fix:e.fix||'',why:e.why||'',point:e.point||''})),corrected:r.corrected||'',level:r.level||''}:null}; const i=S.writings.findIndex(w=>w.topic.t===P.topic.t&&w.text===P.text); if(i>=0) S.writings[i]=rec; else S.writings.push(rec); if(S.writings.length>50) S.writings=S.writings.slice(-50); if(!P.saved) bump('wr'); P.saved=true; save(); }
+function saveWriting(P,r){ S.writings=S.writings||[]; const rec={date:now(),topic:P.topic,grade:P.topic.grade||writingGrade(),text:P.text,score:r?r.score:null,result:r?{score:r.score,comment:r.comment||'',errors:(r.errors||[]).slice(0,30).map(e=>({orig:e.orig||'',fix:e.fix||'',why:e.why||'',kind:e.kind||'',point:e.point||''})),tips:(r.tips||[]).slice(0,20).map(e=>({orig:e.orig||'',fix:e.fix||'',why:e.why||''})),corrected:r.corrected||'',level:r.level||''}:null}; const i=S.writings.findIndex(w=>w.topic.t===P.topic.t&&w.text===P.text); if(i>=0) S.writings[i]=rec; else S.writings.push(rec); if(S.writings.length>50) S.writings=S.writings.slice(-50); if(!P.saved) bump('wr'); P.saved=true; save(); }
 
 // ===================== Guía de uso =====================
 function renderGuia(){
