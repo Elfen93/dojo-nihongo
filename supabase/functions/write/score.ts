@@ -8,9 +8,11 @@ export function computeScore(input) {
   const errors = Array.isArray(input.errors) ? input.errors : [];
   let points = 0;
   const count = { 1: 0, 2: 0, 3: 0 };
-  for (const e of errors) { const s = [1, 2, 3].includes(Number(e.sev)) ? Number(e.sev) : 2; points += WEIGHT[s]; count[s]++; }
+  // la gravedad máxima solo vale para los 2 peores errores: el resto cuenta como medio
+  const sorted = errors.map((e) => ([1, 2, 3].includes(Number(e.sev)) ? Number(e.sev) : 2)).sort((a, b) => b - a);
+  sorted.forEach((s0, i) => { const s = s0 === 3 && i >= 2 ? 2 : s0; points += WEIGHT[s]; count[s]++; });
   const density = points / (Math.max(n, FLOOR) / 100);
-  const accuracy = Math.max(0, 100 - 4 * density);
+  const accuracy = Math.max(45, 100 - Math.min(55, 3.6 * density)); // un texto que se entiende no baja de 45 por errores
   let score = accuracy;
   const min = Number(input.min) || 0;
   const lengthPenalty = min && n < min ? Math.min(20, Math.round(20 * (min - n) / min)) : 0;
