@@ -39,14 +39,14 @@ function reportDialog(key,label){
   }},'Enviar');
   close=overlay([h('h3',{},'Señalar un error'), h('div',{class:'small muted jp'},label||key), com, sug, h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>close()},'Cancelar'), h('span',{class:'sp'}), send)]);
 }
-const reportBtn=(key,label)=>h('button',{class:'btn sm ghost',title:'Avisar de un error en este contenido',onclick:e=>{ e.stopPropagation(); reportDialog(key,label); }},'Señalar error');
+const reportBtn=(key,label)=>h('button',{class:'btn sm ghost',title:'Avisar de un error en este contenido',onclick:e=>{ e.stopPropagation(); reportDialog(key,label); }},CAN_REVIEW?'Proponer corrección':'Señalar error');
 // Botones de revisión para una ficha: aviso para todos; marcar como revisado solo para revisores
 const reviewInline=(key,label)=>reviewRow(key,label,true);
-function reviewRow(key,label,inline){
+function reviewRow(key,label,inline,onChange){
   const row=h('div',{class:'row small',style:'justify-content:center;align-items:center'+(inline?'':';margin-top:8px')});
   const draw=()=>{ row.innerHTML=''; if(REVIEWED[key]) row.append(h('span',{class:'badge soft',title:'Revisado por una persona nativa'},'Revisado ✓'));
     row.append(reportBtn(key,label));
-    if(CAN_REVIEW) row.append(h('button',{class:'btn sm ghost',onclick:async()=>{ await setReviewed(key,!REVIEWED[key]); draw(); }},REVIEWED[key]?'Quitar revisado':'Marcar revisado')); };
+    if(CAN_REVIEW) row.append(h('button',{class:'btn sm ghost',onclick:async()=>{ await setReviewed(key,!REVIEWED[key]); draw(); if(onChange) onChange(); }},REVIEWED[key]?'Quitar revisado':'Marcar revisado')); };
   draw(); return row;
 }
 // Texto de un ítem para el informe de correcciones
@@ -73,6 +73,6 @@ function reviewCard(){
   };
   const load=async()=>{ try{ const r=await sb.from('content_reports').select('*').eq('status','open').order('created_at'); if(r.error) throw r.error; rows=r.data||[]; draw(); }catch(e){ list.innerHTML=''; list.append(h('div',{class:'small muted'},'No se pudo leer: '+e.message+'. ¿Has ejecutado schema5.sql?')); } };
   const copy=h('button',{class:'btn sm',onclick:()=>{ const t=rows.map((r,i)=>`${i+1}. [${r.key}] ${r.label||''}\n  AVISO: ${r.comment}${r.suggestion?'\n  PROPUESTA: '+r.suggestion:''}\n  ACTUAL: ${itemSnapshot(r.key)}`).join('\n\n'); navigator.clipboard.writeText(t).then(()=>toast('Informe copiado')).catch(()=>toast('No se pudo copiar')); }},'Copiar informe');
-  box.append(list, h('div',{class:'row'}, copy, h('button',{class:'btn sm ghost',onclick:load},'Actualizar')));
+  box.append(list, h('div',{class:'row'}, h('button',{class:'btn sm primary',onclick:()=>go('revision')},'Abrir la revisión por niveles'), copy, h('button',{class:'btn sm ghost',onclick:load},'Actualizar')));
   load(); return box;
 }

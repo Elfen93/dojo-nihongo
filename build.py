@@ -19,7 +19,7 @@ for f in part('gram_ext_*.js'):
     t=open('data/'+f,encoding='utf-8').read(); m=t[t.index('{'):t.rindex('}')+1]; ext+='Object.assign(GRAM_EXT,'+json.dumps(json.loads(m),ensure_ascii=False,separators=(',',':'))+');\n'
 if os.path.exists('data/furi.json'): ext+='Object.assign(FURI,'+open('data/furi.json',encoding='utf-8').read()+');\n'
 open('ext.js','w',encoding='utf-8').write(ext); print('ext.js',len(ext.encode()),'bytes')
-app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js','app9b.js','app9.js'])
+app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js','app9b.js','app9c.js','app9.js'])
 out=open('src/template.html').read().replace('/*__DATA__*/',data).replace('/*__APP__*/',app)
 open('index.html','w').write(out)
 print('index.html', len(out.encode()), 'bytes')
