@@ -5,8 +5,8 @@ const tierOf = lv => TIERS.find(t=>lv>=t.from&&lv<=t.to) || TIERS[TIERS.length-1
 const tierByName = n => TIERS.find(t=>t.n===n);
 
 // Catálogo: ítems integrados (N5/N4) + esqueleto N3–N1 (completado por generación)
-const KANJI_ALL = [...KANJI, ...KANJI_N4].filter(k=>k.lv>0);
-const VOCAB_ALL = [...VOCAB_N5, ...VOCAB_N4A, ...VOCAB_N4B].filter(v=>v.lv>0);
+const KANJI_ALL = [...KANJI, ...KANJI_N4, ...(typeof KANJI_N3!=='undefined'?KANJI_N3:[])].filter(k=>k.lv>0);
+const VOCAB_ALL = [...VOCAB_N5, ...VOCAB_N4A, ...VOCAB_N4B, ...(typeof VOCAB_N3!=='undefined'?VOCAB_N3:[])].filter(v=>v.lv>0);
 const GRAMMAR_ALL = [...GRAMMAR_N5, ...GRAMMAR_N4A, ...GRAMMAR_N4B, ...(typeof GRAMMAR_EXTRA!=='undefined'?GRAMMAR_EXTRA:[]), ...(typeof GRAMMAR_N3!=='undefined'?GRAMMAR_N3:[])];
 // Reparto del esqueleto en niveles
 (function assignRoadmap(){
@@ -14,7 +14,7 @@ const GRAMMAR_ALL = [...GRAMMAR_N5, ...GRAMMAR_N4A, ...GRAMMAR_N4B, ...(typeof G
     const tier=tierByName(t), nlv=tier.to-tier.from+1;
     const normT=s=>String(s).replace(/（[^）]*）|\([^)]*\)/g,'').replace(/[〜～\s()（）・、。\-ー]/g,'').toLowerCase();
     const hand=new Set(GRAMMAR_ALL.flatMap(g=>g.t.split(/\s*\/\s*/).map(normT)));
-    const ks=ROADMAP_KANJI[t]||[], gs=(ROADMAP[t].grammar||[]).filter(x=>!hand.has(normT(x))&&!hand.has(normT(x.replace(/\s*\(.*\)$/,''))));
+    const handK=new Set(KANJI_ALL.map(k=>k.k)); const ks=(ROADMAP_KANJI[t]||[]).filter(k=>!handK.has(k.k)), gs=(ROADMAP[t].grammar||[]).filter(x=>!hand.has(normT(x))&&!hand.has(normT(x.replace(/\s*\(.*\)$/,''))));
     ROADMAP[t].kanjiByLevel={}; ROADMAP[t].grammarByLevel={};
     ks.forEach((k,i)=>{ const lv=tier.from+Math.min(nlv-1,Math.floor(i/Math.ceil(ks.length/nlv))); (ROADMAP[t].kanjiByLevel[lv]=ROADMAP[t].kanjiByLevel[lv]||[]).push(k); });
     gs.forEach((g,i)=>{ const lv=tier.from+Math.min(nlv-1,Math.floor(i/Math.ceil(gs.length/nlv))); (ROADMAP[t].grammarByLevel[lv]=ROADMAP[t].grammarByLevel[lv]||[]).push(g); });
@@ -37,7 +37,7 @@ const VOCAB_BY_WORD = {}; for (const v of VOCAB_ALL) (VOCAB_BY_WORD[v.w]=VOCAB_B
 const vocabWithKanji = k => VOCAB_ALL.filter(v=>v.w.includes(k));
 function isGenerated(lv){ return lv>=14; }
 function levelHasContent(lv){ return lv<14 || !!(S.gen && S.gen[lv]) || itemsOfLevel(lv).length>0; }
-function levelNeedsGen(lv){ return isGenerated(lv) && !(S.gen && S.gen[lv]); }
+function levelNeedsGen(lv){ return isGenerated(lv) && !(S.gen && S.gen[lv]) && !itemsOfLevel(lv).some(i=>i.kind==='k'||i.kind==='v'); }
 
 // ===================== SRS =====================
 const STAGE_HOURS = [0, 4, 8, 24, 48, 24*7, 24*14, 24*30, 24*120, Infinity];

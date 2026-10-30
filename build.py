@@ -1,6 +1,11 @@
 import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-data=''.join(open('data/'+f).read()+'\n' for f in ['kanji.js','kanji_n4.js','vocab_n5.js','vocab_n5b.js','vocab_n4a.js','vocab_n4b.js','vocab_hints.js','grammar_n5.js','grammar_n4a.js','grammar_n4b.js','grammar_extra.js','readings.js','readings_tales.js','readings_more.js','readings_n5.js','exam_bank.js','exam_bank_n5.js','grammar_n3.js','grammar_n3b.js','roadmap.js'])
+import glob
+def part(pat): return [os.path.basename(x) for x in sorted(glob.glob('data/'+pat))]
+order=['kanji.js','kanji_n4.js','@kanji_n3*.js','vocab_n5.js','vocab_n5b.js','vocab_n4a.js','vocab_n4b.js','@vocab_n3*.js','vocab_hints.js','grammar_n5.js','grammar_n4a.js','grammar_n4b.js','grammar_extra.js','readings.js','readings_tales.js','readings_more.js','readings_n5.js','@readings_n3*.js','exam_bank.js','exam_bank_n5.js','@exam_n3*.js','grammar_n3.js','grammar_n3b.js','@grammar_n3_*.js','roadmap.js']
+files=[]
+for o in order: files+= part(o[1:]) if o.startswith('@') else [o]
+data=''.join(open('data/'+f,encoding='utf-8').read()+'\n' for f in files)
 data+='const CLOZE_KANA='+open('data/cloze_auto.json').read()+';\n'
 data+='const EXAM_KANA='+open('data/exam_kana.json').read()+';\n'
 import datetime
