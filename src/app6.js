@@ -54,8 +54,9 @@ function renderAjustes(){
   // Copia de seguridad
   const ta=h('textarea',{id:'s-backup',placeholder:'Pega aquí una copia de seguridad para restaurarla'});
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Copia de seguridad'),
-    h('div',{class:'row'}, h('button',{class:'btn',onclick:exportBackup},'Descargar copia (.json)'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Copiado al portapapeles')).catch(()=>{ ta.value=JSON.stringify(S); ta.select(); toast('Selecciona y copia el texto'); }); }},'Copiar al portapapeles'), h('span',{class:'sp'}), h('button',{class:'btn warn sm',onclick:()=>confirmBox('Esto borra TODO tu progreso en este dispositivo y en tu cuenta. ¿Seguro?',()=>{ S=DEFAULT_STATE(); S.resetAt=now(); S.settingsAt=now(); loadGenLocal(); save(); go('hoy'); toast('Progreso borrado'); })},'Borrar progreso')),
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:exportBackup},'Descargar copia (.json)'), h('button',{class:'btn',onclick:()=>{ navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Copiado al portapapeles')).catch(()=>{ ta.value=JSON.stringify(S); ta.select(); toast('Selecciona y copia el texto'); }); }},'Copiar al portapapeles')),
     f('Restaurar',ta), h('button',{class:'btn',onclick:()=>{ try{ const o=parseLooseJson(ta.value); if(!o||!o.items) throw 0; S={...DEFAULT_STATE(),...o,settings:{...DEFAULT_STATE().settings,...(o.settings||{})}}; S.gen={...(S.gen||{}),...(o.gen||{})}; S.pace=null; S.settingsAt=now(); S.updated=now(); registerGenerated(); updateStreak(); save(); toast('Copia restaurada'); go('hoy'); }catch(e){ toast('JSON no válido'); } }},'Restaurar desde el texto')));
+  el.append(resetCard());
   collapseSettingsOnMobile();
 }
 // JSON pegado a mano: admite vallas ```json y texto alrededor
@@ -210,6 +211,29 @@ function masteredGrammarCard(){
   return box;
 }
 
+// Confirmación fuerte: hay que escribir la palabra para poder continuar
+function typedConfirm(msg, word, onYes){
+  const inp=h('input',{type:'text',placeholder:'Escribe '+word,autocomplete:'off',style:'width:100%'});
+  const go=h('button',{class:'btn warn',disabled:true,onclick:()=>{ box.remove(); onYes(); }},'Borrar para siempre');
+  inp.addEventListener('input',()=>{ go.disabled=inp.value.trim().toUpperCase()!==word; });
+  const box=h('div',{class:'card stack',style:'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:60;max-width:380px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.3)'},
+    h('p',{style:'margin:0'},msg), inp, h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>box.remove()},'Cancelar'), h('span',{class:'sp'}), go));
+  document.body.append(box); setTimeout(()=>inp.focus(),0);
+}
+function resetLevel(tierName){
+  const tier=tierByName(tierName); const t=now(); S.resetKeys=S.resetKeys||{};
+  for (const it of ITEMS.values()){ if(it.lv>=tier.from&&it.lv<=tier.to){ const k=keyOf(it); delete S.items[k]; S.resetKeys[k]=t; } }
+  for (let lv=tier.from; lv<=tier.to; lv++) if(S.levelPass) delete S.levelPass[lv];
+  if ((S.level||1)>=tier.from&&(S.level||1)<=tier.to){ S.level=tier.from; S.lvReset={at:t}; }
+  S.pace=null; S.settingsAt=t; updateStreak(); save();
+}
+function resetCard(){
+  const sel=h('select',{}, TIERS.map(t=>h('option',{value:t.n},t.n)));
+  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Reiniciar'),
+    h('div',{class:'small muted'},'Estas acciones no se pueden deshacer. Descarga antes una copia si dudas.'),
+    h('div',{class:'row'}, sel, h('button',{class:'btn warn sm',onclick:()=>typedConfirm(`Se borra el progreso de todo el nivel ${sel.value} (kanji, vocabulario y gramática), en este dispositivo y en tu cuenta.`,'BORRAR',()=>{ resetLevel(sel.value); toast('Nivel '+sel.value+' reiniciado'); go('hoy'); })},'Reiniciar nivel')),
+    h('div',{class:'row'}, h('button',{class:'btn warn sm',onclick:()=>typedConfirm('Se borra TODO: progreso, exámenes, redacciones, ajustes y respuestas anotadas, en este dispositivo y en tu cuenta.','BORRAR',()=>{ S=DEFAULT_STATE(); S.resetAt=now(); S.settingsAt=now(); S.lvReset={at:now()}; loadGenLocal(); save(); go('hoy'); toast('Cuenta reiniciada'); })},'Reiniciar toda la cuenta')));
+}
 function glossaryCard(){
   const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Glosario'));
   const list=h('div',{class:'list'});

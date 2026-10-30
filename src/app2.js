@@ -84,9 +84,11 @@ function mergeRemote(remote){
   const cut=Math.max(L.resetAt||0, R.resetAt||0); const fresh=t=>!cut||(t||0)>=cut; const cutDay=cut?todayKey(new Date(cut)):'';
   const newer=(R.resetAt||0)>(L.resetAt||0)?R:(L.resetAt||0)>(R.resetAt||0)?L:null;
   if (cut) M.resetAt=cut;
+  M.resetKeys={...(R.resetKeys||{})}; for (const [k,t] of Object.entries(L.resetKeys||{})) M.resetKeys[k]=Math.max(t,M.resetKeys[k]||0);
+  const rk=(k,r)=>{ const t=M.resetKeys[k]; return !t||(r.ls||r.lrn||0)>=t; };
   // ítems: gana el registro visto más recientemente; a igualdad, el de etapa mayor
-  M.items={}; for (const [k,r] of Object.entries(L.items||{})) if(r&&fresh(r.ls||r.lrn)) M.items[k]=r;
-  for (const [k,r] of Object.entries(R.items||{})){ if(!r||!fresh(r.ls||r.lrn)) continue; const l=M.items[k]; if(!l) { M.items[k]=r; continue; } const lt=l.ls||l.lrn||0, rt=r.ls||r.lrn||0; if (rt>lt || (rt===lt && (r.s||0)>(l.s||0))) M.items[k]=r; }
+  M.items={}; for (const [k,r] of Object.entries(L.items||{})) if(r&&fresh(r.ls||r.lrn)&&rk(k,r)) M.items[k]=r;
+  for (const [k,r] of Object.entries(R.items||{})){ if(!r||!fresh(r.ls||r.lrn)||!rk(k,r)) continue; const l=M.items[k]; if(!l) { M.items[k]=r; continue; } const lt=l.ls||l.lrn||0, rt=r.ls||r.lrn||0; if (rt>lt || (rt===lt && (r.s||0)>(l.s||0))) M.items[k]=r; }
   // ajustes: los modificados más recientemente
   M.settings = ((R.settingsAt||0) > (L.settingsAt||0)) ? {...DEFAULT_STATE().settings, ...(R.settings||{})} : {...DEFAULT_STATE().settings, ...(L.settings||{})};
   M.settingsAt = Math.max(R.settingsAt||0, L.settingsAt||0);
@@ -103,19 +105,20 @@ function mergeRemote(remote){
     M.stats={...(L.stats||{})}; for (const [f,v] of Object.entries(R.stats||{})){ const l=M.stats[f]||{c:0,w:0}; M.stats[f]={c:Math.max(l.c||0,v.c||0), w:Math.max(l.w||0,v.w||0)}; }
     M.created=Math.min(L.created||now(), R.created||now());
   }
+  { const la=(L.lvReset&&L.lvReset.at)||0, ra=(R.lvReset&&R.lvReset.at)||0, lr=ra>la?R:la?L:null; if(lr){ M.lvReset=lr.lvReset; if(!newer){ M.level=lr.level||1; M.levelPass={...(lr.levelPass||{})}; } } }
   M.readings={}; for (const [k,v] of Object.entries(R.readings||{})) if(v&&fresh(v.date)) M.readings[k]=v;
   for (const [k,v] of Object.entries(L.readings||{})) if(v&&fresh(v.date)&&(!M.readings[k]||(v.date||0)>(M.readings[k].date||0))) M.readings[k]=v;
   M.listen={}; for (const [k,v] of Object.entries(R.listen||{})) if(v&&fresh(v.date)) M.listen[k]=v; for (const [k,v] of Object.entries(L.listen||{})) if(v&&fresh(v.date)&&(!M.listen[k]||(v.date||0)>(M.listen[k].date||0))) M.listen[k]=v;
   const wr={}; [...(L.writings||[]),...(R.writings||[])].filter(w=>w&&fresh(w.date)).forEach(w=>{ wr[w.date]=w; }); M.writings=Object.values(wr).sort((a,b)=>a.date-b.date).slice(-50);
   { const pl={}; [...(L.placements||[]),...(R.placements||[])].filter(x=>x&&fresh(x.date)).forEach(x=>{ pl[x.date]=x; }); M.placements=Object.values(pl).sort((a,b)=>a.date-b.date).slice(-10); }
-  M.alts={}; for (const src of [R.alts||{},L.alts||{}]) for (const [k,a] of Object.entries(src)) M.alts[k]=uniq([...(M.alts[k]||[]),...(Array.isArray(a)?a:[])]);
+  M.alts={}; for (const src of (newer?[newer.alts||{}]:[R.alts||{},L.alts||{}])) for (const [k,a] of Object.entries(src)) M.alts[k]=uniq([...(M.alts[k]||[]),...(Array.isArray(a)?a:[])]);
   M.wgrade=newer?(newer.wgrade||1):Math.max(L.wgrade||1,R.wgrade||1);
   M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
   M.gen=L.gen||{}; M.pace=null;
   const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
   S=M; updateStreak(); saveLocal();
   // si lo fusionado difiere de lo remoto, subimos la fusión
-  const sig=o=>JSON.stringify({i:o.items||{},s:{...DEFAULT_STATE().settings,...(o.settings||{})},d:o.days||{},e:(o.exams||[]).length,l:o.level||1,x:o.resetAt||0});
+  const sig=o=>JSON.stringify({i:o.items||{},s:{...DEFAULT_STATE().settings,...(o.settings||{})},d:o.days||{},e:(o.exams||[]).length,l:o.level||1,x:o.resetAt||0,rk:Object.keys(o.resetKeys||{}).length,lr:(o.lvReset&&o.lvReset.at)||0});
   if (sig(M)!==sig(R)) { S.updated=now(); saveRemote(); }
   return changedLocal;
 }
