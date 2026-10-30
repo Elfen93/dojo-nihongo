@@ -34,6 +34,13 @@ function kanjiDistractors(v){
   const out = uniq([...pick(share,2), ...shuffle(sameLen), ...shuffle(pool)].map(x=>x.w)).filter(w=>w!==word).slice(0,3);
   return out;
 }
+// Registro: la forma cortés (です・ます) y la simple de una respuesta valen igual salvo que la frase lo pida
+const REG_PAIRS=[['ていませんでした','ていなかった'],['でいませんでした','でいなかった'],['ていました','ていた'],['でいました','でいた'],['ています','ている'],['でいます','でいる'],['ていません','ていない'],['でいません','でいない'],['ではありませんでした','ではなかった'],['じゃありませんでした','じゃなかった'],['ではありません','ではない'],['じゃありません','じゃない'],['でした','だった'],['でしょう','だろう'],['です','だ']];
+function regVariants(a){
+  const out=[]; for (const [pol,pl] of REG_PAIRS){ if(a.endsWith(pol)){ out.push(a.slice(0,-pol.length)+pl); if(pol==='です'&&/い$/.test(a.slice(0,-2))) out.push(a.slice(0,-2)); break; } if(a.endsWith(pl)){ out.push(a.slice(0,-pl.length)+pol); break; } }
+  return out;
+}
+const isPoliteAns=a=>REG_PAIRS.some(([pol])=>a.endsWith(pol))||/(ます|ました|ません|ましょう)$/.test(a);
 // Construye la pregunta de una faceta
 function buildPrompt(it, facet){
   const p={it,facet};
@@ -42,7 +49,7 @@ function buildPrompt(it, facet){
   else if (facet==='vm'){ p.kind='v'; p.main=it.w; p.ask='Significado'; p.input='es'; p.check=a=>matchEs(a,[...it.m,...meaningAlts(it)]); p.correct=it.m.join(', '); }
   else if (facet==='vr'){ p.kind='v'; p.main=it.w; p.ask='Lectura'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.correct=it.r; }
   else if (facet==='vp'){ p.kind='p'; p.mainEs=it.m.join(', '); p.sub=it.p?posLabel(it.p):''; p.ask='Escribe la palabra en japonés'; p.input='kana'; p.check=a=>matchKana(a,[it.r]); p.synonym=a=>vocabSynonym(it,a)||customAlt(it,a); p.hint=(typeof VOCAB_HINT!=='undefined'&&VOCAB_HINT[it.w])||''; p.correct=it.r+(hasKanji(it.w)?'（'+it.w+'）':''); if (hasKanji(it.w)) { p.pick={correct:it.w, options:shuffle([it.w,...kanjiDistractors(it)])}; } }
-  else if (facet==='gc'){ p.kind='g'; const ex = it._ex || rnd(it.ex); const c=parseCloze(ex.j); p.cloze=c; p.ex=ex; p.ask='Completa'; p.input='kana'; const acc=uniq([...c.answers, ...(ex.k?[ex.k]:[]), ...(typeof CLOZE_KANA!=='undefined'&&CLOZE_KANA[c.answers[0]]?[CLOZE_KANA[c.answers[0]]]:[])]); p.check=a=>{ const t=toKana(a,true); return acc.some(x=>normKana(x)===normKana(t)) || acc.some(x=>x===a.trim()); }; p.correct=c.answers[0]; }
+  else if (facet==='gc'){ p.kind='g'; const ex = it._ex || rnd(it.ex); const c=parseCloze(ex.j); p.cloze=c; p.ex=ex; p.ask='Completa'; p.input='kana'; const acc=uniq([...c.answers, ...(ex.k?[ex.k]:[]), ...(typeof CLOZE_KANA!=='undefined'&&CLOZE_KANA[c.answers[0]]?[CLOZE_KANA[c.answers[0]]]:[])]); const alt=acc.flatMap(regVariants); const hit=(list,a)=>{ const t=toKana(a,true); return list.some(x=>normKana(x)===normKana(t)) || list.some(x=>x===a.trim()); }; p.check=a=>hit(acc,a)||hit(alt,a); p.viaReg=a=>!hit(acc,a)&&hit(alt,a); if (alt.length){ const polite=isPoliteAns(c.answers[0]); const rec=S.items[keyOf(it)]; if(!rec||rec.s<5) p.reg=polite?'cortés (です・ます)':'forma simple'; p.regPolite=polite; } p.correct=c.answers[0]; }
   return p;
 }
 const POS = {n:'sustantivo',v5:'verbo (grupo 1)',v1:'verbo (grupo 2)',vk:'verbo irregular','adj-i':'adjetivo い','adj-na':'adjetivo な',adv:'adverbio','n-vs':'sustantivo / verbo する',adj:'adjetivo',exp:'expresión'};
@@ -162,7 +169,7 @@ function renderStudy(){
     card.append(h('div',{class:'mid-jp',lang:'ja'}, cl.pre, h('span',{class:'blank'}, s.phase==='ask'?'　　　':cl.answers[0]), cl.post));
     card.append(h('div',{class:'muted'}, p.ex.s));
     if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Pista: ', h('span',{class:'jp'},p.ex.h)));
-    card.append(h('div',{class:'small'}, h('span',{class:'pill g'}, p.it.t)));
+    card.append(h('div',{class:'small'}, h('span',{class:'pill g'}, p.it.t), p.reg?h('span',{class:'badge soft',style:'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
   } else if (c.f==='vp'){
     card.append(h('div',{class:'big-es'}, p.mainEs));
     if (p.hint) card.append(h('div',{class:'small',style:'color:var(--accent);font-weight:600'}, p.hint));
@@ -194,7 +201,7 @@ function renderStudy(){
 }
 function evaluate(ans){
   const s=SESSION; if(!s||s.phase!=='ask') return; const c=s.cur, p=c.p; if(c.answer!==undefined) return; const ok=p.check(ans);
-  c.answer=ans;
+  c.answer=ans; if(ok&&p.viaReg&&p.viaReg(ans)){ c.regNote=p.regPolite?'En esta frase se usa la forma cortés (です・ます); tu forma simple también vale.':'En esta frase se usa la forma simple; tu forma cortés también vale.'; c.full=true; }
   const input=$('#ans'); if(input){ input.classList.add(ok?'right':'wrong'); input.disabled=true; }
   if (!ok && p.synonym){ const alt=p.synonym(ans); if(alt){ // palabra válida pero no la buscada: no se evalúa, se vuelve a preguntar
     c.syn=alt; c.answer=undefined; s.phase='ask'; renderStudy(); return; } }
@@ -291,6 +298,7 @@ function feedbackPanel(c){
   const p=c.p, it=p.it, ok=c.ok;
   const fb=h('div',{class:'feedback'});
   fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null));
+  if (c.regNote) fb.append(h('div',{class:'push info small',style:'margin-top:8px'},c.regNote));
   fb.append(itemDetails(it, p));
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
   const next=h('button',{class:'btn primary big',style:'margin-top:12px',onclick:nextCard},ok&&S.settings.autoNext!==false?'Siguiente':'Siguiente (Enter)');
