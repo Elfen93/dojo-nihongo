@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n2-ni-kakawarazu",j:"金額の多少[にかかわらず]、ご寄付をお待ちしております。",s:"Esperamos sus donativos, sea cual sea el importe.",h:"にかかわらず"},
+{g:"n2-ni-kakawaru",j:"進学は将来[にかかわる]大事な選択だ。",s:"Seguir estudiando es una decisión importante que afecta al futuro.",h:"にかかわる"},
+{g:"n2-ni-kagitte",j:"大事な試合の日[に限って]、熱を出してしまった。",s:"Justo el día del partido importante me dio fiebre.",h:"に限って"},
+{g:"n2-ni-kagiri",j:"学生[に限り]、入場料は無料となります。",s:"Únicamente para los estudiantes la entrada es gratuita.",h:"に限り"},
+{g:"n2-ni-kotaete",j:"親の期待[に応えて]、彼女は医者になった。",s:"Ella se hizo médica para responder a las expectativas de sus padres.",h:"に応えて"},
+{g:"n2-ni-mukete",j:"試験[に向けて]、毎日三時間勉強している。",s:"Estudio tres horas al día de cara al examen.",h:"に向けて"},
+{g:"n2-ni-hikikae",j:"姉がよく勉強するの[にひきかえ]、私は遊んでばかりいた。",s:"Al contrario que mi hermana, que estudiaba mucho, yo no hacía más que jugar.",h:"にひきかえ"},
+{g:"n2-ni-shitara",j:"店の人[にしたら]、長時間座っているだけの客は迷惑だろう。",s:"Para el personal de la tienda, un cliente que solo se sienta durante horas debe de ser una molestia.",h:"にしたら"},
+{g:"n2-ni-tsuke",j:"彼の歌を聞く[につけ]、故郷のことを思い出す。",s:"Cada vez que oigo su canción, me acuerdo de mi tierra.",h:"につけ"},
+{g:"n2-nite",j:"商品は宅配便[にて]お送りいたします。",s:"Le enviaremos el producto por mensajería.",h:"にて"},
+{g:"n2-ni-kakatte-iru",j:"会社の将来は、若い社員たちの力[にかかっている]。",s:"El futuro de la empresa está en manos de los empleados jóvenes.",h:"にかかっている"},
+{g:"n2-ni-wa-oyobanai",j:"書類は郵送しますので、こちらへ来る[には及びません]。",s:"Le enviaré los documentos por correo, así que no es necesario que venga.",h:"には及ばない"},
+{g:"n2-ni-koshita-koto-wa-nai",j:"何事も用心する[に越したことはない]。",s:"En todo, lo mejor es ser precavido.",h:"に越したことはない"},
+{g:"n2-kara-ni-kakete",j:"週末から来週[にかけて]、各地で祭りが行われる。",s:"Desde el fin de semana hasta la semana que viene se celebran festivales en distintos lugares.",h:"から〜にかけて"},
+{g:"n2-kara-naru",j:"このコースは、全部で十二回の授業[からなる]。",s:"Este curso consta de doce clases en total.",h:"からなる"},
+{g:"n2-kara-iu-to",j:"彼の性格[からいうと]、断るとは思えない。",s:"Conociendo su carácter, no creo que lo rechace.",h:"からいうと"},
+{g:"n2-wa-mochiron",j:"平日[はもちろん]、週末も予約でいっぱいだ。",s:"Entre semana, por supuesto, pero también los fines de semana está lleno de reservas.",h:"はもちろん"},
+{g:"n2-wa-tomokaku",j:"子ども[ならともかく]、大人がそんなことで泣くなんて。",s:"Si fuera un niño se entendería, pero que un adulto llore por eso…",h:"ならともかく"},
+{g:"n2-nominarazu",j:"その事故は多くの死者を出した[のみならず]、環境にも深刻な被害を与えた。",s:"Aquel accidente no solo causó muchos muertos, sino que también produjo graves daños al medio ambiente.",h:"のみならず"},
+{g:"n2-nomi",j:"試験の合格者には、書面[のみ]で通知する。",s:"A los aprobados del examen se les notificará únicamente por escrito.",h:"のみ"}
+);

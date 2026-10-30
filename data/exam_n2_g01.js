@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n2-wo-hajime",j:"米[をはじめ]、多くの食品の値段が上がっている。",s:"Están subiendo los precios de muchos alimentos, empezando por el arroz.",h:"をはじめ"},
+{g:"n2-wo-towazu",j:"国籍[を問わず]、優秀な人材を採用したい。",s:"Queremos contratar a personas de talento sin tener en cuenta su nacionalidad.",h:"を問わず"},
+{g:"n2-wo-megutte",j:"一枚の絵[をめぐって]、二人の男が激しく言い争った。",s:"Dos hombres discutieron acaloradamente a propósito de un cuadro.",h:"をめぐって"},
+{g:"n2-wo-kikkake-ni",j:"転職[をきっかけにして]、生活のリズムがすっかり変わった。",s:"Con motivo del cambio de trabajo, mi ritmo de vida cambió por completo.",h:"をきっかけにして"},
+{g:"n2-wo-keiki-ni",j:"大地震[を契機に]、防災への意識が全国で高まった。",s:"A partir del gran terremoto, la concienciación sobre la prevención de desastres aumentó en todo el país.",h:"を契機に"},
+{g:"n2-wo-tsuujite",j:"事故の知らせは、インターネット[を通じて]世界中に広がった。",s:"La noticia del accidente se extendió por todo el mundo a través de internet.",h:"を通じて"},
+{g:"n2-wo-chuushin-ni",j:"今学期は会話[を中心に]勉強する予定だ。",s:"Este semestre tengo previsto estudiar centrándome en la conversación.",h:"を中心に"},
+{g:"n2-wo-moto-ni",j:"先生の助言[をもとに]、論文を書き直した。",s:"Reescribí la tesis basándome en los consejos del profesor.",h:"をもとに"},
+{g:"n2-wo-fumaete",j:"市は住民の要望[を踏まえて]、公園の整備を進めることにした。",s:"El ayuntamiento decidió acondicionar el parque atendiendo a las peticiones de los vecinos.",h:"を踏まえて"},
+{g:"n2-wo-nozoite",j:"祝日[を除き]、窓口は午後五時まで開いております。",s:"La ventanilla permanece abierta hasta las cinco de la tarde, salvo los festivos.",h:"を除き"},
+{g:"n2-wo-komete",j:"平和への祈り[を込めて]、千羽鶴を折った。",s:"Plegamos mil grullas de papel con una oración por la paz.",h:"を込めて"},
+{g:"n2-wo-kanete",j:"この部屋は会議室と食堂[を兼ねている]。",s:"Esta sala hace a la vez de sala de reuniones y de comedor.",h:"兼ねる"},
+{g:"n2-wo-motte",j:"三月三十一日[をもって]、彼は会社を退職した。",s:"Con fecha de 31 de marzo, él dejó la empresa.",h:"をもって"},
+{g:"n2-wo-yoginaku-sareru",j:"台風の接近が、試合の中止[を余儀なくさせた]。",s:"La aproximación del tifón obligó a suspender el partido.",h:"を余儀なくさせる"},
+{g:"n2-ni-sakidatte",j:"出発[に先立って]、全員の健康状態を確認した。",s:"Antes de la salida, se comprobó el estado de salud de todos.",h:"に先立って"},
+{g:"n2-ni-saishite",j:"開業[に際して]、心からお祝い申し上げます。",s:"Con ocasión de la apertura de su negocio, le felicito de todo corazón.",h:"に際して"},
+{g:"n2-ni-itaru-made",j:"この店は文房具から家具[に至るまで]、何でもそろっている。",s:"En esta tienda hay de todo, desde material de papelería hasta muebles.",h:"に至るまで"},
+{g:"n2-ni-itatte",j:"彼は何度も失敗を重ね、ついに成功[に至った]。",s:"Él acumuló fracaso tras fracaso y al final llegó al éxito.",h:"に至る"},
+{g:"n2-ni-sokushite",j:"法律[に即して]、この問題を処理しなければならない。",s:"Hay que tratar este asunto conforme a la ley.",h:"に即して"},
+{g:"n2-ni-terashite",j:"会社の規則[に照らして]、この件を判断する。",s:"Juzgaré este asunto a la luz del reglamento de la empresa.",h:"に照らして"}
+);

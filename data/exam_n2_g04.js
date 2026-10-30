@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n2-dake-mashi-da",j:"試験に落ちたけれど、来年また受けられる[だけましだ]。",s:"He suspendido el examen, pero al menos puedo volver a presentarme el año que viene.",h:"だけましだ"},
+{g:"n2-dake-no-koto-wa-aru",j:"彼は十年も日本に住んでいた[だけのことはある]。日本語が完璧だ。",s:"Con razón vivió diez años en Japón. Su japonés es perfecto.",h:"だけのことはある"},
+{g:"n2-ta-tokoro-de",j:"今さら後悔した[ところで]、どうにもならない。",s:"Aunque me arrepienta ahora, ya no hay nada que hacer.",h:"後悔する"},
+{g:"n2-ta-tokoro",j:"問い合わせた[ところ]、商品はまだ在庫があるそうだ。",s:"Al preguntar, resultó que todavía hay existencias del producto.",h:"問い合わせる"},
+{g:"n2-to-bakari-ni",j:"犬は散歩に行きたい[とばかりに]、ドアの前で尾を振っている。",s:"El perro mueve la cola ante la puerta, como diciendo que quiere salir a pasear.",h:"とばかりに"},
+{g:"n2-to-mo-naku",j:"誰から[ともなく]、拍手が起こった。",s:"Sin que se supiera quién empezó, surgieron los aplausos.",h:"ともなく"},
+{g:"n2-te-moto-moto",j:"失敗し[てもともと]なのだから、挑戦しないほうが損だ。",s:"Como fracasando no se pierde nada, lo que sale caro es no intentarlo.",h:"失敗する"},
+{g:"n2-nai-made-mo",j:"優勝はでき[ないまでも]、入賞はしたい。",s:"Aunque no pueda ganar, al menos quiero quedar entre los premiados.",h:"できる"},
+{g:"n2-nagara-ni",j:"インターネットのおかげで、家に居[ながらにして]世界の情報が得られる。",s:"Gracias a internet, sin salir de casa se puede acceder a la información de todo el mundo.",h:"ながらにして"},
+{g:"n2-mo-sarukoto-nagara",j:"新製品はデザイン[もさることながら]、使いやすさが高く評価されている。",s:"Del nuevo producto se valora mucho el diseño, pero sobre todo la facilidad de uso.",h:"もさることながら"},
+{g:"n2-ya-inaya",j:"犯人は警官の姿を見る[や否や]、逃げ出した。",s:"Apenas vio a los policías, el delincuente salió huyendo.",h:"や否や"},
+{g:"n2-yue-ni",j:"貧しさ[ゆえに]、学校に行けない子どもが今もいる。",s:"Todavía hay niños que no pueden ir a la escuela por culpa de la pobreza.",h:"ゆえに"},
+{g:"n2-bekarazu",j:"ここにごみを捨てる[べからず]。",s:"Prohibido tirar basura aquí.",h:"べからず"},
+{g:"n2-taritomo",j:"この部屋には、何人[たりとも]入ることを許さない。",s:"En esta habitación no se permite entrar a nadie en absoluto.",h:"たりとも"},
+{g:"n2-to-iedomo",j:"子ども[といえども]、ルールは守らなければならない。",s:"Aunque sea un niño, debe cumplir las reglas.",h:"といえども"},
+{g:"n2-to-wa-ie",j:"計画は立てた。[とはいえ]、実行するのは簡単ではない。",s:"El plan ya está hecho. Sin embargo, llevarlo a cabo no es sencillo.",h:"とはいえ"},
+{g:"n2-to-iu-noni",j:"せっかく作った[というのに]、誰も食べてくれなかった。",s:"Con el trabajo que me costó hacerlo, y nadie se lo comió.",h:"というのに"},
+{g:"n2-to-iu-mono-da",j:"一日で日本語を覚えようとするのは、無理[というものだ]。",s:"Pretender aprender japonés en un día es sencillamente imposible.",h:"というものだ"},
+{g:"n2-to-iu-mono-dewa-nai",j:"謝れば何でも許される[というものではない]。",s:"No es que con pedir perdón se perdone todo.",h:"というものではない"},
+{g:"n2-katawara",j:"彼は農業の[かたわら]、村の祭りの準備を手伝っている。",s:"Además de dedicarse a la agricultura, él ayuda a preparar el festival del pueblo.",h:"かたわら"}
+);

@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n2-gatai",j:"彼の説明は、どうにも理解し[がたい]ものだった。",s:"Su explicación era algo realmente difícil de entender.",h:"理解する"},
+{g:"n2-kaneru",j:"どちらを選ぶべきか、決め[かねている]。",s:"No consigo decidir cuál de los dos debería elegir.",h:"決める"},
+{g:"n2-kanenai",j:"無理な計画は、社員の健康を害し[かねない]。",s:"Un plan desmesurado podría dañar la salud de los empleados.",h:"害する"},
+{g:"n2-osore-ga-aru",j:"台風の影響で、川の水があふれる[おそれがある]。",s:"Por efecto del tifón, hay riesgo de que el río se desborde.",h:"おそれがある"},
+{g:"n2-eru-enai",j:"一人の力で解決し[得る]問題ではない。",s:"No es un problema que se pueda resolver con la fuerza de una sola persona.",h:"解決する"},
+{g:"n2-ageku",j:"口論の[あげく]、二人は別れてしまった。",s:"Al final de la pelea, los dos acabaron separándose.",h:"あげく"},
+{g:"n2-amari",j:"心配の[あまり]、夜も眠れなくなった。",s:"De tanta preocupación, dejé de poder dormir por las noches.",h:"あまり"},
+{g:"n2-nuku",j:"考え[抜いた]上で、この決断をした。",s:"Tomé esta decisión después de pensarlo a fondo.",h:"考える"},
+{g:"n2-nuki-de",j:"朝食[抜きで]学校へ行く子どもが増えている。",s:"Aumentan los niños que van al colegio sin desayunar.",h:"抜きで"},
+{g:"n2-kakeru",j:"食べ[かけの]お弁当をそのままにして、出かけてしまった。",s:"Dejé el almuerzo a medio comer y salí.",h:"食べる"},
+{g:"n2-zurai",j:"忙しそうなので、彼には頼み[づらい]。",s:"Como parece ocupado, me cuesta pedírselo a él.",h:"頼む"},
+{g:"n2-buri",j:"彼女の見事な食べ[っぷり]に、みんなが驚いた。",s:"Todos se sorprendieron de la espléndida forma de comer de ella.",h:"っぷり"},
+{g:"n2-goto-ni",j:"季節が変わる[ごとに]、この公園は違った表情を見せる。",s:"Con cada cambio de estación, este parque muestra una cara distinta.",h:"ごとに"},
+{g:"n2-hanmen",j:"インターネットは便利である[反面]、危険も多い。",s:"Internet es útil, pero por otro lado tiene también muchos peligros.",h:"反面"},
+{g:"n2-dokoro-dewa-nai",j:"地震の後は、商売[どころではなかった]。",s:"Después del terremoto no estábamos para hacer negocios.",h:"どころではない"},
+{g:"n2-yara-yara",j:"部屋には本[やら]服[やら]が散らばっていた。",s:"En la habitación había libros, ropa y de todo tirado por el suelo.",h:"やら"},
+{g:"n2-nari-nari",j:"使わない本は、売る[なり]捨てる[なり]したほうがいい。",s:"Los libros que no uses, mejor vendelos o tíralos.",h:"なり"},
+{g:"n2-ka-no-you-da",j:"彼女は、その事件がなかった[かのように]笑っていた。",s:"Ella sonreía como si aquel suceso no hubiera ocurrido.",h:"かのように"},
+{g:"n2-to-ittara",j:"合格を知った時のうれしさ[といったら]、今でも忘れられない。",s:"La alegría que sentí al saber que había aprobado, todavía hoy no la olvido.",h:"といったら"},
+{g:"n2-to-mo-naru-to",j:"部長[ともなると]、責任の重さが違う。",s:"Cuando uno llega a jefe de departamento, el peso de la responsabilidad es otro.",h:"ともなると"}
+);

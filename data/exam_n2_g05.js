@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n2-to-miete",j:"試合に負けた[とみえて]、選手たちは黙って帰ってきた。",s:"Al parecer perdieron el partido, porque los jugadores volvieron en silencio.",h:"とみえて"},
+{g:"n2-tomo",j:"この仕事を終えるには、少なく[とも]三人の協力が必要だ。",s:"Para terminar este trabajo hace falta la colaboración de al menos tres personas.",h:"とも"},
+{g:"n2-toshite-nai",j:"彼女の言葉には、嘘は一つ[として]なかった。",s:"En las palabras de ella no había ni una sola mentira.",h:"として〜ない"},
+{g:"n2-to-douji-ni",j:"新しい工場の建設は、雇用を生み出す[と同時に]、環境への負担も大きい。",s:"La construcción de la nueva fábrica crea empleo y, al mismo tiempo, supone una gran carga para el medio ambiente.",h:"と同時に"},
+{g:"n2-koto-dakara",j:"食いしん坊の弟の[ことだから]、ケーキはもう残っていないだろう。",s:"Conociendo lo glotón que es mi hermano, seguro que ya no queda tarta.",h:"ことだから"},
+{g:"n2-koto-mo-atte",j:"連休だった[こともあって]、高速道路は大変混雑した。",s:"En parte porque era puente, la autopista estuvo muy congestionada.",h:"こともあって"},
+{g:"n2-koto-shiji",j:"貴重品は各自で管理する[こと]。",s:"Cada uno debe hacerse cargo de sus objetos de valor.",h:"こと"},
+{g:"n2-nai-koto-niwa",j:"資料を読ま[ないことには]、何も意見が言えない。",s:"Si no leo los documentos, no puedo opinar nada.",h:"読む"},
+{g:"n2-nai-kagiri",j:"雨が降ら[ない限り]、運動会は予定通り行われる。",s:"A menos que llueva, el día deportivo se celebrará según lo previsto.",h:"降る"},
+{g:"n2-kagiri",j:"命がある[限り]、希望を捨ててはいけない。",s:"Mientras haya vida, no hay que perder la esperanza.",h:"限り"},
+{g:"n2-kagiri-dewa",j:"聞いた[限りでは]、新しい制度に不満を持つ人は少ないようだ。",s:"Según lo que he oído, parece que son pocos los descontentos con el nuevo sistema.",h:"限りでは"},
+{g:"n2-shidai-de",j:"合格できるかどうかは、これからの努力[次第だ]。",s:"Que apruebes o no depende del esfuerzo que hagas a partir de ahora.",h:"次第だ"},
+{g:"n2-nai-mono-ka",j:"彼の病気を治す方法は、本当に[ないものか]と彼女は毎日考えていた。",s:"Ella pensaba cada día si de verdad no habría ningún modo de curar su enfermedad.",h:"ないものか"},
+{g:"n2-naku-mo-nai",j:"時間があれば、手伝え[なくもない]。",s:"Si tuviera tiempo, no es que no pudiera ayudar.",h:"手伝える"},
+{g:"n2-nashi-ni",j:"この映画は、涙[なしには]見られない。",s:"Esta película no se puede ver sin llorar.",h:"なしには"},
+{g:"n2-ni-mo-nai",j:"道が分からないので、行く[にも]行けない。",s:"Como no conozco el camino, aunque quiera ir, no puedo.",h:"にも〜ない"},
+{g:"n2-made-shite",j:"家族を犠牲にし[てまで]、出世したいとは思わない。",s:"No quiero ascender a costa de sacrificar a mi familia.",h:"てまで"},
+{g:"n2-made-mo-nai",j:"説明する[までもなく]、使い方はすぐ分かるだろう。",s:"Sin necesidad de explicación, enseguida entenderás cómo se usa.",h:"説明する"},
+{g:"n2-mo-kamawazu",j:"子どもたちは雨[もかまわず]、外で遊び続けた。",s:"Los niños siguieron jugando fuera sin que les importara la lluvia.",h:"もかまわず"},
+{g:"n2-te-koso",j:"実際に使ってみ[てこそ]、この道具の便利さが分かる。",s:"Solo al usarla de verdad se aprecia lo práctica que es esta herramienta.",h:"使ってみる"}
+);

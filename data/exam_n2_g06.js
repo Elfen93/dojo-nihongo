@@ -1,0 +1,22 @@
+EXAM_GRAMMAR.push(
+{g:"n2-te-miseru",j:"父は子どもたちに、魚のさばき方をやっ[てみせた]。",s:"Mi padre les enseñó a los niños cómo se limpia un pescado, haciéndolo delante de ellos.",h:"やる"},
+{g:"n2-te-mo-sashitsukaenai",j:"返事は来週になっ[ても差し支えありません]か。",s:"¿Hay algún inconveniente en que la respuesta sea la semana que viene?",h:"なる"},
+{g:"n2-te-mo-hajimaranai",j:"失敗を人のせいにし[ても始まらない]。",s:"Echar la culpa del fracaso a los demás no lleva a ninguna parte.",h:"する"},
+{g:"n2-te-kanawanai",j:"休みの日まで電話がかかってき[てはかなわない]。",s:"Que me llamen incluso los días de descanso es algo que no puedo soportar.",h:"かかってくる"},
+{g:"n2-ka-mai-ka",j:"パーティーに行く[か行くまいか]、まだ決めていない。",s:"Todavía no he decidido si ir a la fiesta o no.",h:"行く"},
+{g:"n2-kurai-nara",j:"満員電車に乗る[くらいなら]、一時間歩いて帰る。",s:"Antes que subirme a un tren atestado, vuelvo andando una hora.",h:"くらいなら"},
+{g:"n2-kanarazushimo",j:"多数の意見が[必ずしも]正しいわけではない。",s:"La opinión de la mayoría no es necesariamente la correcta.",h:"必ずしも"},
+{g:"n2-toutei",j:"一人では、この問題は[とうてい]解決できない。",s:"Solo, este problema no puedo resolverlo de ninguna manera.",h:"とうてい"},
+{g:"n2-ichigai-ni",j:"外国の文化を[一概に]否定するべきではない。",s:"No se debe rechazar en bloque la cultura de otros países.",h:"一概に"},
+{g:"n2-yamu-wo-enai",j:"資金が足りず、[やむを得ず]計画の規模を小さくした。",s:"Como no había fondos suficientes, no tuvimos más remedio que reducir el plan.",h:"やむを得ず"},
+{g:"n2-no-mo-mottomo-da",j:"三日も寝ていないなら、疲れている[のは無理もない]。",s:"Si lleva tres días sin dormir, no es de extrañar que esté cansado.",h:"のは無理もない"},
+{g:"n2-no-dewa-nai-darou-ka",j:"若者の読書量が減ったのは、スマートフォンの影響[なのではないだろうか]。",s:"¿No será que la caída de la lectura entre los jóvenes se debe a la influencia del móvil?",h:"なのではないだろうか"},
+{g:"n2-no-moto-de",j:"両社の合意[のもとに]、新しい契約が結ばれた。",s:"Con el acuerdo de ambas empresas, se firmó un nuevo contrato.",h:"のもとに"},
+{g:"n2-wa-betsu-toshite",j:"一部の例外[は別として]、ほとんどの学生がこの授業に満足している。",s:"Salvo algunas excepciones, casi todos los estudiantes están satisfechos con esta clase.",h:"は別として"},
+{g:"n2-rokuni",j:"朝食を[ろくに]食べないで出かけるのは、体によくない。",s:"Salir sin apenas desayunar no es bueno para el cuerpo.",h:"ろくに"},
+{g:"n2-dounimo",j:"自分一人の力では、[どうにも]解決できない問題だった。",s:"Era un problema que yo solo no podía resolver de ninguna manera.",h:"どうにも"},
+{g:"n2-te-irarenai",j:"周りがどんどん進んでいるのに、立ち止まっ[てはいられない]。",s:"Con todos a mi alrededor avanzando sin parar, no puedo quedarme quieto.",h:"立ち止まる"},
+{g:"n2-ka-to-omou-to",j:"赤ちゃんは眠った[かと思うと]、すぐに目を覚まして泣き始めた。",s:"El bebé, en cuanto parecía dormido, se despertó enseguida y empezó a llorar.",h:"かと思うと"},
+{g:"n2-to-naru-to",j:"工場を閉める[となると]、多くの人が仕事を失うことになる。",s:"Si se cierra la fábrica, mucha gente perderá su trabajo.",h:"となると"},
+{g:"n2-mono-to-omowareru",j:"景気は今後も緩やかに回復する[ものと思われる]。",s:"Se prevé que la economía siga recuperándose lentamente en adelante.",h:"ものと思われる"}
+);
