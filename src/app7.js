@@ -120,7 +120,7 @@ function renderRedaccion(){
   const saveBtn=h('button',{class:'btn',onclick:()=>{ saveWriting(P,null); toast('Guardada sin corregir'); PRACT={mode:null}; renderPractica(); }},'Guardar sin corregir');
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, ta, h('div',{class:'row'}, counter, h('span',{class:'sp'}), saveBtn, btn), status)); upd();
   const r=P.result; if (r){
-    const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('div',{class:'row between'}, h('h3',{},'Corrección'), h('span',{class:'score '+(r.score>=70?'pass':'fail'),style:'font-size:1.6rem'},r.score+'%')), r.breakdown?h('div',{class:'small muted'},`Errores: ${(r.breakdown.errors[3]||0)} graves · ${(r.breakdown.errors[2]||0)} medios · ${(r.breakdown.errors[1]||0)} leves`+(r.breakdown.lengthPenalty?` · longitud −${r.breakdown.lengthPenalty}`:'')+(r.breakdown.topicPenalty?` · tema −${r.breakdown.topicPenalty}`:'')+(r.breakdown.structPenalty?` · estructuras pedidas −${r.breakdown.structPenalty}`:'')):null, r.prev!=null?h('div',{class:'small muted'},`Corrección anterior de este mismo texto: ${r.prev} %`):null, r.comment?h('p',{style:'margin:0'},r.comment):null);
+    const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('div',{class:'row between'}, h('h3',{},'Corrección'), h('span',{class:'score '+(r.score>=70?'pass':'fail'),style:'font-size:1.6rem'},r.score+'%')), r.cached?h('div',{class:'small muted'},r.system?'Este texto es una versión corregida por la app.':'Resultado guardado: el mismo texto siempre recibe la misma nota.'):null, r.breakdown?h('div',{class:'small muted'},`Errores: ${(r.breakdown.errors[3]||0)} graves · ${(r.breakdown.errors[2]||0)} medios · ${(r.breakdown.errors[1]||0)} leves`+(r.breakdown.lengthPenalty?` · longitud −${r.breakdown.lengthPenalty}`:'')+(r.breakdown.topicPenalty?` · tema −${r.breakdown.topicPenalty}`:'')+(r.breakdown.structPenalty?` · estructuras pedidas −${r.breakdown.structPenalty}`:'')):null, r.prev!=null?h('div',{class:'small muted'},`Corrección anterior de este mismo texto: ${r.prev} %`):null, r.comment?h('p',{style:'margin:0'},r.comment):null);
     const errCard=(e,tip)=>h('div',{class:'wr-err'+(tip?' tip':'')}, e.orig?h('div',{class:'o jp'},e.orig):null, e.fix?h('div',{class:'f jp'},(e.orig?'→ ':'')+e.fix):null, e.why?h('div',{class:'w small'},e.why):null);
     if (Array.isArray(r.errors)&&r.errors.length){ box.append(h('div',{class:'eyebrow'},'Errores'), h('div',{class:'stack',style:'gap:8px'}, r.errors.map(e=>errCard(e,false)))); box.append(studyLinks(r.errors)); }
     else box.append(h('div',{class:'small muted'},'Sin errores señalados.'));
@@ -192,10 +192,10 @@ function renderGuia(){
          'Si tu respuesta era buena y la app la marca mal, pulsa «Mi respuesta también era válida»: cuenta como acierto y queda anotada en el Glosario (Ajustes), donde puedes quitarla.',
          'Si tu cuenta tiene permiso de edición, lo que anotas se comparte con todos; si no, se guarda solo en tu cuenta.')),
     sec('Cómo se corrige una redacción',
-      ul('Se corrige en dos pasadas: primero se localizan los errores y se prepara una versión corregida; después esa versión se vuelve a revisar para que no conserve fallos.',
+      ul('La IA propone errores en dos análisis independientes y un tercer paso los confirma o los descarta; solo cuentan los confirmados. Lo que es estilo, hiragana por kanji o puntuación latina no cuenta.',
          'La nota sale de una fórmula fija, no de una impresión: depende de cuántos errores hay (graves, medios y leves) respecto a la longitud del texto, de si cumple el tema y de si usas las estructuras pedidas.',
-         'La puntuación latina, escribir en hiragana palabras con kanji y las alternativas igual de naturales van como sugerencias y no restan.',
-         'Si pegas la versión corregida y la vuelves a corregir, debería salir cerca de 100.')),
+         'El mismo texto recibe siempre la misma corrección y la misma nota. La versión corregida que te devuelve la app puntúa 100.',
+         'Si cambias aunque sea un carácter del texto, se vuelve a analizar y la nota puede variar unos puntos: una IA no es un examinador perfecto.')),
     sec('Test de nivel',
       ul('Unas 30 preguntas de vocabulario y kanji, gramática, lectura, escucha, producción y una redacción corta (si has iniciado sesión).',
          'Se adapta a ti: si aciertas, la siguiente es más difícil; si fallas, más fácil. «No sé» cuenta como fallo, mejor que adivinar.',

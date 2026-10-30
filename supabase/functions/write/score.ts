@@ -1,20 +1,19 @@
-// Nota de una redacción calculada con una fórmula fija a partir de los hechos que detecta el modelo.
-// La IA no decide la nota: solo localiza errores, y la misma lista de errores da siempre la misma nota.
+// Nota de una redacción calculada con una fórmula fija a partir de los errores confirmados.
+// La IA no decide la nota: la misma lista de errores da siempre la misma nota.
 export const WEIGHT = { 1: 1, 2: 2, 3: 3 };
 export const jaLen = (s) => (String(s || "").match(/[぀-ヿ一-鿿々ー]/g) || []).length;
+const FLOOR = 200; // en textos cortos un solo error no debe hundir la nota
 export function computeScore(input) {
   const n = Math.max(1, jaLen(input.text));
   const errors = Array.isArray(input.errors) ? input.errors : [];
   let points = 0;
   const count = { 1: 0, 2: 0, 3: 0 };
   for (const e of errors) { const s = [1, 2, 3].includes(Number(e.sev)) ? Number(e.sev) : 2; points += WEIGHT[s]; count[s]++; }
-  const density = points / (n / 100);
-  const accuracy = Math.max(0, 100 - 3.2 * density);
+  const density = points / (Math.max(n, FLOOR) / 100);
+  const accuracy = Math.max(0, 100 - 4 * density);
   let score = accuracy;
-  const parts = [];
   const min = Number(input.min) || 0;
-  let lengthPenalty = 0;
-  if (min && n < min) lengthPenalty = Math.min(20, Math.round(20 * (min - n) / min));
+  const lengthPenalty = min && n < min ? Math.min(20, Math.round(20 * (min - n) / min)) : 0;
   score -= lengthPenalty;
   const topicPenalty = input.topicOk === false ? 12 : 0;
   score -= topicPenalty;
