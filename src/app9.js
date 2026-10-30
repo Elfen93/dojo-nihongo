@@ -64,3 +64,5 @@ function caminoSection(){
 }
 
 boot();
+// Descarga en segundo plano (sin ejecutar) las fichas ampliadas y el furigana, para que queden en caché
+(window.requestIdleCallback||setTimeout)(()=>{ try{ fetch('ext.js').catch(()=>{}); }catch(e){} }, {timeout:6000});

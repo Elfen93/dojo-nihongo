@@ -122,6 +122,7 @@ function forecastChart(){
   return h('div',{}, h('div',{class:'forecast'}, buckets.map((n,i)=>h('div',{title:`+${i*2} h: ${n}`}, h('i',{style:'height:'+Math.round(100*n/max)+'%'})))), h('div',{class:'forecast-labels'},h('span',{},'ahora'),h('span',{},'+12 h'),h('span',{},'+24 h')));
 }
 function renderLecciones(){
+  loadExt();
   const el=$('#main'); const la=lessonsAvailable(); const lv=S.level, items=itemsOfLevel(lv);
   el.append(h('div',{class:'topline'}, h('h1',{},`Nivel ${lv}`), h('span',{class:'pill'},tierOf(lv).n), h('span',{class:'small muted'},`${items.filter(i=>i.kind==='k').length} kanji · ${items.filter(i=>i.kind==='v').length} vocab · ${items.filter(i=>i.kind==='g').length} gramática`)));
   if (levelNeedsGen(lv)) { el.append(generatePanel(lv)); }
