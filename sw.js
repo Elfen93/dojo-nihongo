@@ -1,5 +1,5 @@
-const CACHE='dojo-v8';
-const ASSETS=['./','./index.html','./ext.js','./config.js','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/garden.svg'];
+const CACHE='dojo-v9';
+const ASSETS=['./','./index.html','./config.js','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/garden.svg'];
 // Librería de la cuenta: se guarda en caché para poder abrir la app sin conexión
 const CDN=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js'];
 self.addEventListener('install',e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS).then(()=>Promise.all(CDN.map(u=>c.add(u).catch(()=>{}))))).then(()=>self.skipWaiting())); });
