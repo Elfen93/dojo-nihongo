@@ -254,19 +254,19 @@ function grammarSheet(it, opts={}){
   const plain=t=>{ const out=[]; let last=0; t=String(t||''); for (const m of t.matchAll(JP_RUN)){ if(m.index>last) out.push(t.slice(last,m.index)); out.push(...furiNodes(m[0])); last=m.index+m[0].length; } if(last<t.length) out.push(t.slice(last)); return out; };
   if (EXT_STATE!==2) loadExt().then(()=>{ if(EXT_STATE===2&&root.isConnected) root.replaceWith(grammarSheet(it,opts)); });
   root.append(h('div',{class:'gs-head'}, h('div',{class:'gs-title'},...plain(it.t)), it.s?h('div',{class:'gs-formula'},...plain(it.s)):null,
-    (X.cat||X.reg)?h('div',{class:'gs-chips'}, X.cat?h('span',{class:'badge soft'},X.cat):null, X.reg?h('span',{class:'badge soft'},X.reg):null):null,
-    EXT_STATE===2?h('div',{class:'gs-tools'}, h('button',{class:'btn sm ghost',title:'Toca una palabra con kanji para ver su lectura',onclick:e=>{ root.classList.toggle('allfg'); e.currentTarget.textContent=root.classList.contains('allfg')?'Ocultar furigana':'Mostrar todo el furigana'; }},'Mostrar todo el furigana')):null));
+    (X.cat||X.reg)?h('div',{class:'gs-chips'}, X.cat?h('span',{class:'badge soft'},tr(X.cat)):null, X.reg?h('span',{class:'badge soft'},tr(X.reg)):null):null,
+    EXT_STATE===2?h('div',{class:'gs-tools'}, h('button',{class:'btn sm ghost',title:tr('Toca una palabra con kanji para ver su lectura'),onclick:e=>{ root.classList.toggle('allfg'); e.currentTarget.textContent=root.classList.contains('allfg')?tr('Ocultar furigana'):tr('Mostrar todo el furigana'); }},tr('Mostrar todo el furigana'))):null));
   const about=(X.about&&X.about.length)?X.about:[it.e||''];
-  root.append(sec('Cómo se usa', h('div',{class:'gs-about'}, ...about.map(p=>h('p',{},...richJp(p))))));
-  if (X.ojo) root.append(h('div',{class:'gs-ojo'}, h('b',{},'Ojo'), ...richJp(X.ojo)));
+  root.append(sec(tr('Cómo se usa'), h('div',{class:'gs-about'}, ...about.map(p=>h('p',{},...richJp(p))))));
+  if (X.ojo) root.append(h('div',{class:'gs-ojo'}, h('b',{},tr('Ojo')), ...richJp(X.ojo)));
   const exs=[...(it.ex||[]).map(e=>{ const c=parseCloze(e.j); return {pre:c.pre,mid:c.answers[0],post:c.post,es:e.s}; }), ...((X.m||[]).map(e=>({pre:e.j,mid:'',post:'',es:e.s})))];
   const row=(e,i)=>h('div',{class:'gs-ex'}, h('span',{class:'n'},i+1), h('div',{class:'t'}, h('div',{class:'j',lang:'ja'}, ...plain(e.pre), e.mid?h('mark',{},...plain(e.mid)):null, ...plain(e.post)), h('div',{class:'es'},e.es)), spkBtn(e.pre+e.mid+e.post));
   const SHOW=4; const first=exs.slice(0,SHOW), rest=exs.slice(SHOW);
-  root.append(sec('Ejemplos', h('div',{class:'gs-exs'}, first.map((e,i)=>row(e,i))), rest.length?h('details',{class:'gs-more',style:'margin-top:8px'}, h('summary',{},`Ver ${rest.length} más`), h('div',{class:'gs-exs'}, rest.map((e,i)=>row(e,SHOW+i)))):null));
+  root.append(sec(tr('Ejemplos'), h('div',{class:'gs-exs'}, first.map((e,i)=>row(e,i))), rest.length?h('details',{class:'gs-more',style:'margin-top:8px'}, h('summary',{},tr('Ver {n} más',{n:rest.length})), h('div',{class:'gs-exs'}, rest.map((e,i)=>row(e,SHOW+i)))):null));
   const rel=X.r||[];
   if (rel.length){
-    const KIND={sin:'Parecido',ant:'Opuesto',rel:'Relacionado'};
-    const det=h('details',{class:'gs-more'}, h('summary',{},`Compáralo con otros puntos (${rel.length})`));
+    const KIND={sin:tr('Parecido'),ant:tr('Opuesto'),rel:tr('Relacionado')};
+    const det=h('details',{class:'gs-more'}, h('summary',{},tr('Compáralo con otros puntos ({n})',{n:rel.length})));
     rel.forEach(r=>{ const tgt=r.id&&ITEMS.get('g|'+r.id); det.append(h('div',{class:'gs-rel'}, h('div',{class:'top'}, h('span',{class:'kind '+r.k},KIND[r.k]||r.k), tgt?h('button',{class:'pill g jp',onclick:()=>itemSheet(tgt)},r.t):h('b',{class:'jp'},r.t)), h('div',{class:'d'},...richJp(r.d)))); });
     root.append(det);
   }
