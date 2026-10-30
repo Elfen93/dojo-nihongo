@@ -204,7 +204,7 @@ async function deleteUserReading(id){ delete USER_READINGS[id]; saveUserReadings
 const allReadings = () => [...READINGS, ...Object.values(USER_READINGS)];
 // Notificaciones push
 const swReady=()=>withTimeout(navigator.serviceWorker.ready, 5000);
-async function pushStatus(){ try{ if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)) return 'unsupported'; if(Notification.permission==='denied') return 'denied'; const reg=await swReady(); const sub=await reg.pushManager.getSubscription(); return sub?'on':'off'; }catch(e){ return 'unsupported'; } }
+async function pushStatus(){ try{ if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){ const ua=navigator.userAgent||''; if(/iPhone|iPad|iPod/.test(ua)) return 'ios'; if(/FBAN|FBAV|Instagram|Line\/|wv\)|; wv|MicroMessenger|Telegram/i.test(ua)) return 'inapp'; if(!window.isSecureContext) return 'insecure'; return 'unsupported'; } if(Notification.permission==='denied') return 'denied'; const reg=await swReady(); const sub=await reg.pushManager.getSubscription(); return sub?'on':'off'; }catch(e){ return 'unsupported'; } }
 function b64ToU8(b){ const p='='.repeat((4-b.length%4)%4); const s=(b+p).replace(/-/g,'+').replace(/_/g,'/'); const r=atob(s); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); }
 const localTz=()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'; }catch(e){ return 'UTC'; } };
 async function enablePush(){
