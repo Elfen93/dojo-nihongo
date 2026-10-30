@@ -24,8 +24,8 @@ function vocabSynonym(it, typed){
   return null;
 }
 // Palabras que el propio alumno ya marcó como válidas para este ítem
-const meaningAlts = it => (S.alts&&S.alts[keyOf(it)+'#m'])||[];
-function customAlt(it, typed){ const t=normKana(toKana(typed,true)); const list=(S.alts&&S.alts[keyOf(it)])||[]; return t&&list.includes(t)?{w:t,r:t,custom:true}:null; }
+const meaningAlts = it => glossAlts(keyOf(it)+'#m');
+function customAlt(it, typed){ const t=normKana(toKana(typed,true)); const list=glossAlts(keyOf(it)); return t&&list.includes(t)?{w:t,r:t,custom:true}:null; }
 function kanjiDistractors(v){
   const word=v.w; const chars=[...word].filter(c=>hasKanji(c));
   let pool = VOCAB_ALL.filter(x=>x.w!==word && hasKanji(x.w) && !(VOCAB_BY_WORD[x.w]||[]).some(y=>y.r===v.r&&y.w===v.w));
@@ -133,10 +133,14 @@ function itemRow(it){
 let imeComposing=false;
 function kanaInput(input){
   if (!input) return;
+  let nnTail=false, lastConv='';
   input.addEventListener('input', e=>{
     if (imeComposing) return;
     const v=input.value; if(!/[a-zA-Z\-~']/.test(v)) return;
-    const pos=input.selectionStart; const conv=toKana(v);
+    let conv=toKana(v);
+    // "nn" da ん al instante; si justo después llega una vocal, esa n abre la sílaba (konni → こんに)
+    if (nnTail && v.length===lastConv.length+1 && v.startsWith(lastConv) && /[aiueoy]/i.test(v.slice(-1))) conv=toKana(lastConv+'n'+v.slice(-1));
+    nnTail=/nn$/i.test(v)&&conv.endsWith('ん'); lastConv=conv;
     if (conv!==v){ input.value=conv; try{input.setSelectionRange(conv.length,conv.length);}catch(e){} }
   });
   input.addEventListener('compositionstart',()=>imeComposing=true);
@@ -199,11 +203,8 @@ function evaluate(ans){
 }
 // Línea de acierto: la respuesta en una línea y adelante (Enter o espera), sin botones. Las fichas se ven al final de la sesión.
 function quickFeedback(c){
-  const p=c.p, it=p.it, s=SESSION;
-  const line = it.kind==='v' ? h('span',{class:'jp'}, it.w, ' ', h('span',{class:'muted'},'（'+it.r+'）'), ' · ', h('span',{style:'font-family:var(--f-ui)'},it.m.join(', ')))
-    : it.kind==='k' ? h('span',{class:'jp'}, it.k, ' · ', kanjiReadings(it).join('・'), ' · ', h('span',{style:'font-family:var(--f-ui)'},it.m.join(', ')))
-    : h('span',{class:'jp'}, p.cloze.pre+p.cloze.answers[0]+p.cloze.post);
-  const fb=h('div',{class:'feedback quick'}, h('div',{class:'verdict ok'},'Correcto'), h('div',{},line));
+  const s=SESSION;
+  const fb=h('div',{class:'feedback quick'}, h('div',{class:'verdict ok'},'Correcto'));
   const handler=e=>{ if(e.key==='Enter' && SESSION===s && s.cur===c && s.phase==='feedback'){ e.preventDefault(); nextCard(); } };
   if (s.enterHandler) document.removeEventListener('keydown',s.enterHandler);
   s.enterHandler=handler; document.addEventListener('keydown',handler);
@@ -242,7 +243,7 @@ function feedbackPanel(c){
     S.items[k]={...old,s:9,due:Infinity,lrn:old.lrn||now(),ls:now()}; s.queue=s.queue.filter(q=>q.k!==k);
     if (r.left.size){ r.left.clear(); s.done++; s.correct++; if(s.mode==='lesson') bump(r.it.kind==='g'?'lg':'l'); else if(s.mode==='review'){ bump('r'); bump('rc'); } }
     s.undo=null; save(); if(s.mode==='review') markClearedIfEmpty(); toast('Quemado: no volverá a salir'); nextCard(); };
-  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:(c.f==='km'||c.f==='vm')?()=>{ const t=(c.answer||'').trim().toLowerCase(); if(!t) return; const k=c.k+'#m'; S.alts=S.alts||{}; S.alts[k]=uniq([...(S.alts[k]||[]),t]); S.settingsAt=S.settingsAt||0; save(); markAsCorrect(); toast('Anotado: esa respuesta también vale'); }:c.f==='vp'?()=>{ const s=SESSION; const t=normKana(toKana(c.answer||'',true)); if(!t) return; const k=c.k; S.alts=S.alts||{}; S.alts[k]=uniq([...(S.alts[k]||[]),t]); S.settingsAt=S.settingsAt||0; save(); undoLast(); if(SESSION&&SESSION.cur){ SESSION.cur.syn={w:t,r:t,custom:true}; renderStudy(); } }:markAsCorrect},c.f==='vp'?'Mi palabra también era válida (sin penalizar)':(c.f==='km'||c.f==='vm')?'Mi respuesta también era válida':'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
+  fb.append(h('div',{class:'row',style:'margin-top:8px;justify-content:center'}, h('button',{class:'btn sm ghost',onclick:undoLast},'Deshacer'), !ok?h('button',{class:'btn sm ghost',onclick:(c.f==='km'||c.f==='vm')?()=>{ const t=(c.answer||'').trim().toLowerCase(); if(!t) return; addAlt(c.k+'#m',t).then(shared=>toast(shared?'Añadido al glosario común':'Anotado: esa respuesta también vale')); markAsCorrect(); }:c.f==='vp'?()=>{ const t=normKana(toKana(c.answer||'',true)); if(!t) return; const k=c.k; addAlt(k,t).then(shared=>{ if(shared) toast('Añadido al glosario común'); }); undoLast(); if(SESSION&&SESSION.cur){ SESSION.cur.syn={w:t,r:t,custom:true}; renderStudy(); } }:markAsCorrect},c.f==='vp'?'Mi palabra también era válida (sin penalizar)':(c.f==='km'||c.f==='vm')?'Mi respuesta también era válida':'Era una errata, estaba bien'):null, ok?h('button',{class:'btn sm ghost',onclick:burn},'Ya lo domino, quemar'):null));
   const sess=SESSION; const handler=e=>{ if(e.key==='Enter' && SESSION===sess && sess.cur===c && sess.phase==='feedback'){ e.preventDefault(); nextCard(); } };
   if (SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler);
   SESSION.enterHandler=handler; document.addEventListener('keydown',handler); setTimeout(()=>next.focus(),0);

@@ -138,6 +138,21 @@ async function onSignedIn(){
   await pullRemote();
   if (wall) setTimeout(()=>{ document.body.classList.remove('leaving'); render(); },560); else render();
 }
+// Glosario común: respuestas válidas compartidas. Si no tienes permiso para editarlo, lo que anotas se queda en tu dispositivo.
+async function pullGlossary(){
+  if(!sb||!USER) return;
+  try{ const r=await sb.from('glossary_alts').select('key,alt'); if(r.error) throw r.error; const m={}; for(const row of r.data||[]) (m[row.key]=m[row.key]||[]).push(row.alt); GLOSS=m; saveGlossLocal(); }catch(e){ console.warn('glosario',e); }
+}
+function glossAlts(key){ return uniq([...((S.alts&&S.alts[key])||[]), ...(GLOSS[key]||[])]); }
+async function addAlt(key, alt){
+  S.alts=S.alts||{}; S.alts[key]=uniq([...(S.alts[key]||[]),alt]); S.settingsAt=now(); save();
+  if(!(sb&&USER&&CAN_GLOSS)) return false;
+  try{ const r=await sb.from('glossary_alts').upsert({key,alt,added_by:USER.id,added_email:USER.email||null}); if(r.error) throw r.error; GLOSS[key]=uniq([...(GLOSS[key]||[]),alt]); saveGlossLocal(); return true; }catch(e){ console.warn('glosario',e); return false; }
+}
+async function removeAlt(key, alt, common){
+  if(S.alts&&S.alts[key]){ S.alts[key]=S.alts[key].filter(x=>x!==alt); if(!S.alts[key].length) delete S.alts[key]; S.settingsAt=now(); save(); }
+  if(common&&sb&&USER&&CAN_GLOSS){ try{ const r=await sb.from('glossary_alts').delete().eq('key',key).eq('alt',alt); if(r.error) throw r.error; GLOSS[key]=(GLOSS[key]||[]).filter(x=>x!==alt); if(!GLOSS[key].length) delete GLOSS[key]; saveGlossLocal(); }catch(e){ toast('No se pudo quitar del glosario común'); }}
+}
 async function pullRemote(){
   if(!sb||!USER) return;
   try{
@@ -145,6 +160,7 @@ async function pullRemote(){
     if (data && data.state) mergeRemote(data.state); else { S.updated=now(); saveRemote(); }
     const g=await sb.from('gen_levels').select('lv,data').eq('user_id',USER.id); if(!g.error && g.data) for(const row of g.data){ S.gen[row.lv]=row.data; } registerGenerated();
     const ur=await sb.from('user_readings').select('id,data').eq('user_id',USER.id); if(!ur.error && ur.data){ for(const row of ur.data) USER_READINGS[row.id]=row.data; saveUserReadingsLocal(); }
+    await pullGlossary();
     setSyncLabel('Sincronizado con tu cuenta');
   }catch(e){ console.warn(e); setSyncLabel('Sin conexión: guardado solo aquí'); }
 }
@@ -203,6 +219,9 @@ async function enablePush(){
 }
 async function disablePush(){ try{ const reg=await swReady(); const sub=await reg.pushManager.getSubscription(); if(sub){ if(sb&&USER) await sb.from('push_subs').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); } toast('Notificaciones desactivadas'); }catch(e){ toast('No se pudieron desactivar: '+(e.message||e)); } }
 
+let CAN_GLOSS=false, GLOSS={};
+try{ GLOSS=JSON.parse(localStorage.getItem('dojo.gloss')||'{}')||{}; }catch(e){ GLOSS={}; }
+const saveGlossLocal=()=>{ try{ localStorage.setItem('dojo.gloss',JSON.stringify(GLOSS)); }catch(e){} };
 let ALLOWED=null, IS_ADMIN=false, DENIED_EMAIL=null, DENIED_NET=false;
 async function checkAllowed(){
   const cacheKey='dojo.allowed'; let cached=''; try{ cached=localStorage.getItem(cacheKey)||''; }catch(e){}
@@ -210,9 +229,10 @@ async function checkAllowed(){
   try{
     const r=await withTimeout(sb.rpc('is_allowed'), 10000); if(r.error) throw r.error; ALLOWED=!!r.data;
     const a=await sb.rpc('is_admin'); IS_ADMIN=!a.error&&!!a.data;
+    try{ const g=await sb.rpc('can_edit_glossary'); CAN_GLOSS=!g.error&&!!g.data; }catch(e){ CAN_GLOSS=false; }
     try{ if(ALLOWED) localStorage.setItem(cacheKey,USER.id); else localStorage.removeItem(cacheKey); }catch(e){}
   }catch(e){
-    IS_ADMIN=false;
+    IS_ADMIN=false; CAN_GLOSS=false;
     const noRpc = !!e && (e.code==='PGRST202' || /is_allowed/.test(e.message||''));
     if (noRpc){ // sin schema3 aún: usar la lista de config como respaldo
       const list=(CONFIG.ALLOWED_EMAILS||[]).map(x=>String(x).toLowerCase()); ALLOWED=!list.length||!!(USER&&USER.email&&list.includes(USER.email.toLowerCase()));
@@ -225,4 +245,5 @@ async function checkAllowed(){
 }
 async function adminList(){ const r=await sb.rpc('admin_list_users'); if(r.error) throw r.error; return r.data||[]; }
 async function adminAdd(email,note){ const r=await sb.rpc('admin_add_user',{p_email:email,p_note:note||null}); if(r.error) throw r.error; }
+async function adminSetEditor(email,on){ const r=await sb.rpc('admin_set_glossary_editor',{p_email:email,p_on:!!on}); if(r.error) throw r.error; }
 async function adminRemove(email){ const r=await sb.rpc('admin_remove_user',{p_email:email}); if(r.error) throw r.error; }

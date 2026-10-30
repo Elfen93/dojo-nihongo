@@ -35,6 +35,7 @@ function renderAjustes(){
     h('div',{class:'grid c2'}, f('WaniKani',wk,'wanikani.com → Settings → API Tokens (lectura)'), f('Bunpro',bp,'bunpro.jp → Settings → API')),
     h('div',{class:'row'}, h('button',{class:'btn primary',onclick:async()=>{ st.wkToken=wk.value.trim(); st.bpKey=bp.value.trim(); S.settingsAt=now(); save(); syncStatus.textContent='Sincronizando…'; try{ await syncExternal(); }catch(e){ syncStatus.textContent='Error: '+e.message; } }},'Guardar y sincronizar ahora'), h('span',{class:'sp'})),
     syncStatus));
+  el.append(glossaryCard());
   if (IS_ADMIN) el.append(adminCard());
   // Gramática ya dominada (sustituye a la sincronización con Bunpro)
   el.append(masteredGrammarCard());
@@ -209,10 +210,31 @@ function masteredGrammarCard(){
   return box;
 }
 
+function glossaryCard(){
+  const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Glosario'));
+  const list=h('div',{class:'list'});
+  const label=key=>{ const base=key.replace(/#m$/,''); const it=ITEMS.get(base); if(!it) return base; return it.kind==='k'?it.k:it.kind==='v'?it.w+'（'+it.r+'）':base; };
+  const draw=()=>{
+    list.innerHTML='';
+    const rows=[]; const seen=new Set();
+    for (const [k,a] of Object.entries(S.alts||{})) for (const x of a){ rows.push({k,x,mine:true,common:(GLOSS[k]||[]).includes(x)}); seen.add(k+'\u0000'+x); }
+    for (const [k,a] of Object.entries(GLOSS)) for (const x of a) if(!seen.has(k+'\u0000'+x)) rows.push({k,x,mine:false,common:true});
+    if(!rows.length){ list.append(h('div',{class:'small muted'},'Aún no hay respuestas añadidas. Cuando una respuesta tuya sea válida y la app la marque mal, pulsa "Mi respuesta también era válida" y aparecerá aquí.')); return; }
+    rows.sort((a,b)=>label(a.k).localeCompare(label(b.k),'ja'));
+    for (const r of rows){
+      const canRemove = r.mine || CAN_GLOSS;
+      list.append(h('div',{class:'item'}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'}, h('span',{class:'jp'},label(r.k)), ' → ', r.x), h('div',{class:'small muted'}, (r.k.endsWith('#m')?'Significado':'Palabra')+' · '+(r.common?'compartido con todos':'solo en tu cuenta'))),
+        canRemove?h('button',{class:'btn sm ghost',onclick:async()=>{ await removeAlt(r.k,r.x,r.common); draw(); }},'Quitar'):null));
+    }
+  };
+  draw();
+  box.append(h('div',{class:'small muted'}, CAN_GLOSS?'Tienes permiso para editar el glosario común: lo que añades lo ven todos.':'Lo que añades se guarda en tu cuenta. Para compartirlo con todos hace falta permiso de edición.'), list);
+  return box;
+}
 function adminCard(){
   const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Cuentas autorizadas'));
   const list=h('div',{class:'list'}); const email=h('input',{type:'email',placeholder:'correo@gmail.com',autocomplete:'off',style:'flex:1;min-width:0'}); const note=h('input',{type:'text',placeholder:'nota (opcional)',style:'flex:1;min-width:0'});
-  const refresh=async()=>{ list.innerHTML=''; try{ const rows=await adminList(); if(!rows.length) list.append(h('div',{class:'small muted'},'Lista vacía (ejecuta schema3.sql).')); rows.forEach(r=>list.append(h('div',{class:'item'}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},r.email), h('div',{class:'small muted'},(r.note||'')+(r.added_at?' · '+fmtDate(new Date(r.added_at).getTime()):''))), r.email.toLowerCase()===(USER.email||'').toLowerCase()?h('span',{class:'badge soft'},'tú'):h('button',{class:'btn sm warn',onclick:()=>confirmBox(`¿Quitar el acceso a ${r.email}? Su progreso se conserva pero no podrá entrar.`,async()=>{ try{ await adminRemove(r.email); toast('Acceso retirado'); refresh(); }catch(e){ toast('Error: '+e.message); } })},'Quitar')))); }catch(e){ list.append(h('div',{class:'small muted'},'No se pudo leer la lista: '+e.message+'. ¿Has ejecutado schema3.sql?')); } };
+  const refresh=async()=>{ list.innerHTML=''; try{ const rows=await adminList(); if(!rows.length) list.append(h('div',{class:'small muted'},'Lista vacía (ejecuta schema3.sql).')); rows.forEach(r=>list.append(h('div',{class:'item'}, h('div',{style:'flex:1;min-width:0'}, h('div',{class:'t'},r.email), h('div',{class:'small muted'},(r.note||'')+(r.added_at?' · '+fmtDate(new Date(r.added_at).getTime()):''))), r.email.toLowerCase()===(USER.email||'').toLowerCase()?h('span',{class:'badge soft'},'tú'):h('button',{class:'btn sm ghost',onclick:async()=>{ try{ await adminSetEditor(r.email,!r.glossary_editor); toast(r.glossary_editor?'Ya no edita el glosario':'Puede editar el glosario'); refresh(); }catch(e){ toast('Error: '+e.message); } }},r.glossary_editor?'Editor del glosario ✓':'Dar permiso de glosario'), r.email.toLowerCase()===(USER.email||'').toLowerCase()?null:h('button',{class:'btn sm warn',onclick:()=>confirmBox(`¿Quitar el acceso a ${r.email}? Su progreso se conserva pero no podrá entrar.`,async()=>{ try{ await adminRemove(r.email); toast('Acceso retirado'); refresh(); }catch(e){ toast('Error: '+e.message); } })},'Quitar')))); }catch(e){ list.append(h('div',{class:'small muted'},'No se pudo leer la lista: '+e.message+'. ¿Has ejecutado schema3.sql?')); } };
   box.append(list, h('div',{class:'row'}, email, note, h('button',{class:'btn primary',onclick:async()=>{ const v=email.value.trim().toLowerCase(); if(!v.includes('@')){ toast('Correo no válido'); return; } try{ await adminAdd(v,note.value.trim()); email.value=''; note.value=''; toast('Cuenta autorizada'); refresh(); }catch(e){ toast('Error: '+e.message); } }},'Autorizar')));
   refresh(); return box;
 }

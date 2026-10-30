@@ -91,7 +91,7 @@ function toKana(input, final=false){
     if (c==='n'){
       if (n1==="'") { out+='ん'; i+=2; continue; }
       // nn: ん, y la segunda n abre la sílaba siguiente si viene una vocal (annai → あんない); ante consonante o al final, solo ん
-      if (n1==='n'){ if (n2===undefined){ if (final){ out+='ん'; i+=2; continue; } out+='nn'; break; } out+='ん'; i+=(/[aeiouy]/.test(n2)?1:2); continue; }
+      if (n1==='n'){ if (n2===undefined){ out+='ん'; i+=2; continue; } out+='ん'; i+=(/[aeiouy]/.test(n2)?1:2); continue; }
       // n + consonante (no vocal, no y) => ん
       if (n1!==undefined && /[a-z]/.test(n1) && !/[aeiouy]/.test(n1)) { out+='ん'; i++; continue; }
       if (n1===undefined && final) { out+='ん'; i++; continue; }
