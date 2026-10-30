@@ -65,7 +65,8 @@ function renderLesson(){
     const vs=vocabWithKanji(it.k).slice(0,4); if(vs.length) card.append(h('div',{class:'ex'}, h('div',{class:'eyebrow'},'Palabras con este kanji'), vs.map(v=>h('div',{class:'jp',style:'margin-top:4px'}, v.w, ' ', h('span',{class:'muted'},'（'+v.r+'）'), ' ', h('span',{class:'muted',style:'font-family:var(--f-ui)'}, v.m[0])))));
   } else if (it.kind==='v'){
     card.append(h('div',{class:'ask v',style:'text-align:center'},'Vocabulario nuevo'), h('div',{class:'big-jp',lang:'ja',style:'text-align:center'},it.w), h('div',{class:'mid-jp',style:'text-align:center;color:var(--accent)'}, it.r, ' ', spkBtn(it.w)),
-      h('div',{class:'big-es',style:'text-align:center;font-size:1.4rem'}, it.m.join(', ')), it.p?h('div',{class:'small muted',style:'text-align:center'},posLabel(it.p)):null);
+      h('div',{class:'big-es',style:'text-align:center;font-size:1.4rem'}, it.m.join(', ')), it.p?h('div',{class:'small muted',style:'text-align:center'},posLabel(it.p)):null,
+      it.kj?h('div',{class:'small',style:'text-align:center'},h('span',{class:'muted'},'Se escribe con kanji: '),h('span',{class:'jp',style:'font-size:1.15rem'},...furiText(it.kj)),h('span',{class:'muted'},' · llegará más adelante')):null);
     const ks=[...it.w].filter(hasKanji).map(ch=>KANJI_META[ch]||(ITEMS.get('k|'+ch))).filter(Boolean);
     if (ks.length) card.append(h('div',{class:'mn'}, h('b',{class:'small'},'Composición · '), h('span',{class:'jp'}, ks.map(k=>k.k+' ('+(k.m||[])[0]+')').join(' + '))));
     if (it.ex) card.append(h('div',{class:'ex'}, h('div',{class:'jp'}, ...furiText(it.ex), ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));

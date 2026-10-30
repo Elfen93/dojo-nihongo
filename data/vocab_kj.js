@@ -1,0 +1,28 @@
+// Forma con kanji de palabras que se aprenden primero en kana (N5). Se desbloquean cuando sus kanji llegan a Gurú.
+VOCAB_N3.push(
+{w:"一回",r:"いっかい",m:["una vez"],lv:4,p:"n",ex:"週に一回走ります。",es:"Corro una vez por semana."},
+{w:"一台",r:"いちだい",m:["una unidad (máquinas, coches)"],lv:9,p:"n",ex:"車が一台あります。",es:"Hay un coche."},
+{w:"明日",r:"あした",m:["mañana"],lv:11,p:"n",ex:"明日学校へ行きます。",es:"Mañana voy a la escuela."},
+{w:"明後日",r:"あさって",m:["pasado mañana"],lv:11,p:"n",ex:"明後日友だちに会います。",es:"Pasado mañana veo a mi amigo."},
+{w:"今朝",r:"けさ",m:["esta mañana"],lv:10,p:"n",ex:"今朝は早く起きました。",es:"Esta mañana me levanté temprano."},
+{w:"毎晩",r:"まいばん",m:["cada noche"],lv:13,p:"n",ex:"毎晩日本語を勉強します。",es:"Cada noche estudio japonés."},
+{w:"大体",r:"だいたい",m:["más o menos", "en general"],lv:9,p:"adv",ex:"大体分かりました。",es:"Más o menos lo entendí."},
+{w:"普通",r:"ふつう",m:["normal", "ordinario"],lv:41,p:"n",ex:"普通の電車に乗ります。",es:"Cojo el tren ordinario."},
+{w:"兄弟",r:"きょうだい",m:["hermanos"],lv:10,p:"n",ex:"兄弟は二人います。",es:"Tengo dos hermanos."},
+{w:"姉妹",r:"しまい",m:["hermanas"],lv:11,p:"n",ex:"三人姉妹です。",es:"Somos tres hermanas."},
+{w:"赤ちゃん",r:"あかちゃん",m:["bebé"],lv:9,p:"n",ex:"赤ちゃんが泣いています。",es:"El bebé está llorando."},
+{w:"歯医者",r:"はいしゃ",m:["dentista"],lv:31,p:"n",ex:"歯医者に行きます。",es:"Voy al dentista."},
+{w:"美術館",r:"びじゅつかん",m:["museo de arte"],lv:23,p:"n",ex:"美術館へ行きます。",es:"Voy al museo de arte."},
+{w:"動物園",r:"どうぶつえん",m:["zoológico"],lv:26,p:"n",ex:"動物園へ行きました。",es:"Fui al zoológico."},
+{w:"魚屋",r:"さかなや",m:["pescadería"],lv:4,p:"n",ex:"魚屋で魚を買います。",es:"Compro pescado en la pescadería."},
+{w:"パン屋",r:"パンや",m:["panadería"],lv:4,p:"n",ex:"パン屋は朝早く開きます。",es:"La panadería abre temprano."},
+{w:"花屋",r:"はなや",m:["floristería"],lv:4,p:"n",ex:"花屋で花を買いました。",es:"Compré flores en la floristería."},
+{w:"教科書",r:"きょうかしょ",m:["libro de texto"],lv:24,p:"n",ex:"教科書を開けてください。",es:"Abran el libro de texto."},
+{w:"切手",r:"きって",m:["sello"],lv:9,p:"n",ex:"切手を二枚ください。",es:"Dos sellos, por favor."},
+{w:"太陽",r:"たいよう",m:["sol"],lv:31,p:"n",ex:"太陽が出ました。",es:"Ha salido el sol."},
+{w:"牛",r:"うし",m:["vaca"],lv:5,p:"n",ex:"牛が草を食べています。",es:"Las vacas están comiendo hierba."},
+{w:"茶色",r:"ちゃいろ",m:["marrón"],lv:10,p:"n",ex:"茶色の靴を買いました。",es:"Compré zapatos marrones."},
+{w:"黄色い",r:"きいろい",m:["amarillo"],lv:48,p:"adj-i",ex:"黄色い花が咲きました。",es:"Han florecido flores amarillas."},
+{w:"行ってきます",r:"いってきます",m:["ya me voy (y vuelvo)"],lv:2,p:"exp",ex:"行ってきます。",es:"Ya me voy."},
+{w:"お帰りなさい",r:"おかえりなさい",m:["bienvenido a casa"],lv:3,p:"exp",ex:"お帰りなさい。",es:"Bienvenido a casa."}
+);

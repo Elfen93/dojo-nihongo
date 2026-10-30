@@ -311,7 +311,7 @@ function itemDetails(it, p){
     const vs=vocabWithKanji(it.k).slice(0,3); if(vs.length) add('Palabras', h('span',{class:'jp'}, vs.map(v=>v.w+'（'+v.r+'）').join('、')));
   } else if (it.kind==='v'){
     add('Palabra', h('span',{class:'jp'}, it.w, ' ', h('span',{class:'muted'},'（'+it.r+'）'), ' ', spkBtn(it.w)));
-    add('Significado', it.m.join(', ')); if (it.p) add('Tipo', posLabel(it.p));
+    add('Significado', it.m.join(', ')); if (it.p) add('Tipo', posLabel(it.p)); if (it.kj) add('Con kanji', h('span',{class:'jp'},...furiText(it.kj)));
     if (it.ex) add('Ejemplo', h('div',{}, h('div',{class:'jp'}, ...furiText(it.ex), ' ', spkBtn(it.ex)), h('div',{class:'small muted'}, it.es||'')));
     const kinfo=[...it.w].filter(hasKanji).map(ch=>KANJI_META[ch]).filter(Boolean); if(kinfo.length) add('Kanji', h('span',{class:'jp'}, kinfo.map(k=>k.k+' = '+k.m[0]).join(' · ')));
   } else {
