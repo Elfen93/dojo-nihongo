@@ -229,6 +229,26 @@ body.leaving .login-wrap{animation:fadeout .55s ease forwards}
 
 @keyframes draw{to{stroke-dashoffset:40}}
 @media (prefers-reduced-motion:reduce){ .login .enso path{animation:none;stroke-dashoffset:40} }
+/* Camino (perfil) */
+.camino{padding:16px}
+.camino-head{display:flex;gap:14px;align-items:center;margin-bottom:6px}
+.camino-head .lvl{font-size:1.3rem;font-weight:500;font-family:var(--f-jp-display),var(--f-ui);line-height:1.2}
+.camino-head .sub{color:var(--muted);font-size:.88rem}
+.camino-art{width:100%;margin:4px 0}
+.camino-svg{display:block;width:100%;height:auto}
+.hanko{width:var(--hs,64px);height:var(--hs,64px);flex:none;border:0;border-radius:10px;background:var(--warn);color:#f7f5ef;font-family:var(--f-jp-display);font-size:calc(var(--hs,64px)*.62);line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 3px color-mix(in srgb,#f7f5ef 35%,transparent);padding:0}
+.hanko.sm{--hs:48px;width:48px;height:48px}
+.hanko.on{outline:3px solid var(--accent);outline-offset:2px}
+.hanko-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
+.weekdots{display:flex;justify-content:space-between;gap:6px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;font-size:.72rem;color:var(--muted)}
+.wd i{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:block}
+.wd.on i{background:var(--accent);border-color:var(--accent)}
+.wd.today i{border-color:var(--fg)}
+.wd.future{opacity:.5}
+.cuaderno{display:flex;flex-direction:column;gap:6px}
+.cq{display:flex;gap:12px;align-items:baseline;border-top:1px solid var(--line);padding-top:6px}
+.cq .num{min-width:5.4em}
 /* Aviso de versión nueva */
 .updatebar{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--accent);border-radius:999px;padding:6px 8px 6px 16px;box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:.9rem;width:max-content;max-width:calc(100% - 24px);white-space:nowrap}
 /* Plegables */

@@ -41,14 +41,14 @@ function checkReadingDone(r){ if(Object.keys(READER.answers).length<r.q.length) 
 function addReadingVocab(r){ let n=0; const re=/\[([^|\]]+)\|/g; let m; while((m=re.exec(r.t))){ const v=(VOCAB_BY_WORD[m[1]]||[])[0]; if(v){ const k=keyOf({...v,kind:'v'}); if(!S.items[k]||S.items[k].s===0){ S.items[k]={s:1,due:now()+4*H,c:0,w:0,lrn:now()}; n++; } } } save(); toast(n?`${n} palabras añadidas a tus repasos`:'Todas las palabras del texto ya estaban en tu SRS'); }
 
 // ===================== Vistas =====================
-const VIEWS=[{id:'hoy',t:'Hoy',ic:'今'},{id:'lecciones',t:'Lecciones',ic:'学'},{id:'repasos',t:'Repasos',ic:'復'},{id:'lectura',t:'Lectura',ic:'読'},{id:'examenes',t:'Exámenes',ic:'試'},{id:'practica',t:'Práctica',ic:'練'},{id:'progreso',t:'Progreso',ic:'進'},{id:'ajustes',t:'Ajustes',ic:'設'},{id:'guia',t:'Guía',ic:'?',hidden:true}];
+const VIEWS=[{id:'hoy',t:'Hoy',ic:'今'},{id:'lecciones',t:'Lecciones',ic:'学'},{id:'repasos',t:'Repasos',ic:'復'},{id:'lectura',t:'Lectura',ic:'読'},{id:'examenes',t:'Exámenes',ic:'試'},{id:'practica',t:'Práctica',ic:'練'},{id:'progreso',t:'Camino',ic:'道'},{id:'ajustes',t:'Ajustes',ic:'設'},{id:'guia',t:'Guía',ic:'?',hidden:true}];
 let VIEW='hoy';
 function go(id){ stopSpeak(); if(PRACT&&PRACT.kh){ document.removeEventListener('keydown',PRACT.kh); } PRACT={mode:null}; if(SESSION){ if(SESSION.enterHandler) document.removeEventListener('keydown',SESSION.enterHandler); clearTimeout(SESSION.autoT); } if(EXAM) examKeysOff(EXAM); VIEW=id; SESSION=null; LESSON=null; EXAM=null; clearInterval(examTimer); document.body.classList.remove('focus'); if(location.hash!=='#'+id) history.replaceState(null,'','#'+id); render(); window.scrollTo(0,0); }
 function renderNav(){
   const due=dueItems().length, la=lessonsAvailable();
   const mk=v=>h('button',{class:VIEW===v.id?'active':'',onclick:()=>go(v.id)}, h('span',{class:'ic'},v.ic), h('span',{},v.t), v.id==='repasos'&&due?h('span',{class:'badge'+(due>100?' warn':'')},due):null, v.id==='lecciones'&&la.items.length?h('span',{class:'badge ok'},Math.min(la.items.length,99)):null);
   const side=$('#sidenav'); side.innerHTML=''; side.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},'Dojo 日本語')), ...VIEWS.filter(v=>!v.hidden).map(mk), h('div',{class:'foot'}, h('div',{},`Nivel ${S.level} · ${tierOf(S.level).n}`), h('div',{class:'synclabel'},syncLabel)));
-  const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Progreso','aria-label':'Progreso',onclick:()=>go('progreso')},'進'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes','aria-label':'Ajustes',onclick:()=>go('ajustes')},'設')); }
+  const head=$('#mobilehead'); if(head){ head.innerHTML=''; head.append(h('div',{class:'brand'},h('b',{},'道場'),h('span',{},`Nivel ${S.level} · ${tierOf(S.level).n}`)), h('button',{class:VIEW==='progreso'?'active':'',title:'Camino','aria-label':'Camino',onclick:()=>go('progreso')},'道'), h('button',{class:VIEW==='ajustes'?'active':'',title:'Ajustes','aria-label':'Ajustes',onclick:()=>go('ajustes')},'設')); }
   const tabs=$('#tabnav'); tabs.innerHTML=''; VIEWS.filter(v=>['hoy','lecciones','repasos','lectura','examenes','practica'].includes(v.id)).forEach(v=>tabs.append(mk(v)));
 }
 function render(){ if (needsLogin()) { renderLoginWall(); return; } document.body.classList.remove('login-mode'); document.body.classList.remove('focus'); renderNav(); const el=$('#main'); el.innerHTML=''; ({hoy:renderHoy,guia:renderGuia,lecciones:renderLecciones,repasos:renderRepasos,lectura:renderLectura,examenes:renderExamenes,practica:renderPractica,progreso:renderProgreso,ajustes:renderAjustes}[VIEW]||renderHoy)(); }
@@ -56,7 +56,7 @@ function render(){ if (needsLogin()) { renderLoginWall(); return; } document.bod
 function pushMessage(){
   const due=dueItems().length, missed=daysMissed(), w=weeklyStatus(), d=day(), la=lessonsAvailable();
   const target=S.settings.target?new Date(S.settings.target+'T09:00:00'):null; const daysLeft=target?Math.ceil((target-now())/D):null;
-  if (w.overdue && paceToday().mode!=='recuperacion') return {cls:'warnish',t:'El examen semanal espera. Las lecciones se abren después.'};
+  if (w.overdue) return {cls:'info',t:'La revisión semanal te espera. Las lecciones siguen abiertas, a medio ritmo.'};
   if (missed>=2) return {cls:'',t:`Vuelves tras ${missed} días. Hoy basta con una sesión corta de repasos.`};
   if (due>150) return {cls:'',t:`${due} repasos esperan. Hoy, solo repasar.`};
   if (due>=40) return {cls:'info',t:`${due} repasos listos.`};
@@ -80,13 +80,13 @@ function renderHoy(){
   const hello=S.settings.name?S.settings.name:'今日';
   const lvItems=itemsOfLevel(S.level), lvDone=lvItems.filter(it=>S.items[keyOf(it)]&&S.items[keyOf(it)].s>0).length, lvPct=lvItems.length?Math.round(100*lvDone/lvItems.length):0;
   const R=34, C=2*Math.PI*R; const ring=h('div',{class:'ring',html:`<svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="${R}" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="42" cy="42" r="${R}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-lvPct/100)}" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="20">${S.level}</text></svg>`});
-  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`${S.streak||0} ${plural(S.streak||0,'día seguido','días seguidos')}`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):pace.past?h('span',{class:'chip'},'Fecha objetivo pasada'):null, h('span',{class:'chip'},`${pace.total-pace.remaining}/${pace.total} gramática ${S.settings.targetTier||'N4'}`)))));
+  el.append(h('div',{class:'hero',style:'margin-bottom:14px'}, ring, h('div',{style:'min-width:0'}, h('div',{class:'lvl'},hello), h('div',{class:'sub'},`Nivel ${S.level} · ${tierOf(S.level).n} · ${lvPct}% del nivel aprendido`), h('div',{class:'chips'}, h('span',{class:'chip'},`${weekInfo().done}/${weekInfo().goal} esta semana`), pace.days?h('span',{class:'chip'},`${pace.days} d para ${S.settings.targetTier||'N4'}`):pace.past?h('span',{class:'chip'},'Fecha objetivo pasada'):null, h('span',{class:'chip'},`${pace.total-pace.remaining}/${pace.total} gramática ${S.settings.targetTier||'N4'}`)))));
   if (CONFIG.SUPABASE_URL && !USER) el.append(h('div',{class:'push info',style:'margin-bottom:10px'}, OFFLINE?'Sin conexión: lo que hagas se guarda aquí y se sube a tu cuenta en cuanto vuelva la red.':'No has iniciado sesión: el progreso se guarda solo en este navegador. ', OFFLINE?null:h('a',{href:'#ajustes',onclick:e=>{e.preventDefault();go('ajustes');}},'Inicia sesión'), OFFLINE?null:' para tenerlo en todos tus dispositivos.'));
   el.append(h('div',{class:'push '+pm.cls,style:'margin-bottom:14px'}, pm.t));
   const actions=h('div',{class:'grid c3'},
     h('button',{class:'action rev',onclick:()=>startReviews()}, h('div',{class:'big-n'},due), h('div',{}, h('div',{class:'t'},'Repasos'), h('div',{class:'d'}, due?`El más antiguo venció ${fmtAgo(Math.min(...dueItems().map(i=>S.items[keyOf(i)].due)))}`:'Nada pendiente'))),
     h('button',{class:'action les'+(la.items.length?'':' locked'),onclick:()=>go('lecciones'),disabled:!la.items.length}, h('div',{class:'big-n'},la.items.length?la.items.length:'—'), h('div',{}, h('div',{class:'t'},'Lecciones'), h('div',{class:'d'}, la.items.length?`${la.kv.length} kanji/vocab · ${la.g.length} gramática hoy`:la.reason))),
-    h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Semanal atrasado':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
+    h('button',{class:'action exam'+(le.ready||(w.available&&now()>=w.due)?'':' locked'),onclick:()=>go('examenes')}, h('div',{class:'big-n'},'試'), h('div',{}, h('div',{class:'t'},'Exámenes'), h('div',{class:'d'}, w.overdue?'Revisión pendiente':le.ready?'Examen de nivel listo':'Semanal: '+w.text)))
   );
   el.append(actions);
   const pc=paceToday(); const goalL=pc.lessons, dueStart=(d.r||0)+due;
@@ -149,7 +149,7 @@ function renderExamenes(){
   el.append(h('div',{class:'topline'}, h('h1',{},'Exámenes')));
   el.append(h('div',{class:'grid c2'},
     placementCard(),
-    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Semanal · obligatorio'), h('div',{class:'small muted'},w.text), h('button',{class:'btn primary',disabled:!w.available,onclick:()=>startExam('weekly')},'Hacer examen semanal')),
+    h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Revisión semanal'), h('div',{class:'small muted'},w.text), h('button',{class:'btn primary',disabled:!w.available,onclick:()=>startExam('weekly')},'Hacer examen semanal')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},`Nivel ${S.level}`), h('div',{class:'small muted'},le.text), h('button',{class:'btn primary',disabled:!le.ready,onclick:()=>startExam('level')},'Hacer examen de nivel')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Frases nuevas'), h('div',{class:'small muted',id:'fresh-status'},freshOk?'Disponible':`Se activa con 30 palabras (llevas ${nv}) y 8 puntos gramaticales (llevas ${ng})`), h('button',{class:'btn primary',disabled:!freshOk,onclick:()=>startFreshExam($('#fresh-status'))},'Generar examen nuevo')),
     h('div',{class:'card stack'}, h('div',{class:'section-tag'},'Simulacro JLPT'), h('div',{class:'small muted'},learnedKeys().length<60?'Se activa con 60 ítems aprendidos':'Disponible'), h('button',{class:'btn',disabled:learnedKeys().length<60,onclick:()=>startExam('mock')},'Hacer simulacro'))));
@@ -157,7 +157,8 @@ function renderExamenes(){
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Historial'), ex.length?h('div',{class:'tscroll'},h('table',{}, h('thead',{},h('tr',{},h('th',{},'Fecha'),h('th',{},'Tipo'),h('th',{},'Nivel'),h('th',{},'Nota'),h('th',{},'Secciones'),h('th',{},''))), h('tbody',{}, ex.slice(0,20).map(e=>h('tr',{}, h('td',{},fmtDate(e.date)), h('td',{},{weekly:'Semanal',level:'Nivel',mock:'Simulacro',fresh:'Frases nuevas'}[e.kind]||e.kind), h('td',{class:'num'},e.level), h('td',{},h('b',{style:'color:'+(e.score>=80?'var(--ok)':e.score>=60?'var(--gold)':'var(--warn)')},e.score+'%')), h('td',{class:'small'}, Object.entries(e.secs||{}).map(([s,v])=>`${s} ${v.ok}/${v.n}`).join(' · ')), h('td',{}, h('button',{class:'btn sm ghost warn',title:'Borrar este examen del historial','aria-label':'Borrar este examen',onclick:()=>confirmBox(`¿Borrar del historial el examen del ${fmtDate(e.date)} (${e.score} %)? No se puede deshacer.`,()=>{ S.exams=S.exams.filter(x=>x.date!==e.date); S.exDel=uniq([...(S.exDel||[]),e.date]); S.settingsAt=S.settingsAt||0; save(); toast('Examen borrado del historial'); render(); })},'Borrar'))))))):h('p',{class:'small muted'},'Todavía no has hecho ningún examen.')));
 }
 function renderProgreso(){
-  const el=$('#main'); el.append(h('div',{class:'topline'}, h('h1',{},'Progreso')));
+  const el=$('#main'); el.append(h('div',{class:'topline'}, h('h1',{},'Camino')));
+  el.append(caminoSection());
   const counts={aprendiz:0,guru:0,maestro:0,iluminado:0,quemado:0}; Object.entries(S.items).forEach(([k,r])=>{ if(!ITEMS.has(k)||r.s<=0) return; counts[stageGroup(r.s)]++; });
   const STAGE_GROUP_LABEL={aprendiz:'Aprendiz',guru:'Gurú',maestro:'Maestro',iluminado:'Iluminado',quemado:'Quemado'};
   el.append(h('div',{class:'stages'}, Object.entries(counts).map(([k,n])=>h('div',{class:'card',title:STAGE_GROUP_LABEL[k]},h('div',{class:'n'},n),h('div',{class:'l'},STAGE_GROUP_LABEL[k]||k)))));
@@ -196,7 +197,7 @@ function renderLoginWall(){
   document.body.classList.remove('leaving'); document.body.classList.add('login-mode');
   const enso=h('div',{class:'enso',html:'<svg viewBox="0 0 120 120"><path d="M92 36 A40 40 0 1 1 60 20"/><text x="60" y="72" text-anchor="middle">道</text></svg>'});
   const gicon='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z" opacity=".9"/><path fill="currentColor" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z" opacity=".7"/><path fill="currentColor" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9z" opacity=".5"/><path fill="currentColor" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z" opacity=".8"/></svg>';
-  el.append(h('div',{class:'login-wrap'}, h('div',{class:'login'}, enso, h('h1',{},'Dojo 日本語'), h('div',{class:'sub'},'Un rato de japonés, cada día.'),
+  el.append(h('div',{class:'login-wrap'}, h('div',{class:'login'}, enso, h('h1',{},'Dojo 日本語'), h('div',{class:'sub'},'Cada paso, a tu ritmo.'),
     h('button',{class:'google',onclick:()=>{ signInGoogle(); }}, h('span',{html:gicon}), 'Entrar con Google'),
     DENIED_EMAIL?h('div',{class:'note',style:'color:var(--warn)'},`La cuenta ${DENIED_EMAIL} no está autorizada. Pide acceso al administrador.`):DENIED_NET?h('div',{class:'note',style:'color:var(--warn)'},'No se pudo comprobar tu cuenta (sin conexión con el servidor). Inténtalo de nuevo.'):(!window.supabase&&CONFIG.SUPABASE_URL)?h('div',{class:'note',style:'color:var(--warn)'},'Sin conexión: no se pudo cargar el acceso. Comprueba la red y recarga.'):h('div',{class:'note'},'Acceso privado. Solo cuentas autorizadas.'))));
 }

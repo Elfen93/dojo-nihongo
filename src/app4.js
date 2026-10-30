@@ -13,6 +13,7 @@ function paceToday(){
   else if (appr>120){ goal=0; mode='recuperacion'; why=`${appr} ítems en fase Aprendiz: demasiada carga nueva a la vez. Deja que se asienten.`; }
   else if (missed>=2){ goal=0; mode='recuperacion'; why=`Vuelves tras ${missed} días. Hoy solo repasos, sin prisa. Mañana retomamos lecciones.`; }
   else if (st.acc!=null && st.r>=30 && st.acc<0.75){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why=`Precisión del ${Math.round(st.acc*100)} % esta semana. Menos material nuevo hasta que suba.`; }
+  else if (weeklyStatus().overdue){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why='La revisión semanal te espera: mientras tanto, la mitad de lecciones nuevas.'; }
   else if (lch>=8){ goal=Math.max(2,Math.floor(prev/2)); mode='suave'; why=`${lch} sanguijuelas. Antes de añadir, machaca las que fallas siempre.`; }
   else if (due>60 || appr>90){ goal=Math.max(2,Math.min(prev,ceiling)-2); mode='suave'; why=due>60?`${due} repasos esperando: bajo el ritmo un poco.`:`${appr} en Aprendiz: bajo el ritmo un poco.`; }
   else { const cs=clearedStreak(); if (cs>=3 && (st.acc==null||st.acc>=0.9) && appr<70 && due<30){ goal=Math.min(ceiling,prev+2); mode=goal>prev?'impulso':'normal'; why=goal>prev?`${cs} días seguidos con la cola vacía y más del 90 %: subo a ${goal}.`:`Vas bien y al techo que fijaste (${ceiling}).`; } else { goal=Math.min(ceiling,Math.max(prev,Math.min(ceiling,prev+ (prev<ceiling&&st.active>=3?1:0)))); mode='normal'; why=`Carga equilibrada: ${goal} ${plural(goal,'lección','lecciones')} hoy.`; } }
@@ -20,7 +21,7 @@ function paceToday(){
   const maxReviews = mode==='recuperacion'?40 : mode==='suave'?60 : (S.settings.maxReviews||100);
   S.pace={goal, lessons:goal, day:k, mode, why, maxReviews, due, appr}; saveLocal(); return S.pace;
 }
-const PACE_LABEL={recuperacion:'Recuperación',suave:'Ritmo suave',normal:'Ritmo normal',impulso:'Impulso',manual:'Ritmo fijo'};
+const PACE_LABEL={recuperacion:'Retomar',suave:'Paso tranquilo',normal:'Paso firme',impulso:'Paso largo',manual:'Ritmo fijo'};
 function markClearedIfEmpty(){ if(!dueItems().length){ const d=day(); if(!d.cleared){ d.cleared=1; save(); } } }
 // ===================== Lecciones =====================
 function grammarGoalToday(){ const base=Math.max(0,S.settings.goalGrammar!=null?S.settings.goalGrammar:2); const pace=paceToday(); if(pace.mode==='recuperacion') return 0; if(pace.mode==='suave') return Math.max(base?1:0,Math.floor(base/2)); return base; }
@@ -30,7 +31,6 @@ function lessonsAvailable(track){
   const due=dueItems().length;
   if (due>150) return empty(`Tienes ${due} repasos pendientes. Las lecciones se desbloquean por debajo de 150.`,'reviews');
   const pace=paceToday(); if (pace.lessons===0 && pace.mode==='recuperacion') return empty('Modo Recuperación: hoy no hay lecciones nuevas. '+pace.why,'pace');
-  const w=weeklyStatus(); if (w.overdue && pace.mode!=='recuperacion') return empty('Tu examen semanal está atrasado. Hazlo para desbloquear las lecciones.','weekly');
   const all=itemsOfLevel(lv).filter(it=>!(S.items[keyOf(it)]&&S.items[keyOf(it)].s>0));
   // Como WaniKani: una palabra se desbloquea cuando todos sus kanji (los que existen en la app) están en Gurú o más
   const guruK=ch=>{ if(!ITEMS.has('k|'+ch)) return true; const r=S.items['k|'+ch]; return !!(r&&r.s>=5); };
@@ -83,7 +83,7 @@ function renderLesson(){
 function weeklyStatus(){
   const learned=learnedKeys().length; if(learned<20) return {available:false, overdue:false, text:'Se activa cuando tengas 20 ítems aprendidos.'};
   const last=S.weekly.last||S.created; const due=last+7*D; const overdue=now()>due+1*D;
-  return {available:now()>=due-2*D, overdue, due, text: now()>=due ? (overdue?'Atrasado desde hace '+Math.floor((now()-due)/D)+' d':'Disponible, hazlo hoy') : 'En '+fmtRel(due)};
+  return {available:now()>=due-2*D, overdue, due, text: now()>=due ? (overdue?'Pendiente desde hace '+Math.floor((now()-due)/D)+' d':'Disponible') : 'En '+fmtRel(due)};
 }
 function levelExamStatus(){
   const lv=S.level; const items=itemsOfLevel(lv); if(!items.length) return {ready:false, text:'Sin contenido'};

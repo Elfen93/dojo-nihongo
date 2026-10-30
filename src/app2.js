@@ -58,7 +58,7 @@ const leechScore = r => (r.w||0) - (r.c||0)*0.5;
 // ===================== Estado y persistencia (Supabase) =====================
 const DEFAULT_STATE = () => ({
   v:1, updated:0, created:now(), items:{}, level:1, exams:[], levelPass:{}, weekly:{last:0}, readings:{}, listen:{}, writings:[], alts:{}, exDel:[], placements:[], days:{}, gen:{},
-  settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'' },
+  settings:{ target:'2026-12-06', goalLessons:10, goalGrammar:2, examDay:0, strict:false, furigana:false, maxReviews:100, name:'', targetTier:'N4', wkToken:'', bpKey:'', weekGoal:4, hanko:'' },
   sync:{}, log:[]
 });
 let S = DEFAULT_STATE();

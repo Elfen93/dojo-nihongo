@@ -180,7 +180,7 @@ function boot(){
   setInterval(()=>{ if(!SESSION&&!LESSON&&!EXAM&&(VIEW==='hoy'||VIEW==='repasos')) render(); }, 6e4);
   try{ speechSynthesis.getVoices(); }catch(e){}
 }
-boot();
+// boot() se llama al final de app9.js, cuando todos los módulos están definidos
 
 // Actualizar: borra la copia guardada y recarga la última versión publicada
 async function updateApp(){

@@ -6,7 +6,7 @@ data+='const EXAM_KANA='+open('data/exam_kana.json').read()+';\n'
 import datetime
 data+='const APP_BUILD="'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M')+' UTC";\n'
 data+='const ROADMAP_KANJI='+open('data/roadmap_kanji.json').read()+';\n'
-app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js'])
+app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js','app9.js'])
 out=open('src/template.html').read().replace('/*__DATA__*/',data).replace('/*__APP__*/',app)
 open('index.html','w').write(out)
 print('index.html', len(out.encode()), 'bytes')

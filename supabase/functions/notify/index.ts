@@ -34,11 +34,11 @@ Deno.serve(async (req) => {
         if (hour < 8 || hour >= 23) continue; // nunca de noche
         // Decide el mensaje (uno por tipo y por día como máximo)
         let kind = "", title = "", body = "";
-        if (now > weeklyDue + D) { kind = "weekly-late"; title = "Examen semanal atrasado"; body = "Las lecciones están bloqueadas hasta que lo hagas. 30 preguntas, 30 minutos."; }
-        else if (now >= weeklyDue) { kind = "weekly"; title = "Tu examen semanal está listo"; body = "Hazlo hoy y mide dónde estás de verdad."; }
-        else if (due >= 100) { kind = "due-high"; title = `${due} repasos esperando`; body = "Cuanto más tardes, más olvidas. Empieza por 30."; }
-        else if (due >= 30) { kind = "due"; title = `${due} repasos pendientes`; body = "Diez minutos ahora te ahorran una hora mañana."; }
-        else if (!studied && hour >= 19) { kind = "idle"; title = "Hoy aún no has estudiado"; body = "Una lección de 5 ítems o tus repasos. Mantén la racha."; }
+        if (now > weeklyDue + D) { kind = "weekly-late"; title = "Tu revisión semanal te espera"; body = "Las lecciones siguen abiertas. Cuando puedas, 30 minutos para ver cómo vas."; }
+        else if (now >= weeklyDue) { kind = "weekly"; title = "Tu revisión semanal está lista"; body = "Un buen momento para ver hasta dónde has llegado."; }
+        else if (due >= 100) { kind = "due-high"; title = `${due} repasos esperando`; body = "Hazlos a tu ritmo. Empieza por unos pocos."; }
+        else if (due >= 30) { kind = "due"; title = `${due} repasos listos`; body = "Diez minutos mantienen el camino."; }
+        else if (!studied && hour >= 19) { kind = "idle"; title = "Tu camino te espera"; body = "Unos minutos bastan para dar un paso hoy."; }
         if (!kind) continue;
         const last = s.last_sent ? new Date(s.last_sent).getTime() : 0;
         if (s.last_kind === kind && now - last < 20 * H) continue; // no repetir el mismo aviso el mismo día
