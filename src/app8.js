@@ -9,18 +9,18 @@ const PL_START=3, PL_SCALE=1.5;
 const clampN=(x,a,b)=>Math.max(a,Math.min(b,x));
 function plProb(theta,d,guess){ return guess+(1-guess)/(1+Math.exp(-(theta-d)/PL_SCALE)); }
 // Estimación bayesiana (media a posteriori sobre una rejilla de niveles): no se estanca cuando el alumno está muy por encima o por debajo
-const PL_GRID=Array.from({length:135},(_,i)=>0.5+i*0.25);
+const PL_GRID=Array.from({length:215},(_,i)=>0.5+i*0.25);
 function plInit(sk){ const lim=sk.max+1; sk.post=PL_GRID.map(g=>g>lim?0:Math.exp(-0.5*((g-8)/10)**2)); plNorm(sk); }
 function plNorm(sk){ const s=sk.post.reduce((a,x)=>a+x,0)||1; sk.post=sk.post.map(x=>x/s); const m=PL_GRID.reduce((a,g,i)=>a+g*sk.post[i],0); sk.theta=clampN(m,1,sk.max+1); sk.sd=Math.sqrt(PL_GRID.reduce((a,g,i)=>a+(g-m)**2*sk.post[i],0)); }
 function plUpdate(sk, d, guess, score, unknown){
   if(!sk.post) plInit(sk); const gs=unknown?0:guess;
   sk.post=sk.post.map((w,i)=>{ const p=plProb(PL_GRID[i],d,gs); return w*(score?p:1-p); }); plNorm(sk); sk.n++; sk.hist.push(sk.theta);
 }
-function lvLabel(th){ return th<=3.5?'N5':th<=13.5?'N4':'N3'; }
+function lvLabel(th){ return th<=3.5?'N5':th<=13.5?'N4':th<=33.5?'N3':'N2'; }
 function withLevel(n, fn){ const old=S.level; S.level=n; try{ return fn(); } finally{ S.level=old; } }
 function plPools(){
   const items=[...ITEMS.values()];
-  const v=items.filter(i=>i.kind==='v'&&i.lv>=1&&i.lv<=33), g=items.filter(i=>i.kind==='g'&&i.lv>=1&&i.lv<=33);
+  const v=items.filter(i=>i.kind==='v'&&i.lv>=1&&i.lv<=53), g=items.filter(i=>i.kind==='g'&&i.lv>=1&&i.lv<=53);
   const sents=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.es), orders=(typeof ORDER_QS!=='undefined'?ORDER_QS:[]);
   const mx=a=>a.reduce((m,x)=>Math.max(m,x.lv||1),1);
   return {v,g,sents,orders,reads:READINGS.filter(r=>!r.user&&r.q&&r.q.length), max:{vocab:mx(v),gram:Math.max(mx(g),mx(orders)),lect:mx(READINGS),esc:mx(sents),prod:mx(v),escr:10}};
@@ -86,13 +86,13 @@ async function finishPlacement(E){
   for (const [k,s] of Object.entries(E.skills)){ if(s.n===0) continue; res[k]=Math.round(s.theta*10)/10; sum+=s.theta*PL_SKILLS[k].w; sw+=PL_SKILLS[k].w; }
   const overall=Math.round(sum/Math.max(sw,0.1)*10)/10;
   // Solo se da por sabido lo que está claramente por debajo de tu nivel en vocabulario y en gramática (margen de 1,5 niveles)
-  const cut=x=>x==null?overall-1.5:x-1.5; const rec=clampN(Math.floor(Math.min(cut(res.vocab),cut(res.gram)))+1,1,33);
+  const cut=x=>x==null?overall-1.5:x-1.5; const rec=clampN(Math.floor(Math.min(cut(res.vocab),cut(res.gram)))+1,1,53);
   const graded=E.answers.filter(a=>a.skill!=='escr'); const rec0={date:now(),theta:res,overall,rec,answered:graded.length,ok:graded.filter(a=>a.ok).length};
   S.placements=S.placements||[]; S.placements.push(rec0); S.placements=S.placements.slice(-10); save();
   renderPlacementResult(rec0, wnote);
 }
 function plBar(label, th){
-  const pct=clampN((th-1)/32*100,0,100);
+  const pct=clampN((th-1)/52*100,0,100);
   return h('div',{}, h('div',{class:'row between small'}, h('span',{},label), h('span',{class:'num muted'},`${lvLabel(th)} · nivel ${th.toFixed(1)}`)),
     h('div',{class:'bar plbar'}, h('i',{style:'width:'+pct+'%'})));
 }

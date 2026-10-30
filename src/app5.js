@@ -61,7 +61,6 @@ function pushMessage(){
   if (due>150) return {cls:'',t:`${due} repasos esperan. Hoy, solo repasar.`};
   if (due>=40) return {cls:'info',t:`${due} repasos listos.`};
   if (d.r===0 && due>0) return {cls:'info',t:`${due} ${plural(due,'repaso listo','repasos listos')}. Primero repasar, luego aprender.`};
-  if ((d.l<paceToday().lessons || (d.lg||0)<grammarGoalToday()) && la.items.length) return {cls:'info',t:`Kanji/vocab ${d.l}/${paceToday().lessons} · gramática ${d.lg||0}/${grammarGoalToday()}`};
   if (w.available && !w.overdue && now()>=w.due) return {cls:'info',t:'El examen semanal está disponible.'};
   const le=levelExamStatus(); if (le.ready) return {cls:'ok',t:'Nivel aprendido. El examen de nivel te espera cuando quieras.'};
   return {cls:'ok',t:'Al día. Si quieres algo más, una lectura.'};
@@ -96,7 +95,7 @@ function renderHoy(){
     h('div',{}, h('div',{class:'row between small'},h('span',{},'Repasos'),h('span',{class:'num muted'},`${d.r||0} / ${dueStart}`)), h('div',{class:'bar'},h('i',{style:'width:'+(dueStart?Math.min(100,Math.round(100*(d.r||0)/dueStart)):100)+'%'}))),
     h('div',{}, h('div',{class:'row between small'},h('span',{},'Kanji y vocabulario'),h('span',{class:'num muted'},`${d.l||0} / ${goalL}`)), h('div',{class:'bar'},h('i',{style:'width:'+(goalL?Math.min(100,Math.round(100*(d.l||0)/goalL)):100)+'%'}))),
     h('div',{}, h('div',{class:'row between small'},h('span',{},'Gramática'),h('span',{class:'num muted'},`${d.lg||0} / ${grammarGoalToday()}`)), h('div',{class:'bar'},h('i',{style:'width:'+(grammarGoalToday()?Math.min(100,Math.round(100*(d.lg||0)/grammarGoalToday())):100)+'%'}))),
-    pace.days?h('div',{class:'small muted'}, `${pace.perWeek} puntos de gramática por semana hasta el ${fmtDate(new Date(S.settings.target+'T09:00:00'))}`):pace.past?h('div',{class:'small muted'}, 'La fecha objetivo ya pasó: cámbiala en Ajustes.'):null));
+    pace.past?h('div',{class:'small muted'}, 'La fecha objetivo ya pasó: cámbiala en Ajustes.'):null));
   if (isGenerated(S.level) && !levelHasContent(S.level)) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},`Nivel ${S.level} (${tierOf(S.level).n}) sin contenido todavía`), h('button',{class:'btn primary',onclick:()=>go('lecciones')},'Generar el nivel')));
 }
 function tipsFor(){
@@ -139,7 +138,6 @@ function renderRepasos(){
   const el=$('#main'); const due=dueItems(); const soon=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>0&&r.s<9&&r.due>now()&&r.due<now()+D).length;
   el.append(h('div',{class:'topline'}, h('h1',{},'Repasos'), h('span',{class:'pill'},`${due.length} pendientes`), h('span',{class:'small muted'},`${soon} en 24 h`)));
   el.append(h('div',{class:'card stack',style:'margin-bottom:12px'}, due.length?h('button',{class:'btn primary big',onclick:()=>startReviews()},`Repasar ${Math.min(due.length,paceToday().maxReviews)} ahora`):h('div',{class:'push ok'},'Sin repasos pendientes. Vuelve más tarde o haz una lección.'),
-    h('div',{class:'small muted'},'Cada ítem tiene varias preguntas: kanji (significado + lectura), vocabulario (significado, lectura y español→japonés con elección del kanji) y gramática (frase con hueco). Un fallo en cualquiera cuenta como fallo del ítem.'),
     h('div',{class:'row'}, due.length?h('button',{class:'btn sm',onclick:()=>startReviews(false,12)},'Sesión de 5 minutos (12 ítems)'):null, h('button',{class:'btn sm warn',onclick:()=>startReviews(true)},'Solo sanguijuelas'), h('button',{class:'btn sm',onclick:()=>{ const its=learnedKeys().map(k=>ITEMS.get(k)).filter(i=>i.kind==='v'); if(!its.length){toast('Nada aprendido aún');return;} startSession('drill',pick(its,20),{facets:['vp']}); }},'Entrenar producción (20 palabras)'))));
   if (due.length) el.append(h('div',{class:'card'}, h('h3',{},'En la cola'), h('div',{class:'list',style:'margin-top:8px'}, due.slice(0,30).map(itemRow)), due.length>30?h('div',{class:'small muted',style:'margin-top:8px'},`… y ${due.length-30} más`):null));
 }
@@ -168,7 +166,7 @@ function renderProgreso(){
   el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},'Consejos'), h('div',{class:'tips',style:'margin-top:6px'}, tipsFor().map(t=>h('div',{class:'tip'}, h('div',{class:'b'}, h('b',{},t.b), h('p',{},t.p), t.act?h('button',{class:'btn sm',style:'margin-top:6px',onclick:t.act[1]},t.act[0]):null))))));
   const lch=leeches(); if (lch.length) el.append(h('div',{class:'card',style:'margin-top:12px'}, h('div',{class:'row between'},h('h3',{},'Sanguijuelas'),h('button',{class:'btn sm',onclick:()=>startReviews(true)},'Repasarlas')), h('div',{class:'row'}, lch.slice(0,10).map(it=>h('span',{class:'pill jp '+it.kind}, it.kind==='k'?it.k:it.kind==='v'?it.w:it.t)))));
   const mapDet=h('details',{class:'sec',open:!window.matchMedia('(max-width:860px)').matches}, h('summary',{},'Mapa de niveles hasta N1')); const map=h('div',{class:'card',style:'margin-top:12px'}, mapDet);
-  TIERS.forEach(t=>{ mapDet.append(h('div',{class:'tier-row'}, h('b',{},t.n), h('span',{class:'small muted'}, t.n==='N5'?'repaso':(t.n==='N4'||t.n==='N3')?'contenido completo':'se prepara al llegar'))); const g=h('div',{class:'levelmap'}); for(let lv=t.from;lv<=t.to;lv++) g.append(h('div',{class:lv<S.level?'done':lv===S.level?'cur':(isGenerated(lv)&&S.gen[lv])?'gen':'',title:'Nivel '+lv},lv)); mapDet.append(g); });
+  TIERS.forEach(t=>{ mapDet.append(h('div',{class:'tier-row'}, h('b',{},t.n), h('span',{class:'small muted'}, t.n==='N5'?'repaso':(t.n==='N4'||t.n==='N3'||t.n==='N2')?'contenido completo':'se prepara al llegar'))); const g=h('div',{class:'levelmap'}); for(let lv=t.from;lv<=t.to;lv++) g.append(h('div',{class:lv<S.level?'done':lv===S.level?'cur':(isGenerated(lv)&&S.gen[lv])?'gen':'',title:'Nivel '+lv},lv)); mapDet.append(g); });
   el.append(map);
   const exs=S.exams; if(exs.length){ const avg=Math.round(exs.reduce((a,e)=>a+e.score,0)/exs.length); const secAgg={}; exs.forEach(e=>Object.entries(e.secs||{}).forEach(([s,v])=>{const a=secAgg[s]=secAgg[s]||{ok:0,n:0};a.ok+=v.ok;a.n+=v.n;})); el.append(h('div',{class:'card',style:'margin-top:12px'}, h('h3',{},`Exámenes: media ${avg} %`), h('div',{class:'result-grid',style:'margin-top:8px'}, Object.entries(secAgg).map(([s,v])=>h('div',{class:'card'},h('div',{class:'section-tag'},s),h('div',{class:'num'},Math.round(100*v.ok/v.n)+'%'),h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))))); }
 }
