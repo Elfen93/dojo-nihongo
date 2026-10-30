@@ -112,7 +112,7 @@ function applyPlacement(r){
   let n=0; const t=now();
   for (const it of ITEMS.values()){ if(it.lv>=r.rec) continue; const k=keyOf(it), cur=S.items[k]; if(cur&&cur.s>=5) continue; S.items[k]={...(cur||{c:0,w:0}),s:5,due:t+STAGE_HOURS[5]*H*Math.random(),lrn:(cur&&cur.lrn)||t,ls:t,placed:1}; n++; }
   if (S.level<r.rec) S.level=r.rec;
-  if (r.theta.escr!=null){ const g=r.theta.escr>=7?3:r.theta.escr>=4.5?2:1; S.wgrade=Math.max(S.wgrade||1,g); }
+  if (r.theta.escr!=null){ const g=r.theta.escr>=7?3:r.theta.escr>=4.5?2:1; S.wgradeBase=Math.max(writingBase(),g); S.wgrade=Math.max(S.wgrade||1,g); }
   S.pace=null; save(); toast(`Nivel ${S.level}: ${n} ítems marcados como conocidos`); go('hoy');
 }
 function placementCard(){

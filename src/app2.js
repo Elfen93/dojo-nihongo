@@ -114,6 +114,7 @@ function mergeRemote(remote){
   { const pl={}; [...(L.placements||[]),...(R.placements||[])].filter(x=>x&&fresh(x.date)).forEach(x=>{ pl[x.date]=x; }); M.placements=Object.values(pl).sort((a,b)=>a.date-b.date).slice(-10); }
   M.alts={}; for (const src of (newer?[newer.alts||{}]:[R.alts||{},L.alts||{}])) for (const [k,a] of Object.entries(src)) M.alts[k]=uniq([...(M.alts[k]||[]),...(Array.isArray(a)?a:[])]);
   M.wgrade=newer?(newer.wgrade||1):Math.max(L.wgrade||1,R.wgrade||1);
+  M.wgradeBase=newer?(newer.wgradeBase==null?undefined:newer.wgradeBase):(L.wgradeBase==null&&R.wgradeBase==null?undefined:Math.max(L.wgradeBase||1,R.wgradeBase||1));
   M.sync = ((R.sync||{}).date||0) > ((L.sync||{}).date||0) ? R.sync : (L.sync||{});
   M.gen=L.gen||{}; M.pace=null;
   const changedLocal = JSON.stringify({i:M.items,s:M.settings,d:M.days}) !== JSON.stringify({i:L.items,s:L.settings,d:L.days});
