@@ -44,21 +44,22 @@ function startHandwriting(){
   loadStrokes().then(()=>{
     if (STROKE_STATE!==2){ toast('No se pudieron cargar los trazos (¿sin conexión?)'); return; }
     const pool=handPool(8);
-    PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],fallback:pool.fallback}; renderPractica();
+    PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),total:pool.list.length,fallback:pool.fallback}; renderPractica();
   });
 }
 function renderEscritura(){
   const P=PRACT, el=$('#main'); el.innerHTML='';
   el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Escribir a mano')));
   if (P.i>=P.queue.length){
-    el.append(h('div',{class:'card stack',style:'text-align:center'}, h('div',{class:'eyebrow'},'Sesión terminada'), h('div',{class:'big-jp'},P.queue.join(' ')), h('div',{},`${P.ok} de ${P.queue.length} escritos bien a la primera`), P.again.length?h('div',{class:'small muted'},'Para repetir: '+P.again.join(' ')):null,
+    const done=[...new Set(P.queue)];
+    el.append(h('div',{class:'card stack',style:'text-align:center'}, h('div',{class:'eyebrow'},'Sesión terminada'), h('div',{class:'big-jp'},done.join(' ')), h('div',{},`${P.ok} de ${P.total} escritos bien a la primera`), P.again.length?h('div',{class:'small muted'},'Los repetiste hasta acertarlos: '+[...new Set(P.again)].join(' ')):null,
       h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn primary',onclick:startHandwriting},'Otra sesión'), h('button',{class:'btn',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'Salir'))));
     return;
   }
   const ch=P.queue[P.i]; const it=ITEMS.get('k|'+ch); const total=STROKES[ch].length;
   let revealed=false, tracing=false, n=0;
   const read=[...(it.on||[]).slice(0,2).map(r=>kataToHira(r.split('.')[0])), ...(it.kun||[]).slice(0,2).map(r=>r.split('.')[0])].filter(Boolean);
-  const info=h('div',{class:'stack',style:'text-align:center;gap:4px'}, h('div',{class:'eyebrow'},`Kanji ${P.i+1} de ${P.queue.length}`), h('div',{style:'font-size:1.4rem;font-weight:600'},(it.m||[]).join(', ')), h('div',{class:'small muted jp'},read.join('・')));
+  const info=h('div',{class:'stack',style:'text-align:center;gap:4px'}, h('div',{class:'eyebrow'},P.seen.has(ch)?'Repetición: ahora de memoria':`Kanji ${Math.min(P.seen.size+1,P.total)} de ${P.total}`), h('div',{style:'font-size:1.4rem;font-weight:600'},(it.m||[]).join(', ')), h('div',{class:'small muted jp'},read.join('・')));
   const status=h('div',{class:'small muted',style:'text-align:center'});
   const model=h('div',{class:'hw-overlay',html:''});
   const cv=handCanvas(c=>{ n=c; refresh(); });
@@ -78,12 +79,14 @@ function renderEscritura(){
       const same=n===total;
       status.innerHTML=''; status.append(h('span',{style:'color:'+(same?'var(--ok)':'var(--warn)')},`Tus trazos: ${n} · modelo: ${total}`), h('div',{class:'small muted'},'Compara la forma y el orden. Algunos kanji admiten variantes: sé honesto contigo.'));
       actions.append(h('button',{class:'btn sm ghost',onclick:()=>{ setModel(true,true,true); }},'Repetir animación'),
-        h('button',{class:'btn warn',onclick:()=>grade(false)},'Necesito repetirlo'), h('button',{class:'btn primary',onclick:()=>grade(true)},'Lo escribí bien'));
+        h('button',{class:'btn warn',title:'Volverá a salir dentro de unos kanji',onclick:()=>grade(false)},'Necesito repetirlo'), h('button',{class:'btn primary',onclick:()=>grade(true)},'Lo escribí bien'));
     }
   }
   function grade(ok){
     S.hand=S.hand||{}; const r=S.hand[ch]||{n:0,ok:0,last:0}; r.n++; if(ok) r.ok++; r.last=now(); S.hand[ch]=r; S.settingsAt=now(); bump('hw');
-    if(ok) P.ok++; else P.again.push(ch);
+    const first=!P.seen.has(ch); P.seen.add(ch);
+    if(ok){ if(first) P.ok++; }
+    else { P.again.push(ch); P.queue.splice(Math.min(P.queue.length,P.i+3+Math.floor(Math.random()*2)),0,ch); } // vuelve a salir tras 2 o 3 kanji más, hasta que lo escribas bien
     P.i++; renderPractica();
   }
   el.append(h('div',{class:'card stack',style:'align-items:center'}, info, h('div',{style:'width:100%;display:flex;justify-content:center'},box), status, actions));
