@@ -11,11 +11,22 @@ function weekInfo(){
   return {goal,days,done,met,total,ok:done>=goal};
 }
 // Un sendero de piedras: cada piedra es un tramo del camino recorrido (ítems en Gurú o más); el musgo, lo ya quemado
+// Plan de estudio: nivel objetivo, fecha y qué fracción del camino «toca» haber recorrido hoy
+function planInfo(){
+  const tier=TIERS.find(t=>t.n===(S.settings.targetTier||'N4'))||TIERS[1];
+  const tg=S.settings.target&&/^\d{4}-\d{2}-\d{2}$/.test(S.settings.target)?new Date(S.settings.target+'T23:59:00').getTime():0;
+  const start=S.created||now(); let frac=null, days=null;
+  if (tg>start){ frac=Math.max(0,Math.min(1,(now()-start)/(tg-start))); days=Math.max(0,Math.ceil((tg-now())/864e5)); }
+  return {tier:tier.n,to:tier.to,target:tg,days,frac};
+}
 function caminoSvg(){
-  const slots=36; const items=[...ITEMS.values()].filter(i=>i.lv<=TIERS.find(t=>t.n===(S.settings.targetTier||'N4')).to||true);
-  const guru=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>=5).length, burned=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>=9).length;
-  const total=Math.max(1,[...ITEMS.values()].filter(i=>i.lv<=53).length);
+  // El sendero llega hasta el nivel objetivo de tu plan de estudio y su marca de «hoy» sigue la fecha que fijaste
+  const slots=36; const plan=planInfo();
+  const scope=[...ITEMS.values()].filter(i=>i.lv<=plan.to);
+  const guru=scope.filter(i=>{ const r=S.items[keyOf(i)]; return r&&r.s>=5; }).length, burned=Object.entries(S.items).filter(([k,r])=>ITEMS.has(k)&&r.s>=9&&ITEMS.get(k).lv<=plan.to).length;
+  const total=Math.max(1,scope.length);
   const filled=guru>0?Math.max(1,Math.min(slots,Math.floor(slots*guru/total))):0;
+  const expected=plan.frac==null?null:Math.max(0,Math.min(slots-1,Math.round(slots*plan.frac)));
   const W=360,H=250; const pts=[]; for(let i=0;i<slots;i++){ const t=i/(slots-1); const x=34+t*290+Math.sin(t*Math.PI*3)*30*(1-t*0.25); const y=218-t*158+Math.cos(t*Math.PI*2.4)*16; pts.push([x,y]); }
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tu camino: ${filled} de ${slots} tramos" class="camino-svg">`;
   s+=`<path d="M0 232 Q90 214 180 224 T360 214 L360 250 L0 250Z" fill="var(--accent-soft)" opacity=".55"/>`;
@@ -25,9 +36,11 @@ function caminoSvg(){
   pts.forEach((p,i)=>{ const done=i<filled; const rx=4.6+(i%3)*0.8+i/slots*1.6, ry=rx*0.58; const last=done&&i===filled-1;
     s+=`<ellipse cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${done?'var(--accent)':'none'}" stroke="${done?'none':'var(--line)'}" stroke-width="1.2" ${done?(last?'':'opacity=".78"'):'stroke-dasharray="2 3"'}/>`;
     if(last) s+=`<ellipse cx="${p[0].toFixed(1)}" cy="${(p[1]-1.5).toFixed(1)}" rx="${(rx+4).toFixed(1)}" ry="${(ry+3).toFixed(1)}" fill="none" stroke="var(--accent)" stroke-width="1.2" opacity=".5"/>`; });
+  // farol: dónde deberías ir hoy según tu plan
+  if (expected!=null){ const [fx,fy]=pts[Math.max(0,Math.min(slots-1,expected))]; s+=`<g stroke="var(--fg)" stroke-width="1.4" stroke-linecap="round" opacity=".8"><path d="M${fx.toFixed(1)} ${(fy-6).toFixed(1)} V${(fy-26).toFixed(1)}" fill="none"/><path d="M${fx.toFixed(1)} ${(fy-26).toFixed(1)} l11 4.5 -11 4.5z" fill="var(--warn)" stroke="none"/></g>`; }
   // torii al final del sendero
   const [tx,ty]=pts[slots-1]; s+=`<g transform="translate(${(tx+12).toFixed(1)} ${(ty-20).toFixed(1)})" stroke="var(--fg)" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".75"><path d="M-12 8 V30 M12 8 V30 M-16 8 H16 M-13 14 H13 M-18 4 Q0 10 18 4"/></g>`;
-  s+=`</svg>`; return {svg:s,filled,slots,guru,burned,total};
+  s+=`</svg>`; return {svg:s,filled,slots,guru,burned,total,plan,expected};
 }
 function hankoEl(size){ const k=S.settings.hanko||'道'; return h('button',{class:'hanko',style:`--hs:${size||64}px`,title:'Elige tu sello','aria-label':'Tu sello',onclick:pickHanko},k); }
 function pickHanko(){
@@ -49,6 +62,14 @@ function cuadernoItems(){
   Object.entries(S.levelPass||{}).forEach(([lv,sc])=>{ ev.push([ (ex.find(e=>e.kind==='level'&&e.level==+lv)||{}).date||0, `Nivel ${lv} superado`]); });
   return ev.filter(e=>e[0]).sort((a,b)=>b[0]-a[0]).slice(0,8);
 }
+// Una línea sobre tu plan: fecha objetivo y si vas por delante, al día o por detrás (sin presión)
+function planLine(c){
+  const p=c.plan; if(!p.target) return h('div',{class:'small muted',style:'text-align:center'},h('a',{href:'#ajustes',onclick:e=>{e.preventDefault();go('ajustes');}},'Fija una fecha objetivo'),' para ver aquí tu plan.');
+  const fecha=fmtDate(p.target);
+  const diff=c.expected==null?0:c.expected-c.filled;
+  const msg=p.days===0?`La fecha objetivo (${fecha}) ya llegó.`:diff>1?`Plan: ${p.tier} el ${fecha} (quedan ${p.days} días). Vas ${diff} tramos por detrás del farol: sin prisa, ajusta la fecha en Ajustes si lo necesitas.`:diff<-1?`Plan: ${p.tier} el ${fecha} (quedan ${p.days} días). Vas ${-diff} tramos por delante del farol.`:`Plan: ${p.tier} el ${fecha} (quedan ${p.days} días). Vas al día con tu plan.`;
+  return h('div',{class:'small muted',style:'text-align:center;margin-top:4px'},msg);
+}
 function caminoSection(){
   const w=weekInfo(); const c=caminoSvg();
   const name=S.settings.name?S.settings.name:'';
@@ -57,7 +78,7 @@ function caminoSection(){
   const goalSel=h('select',{'aria-label':'Días por semana',onchange:e=>{ S.settings.weekGoal=+e.target.value; S.settingsAt=now(); save(); render(); }}, [2,3,4,5,6,7].map(n=>h('option',{value:n,selected:n===w.goal},`${n} días por semana`)));
   const cuaderno=cuadernoItems();
   return h('div',{class:'stack'},
-    h('div',{class:'card camino'}, head, h('div',{class:'camino-art',html:c.svg}), h('div',{class:'small muted',style:'text-align:center'},`${c.filled} de ${c.slots} tramos del camino hasta el final de N2`)),
+    h('div',{class:'card camino'}, head, h('div',{class:'camino-art',html:c.svg}), h('div',{class:'small muted',style:'text-align:center'},`${c.filled} de ${c.slots} tramos del camino hasta el final de ${c.plan.tier}`), planLine(c)),
     h('div',{class:'card stack'}, h('div',{class:'row between'}, h('h3',{},'Esta semana'), goalSel), dots, h('div',{class:'small muted'}, w.ok?`Compromiso cumplido: ${w.done} de ${w.goal} días.`:`Llevas ${w.done} de ${w.goal} días. Cada día cuenta, a tu ritmo.`+(w.met?` · ${w.met} ${plural(w.met,'semana cumplida','semanas cumplidas')}`:''))),
     cuaderno.length?h('div',{class:'card stack'}, h('h3',{},'Cuaderno'), h('div',{class:'cuaderno'}, cuaderno.map(([d,t])=>h('div',{class:'cq'}, h('span',{class:'small muted num'},fmtDate(d)), h('span',{},t))))):null,
     (S.placements||[]).length?h('div',{class:'card stack'}, h('h3',{},'Tu último test de nivel'), ...Object.entries(PL_SKILLS).filter(([k])=>S.placements.slice(-1)[0].theta[k]!=null).map(([k,m])=>plBar(m.t,S.placements.slice(-1)[0].theta[k]))):null);
