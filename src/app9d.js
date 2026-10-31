@@ -12,7 +12,8 @@ function loadStrokes(){
   });
 }
 // Kanji para practicar: primero los que más tiempo llevan sin escribirse o con más fallos; solo los que ya has empezado a aprender
-function handPool(n=8){
+const HW_SESSION=3; // kanji por sesión: poco y a diario
+function handPool(n=HW_SESSION){
   const hand=S.hand||{};
   let ks=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1);
   let fallback=false;
@@ -43,7 +44,7 @@ function handCanvas(onChange){
 function startHandwriting(){
   loadStrokes().then(()=>{
     if (STROKE_STATE!==2){ toast('No se pudieron cargar los trazos (¿sin conexión?)'); return; }
-    const pool=handPool(8);
+    const pool=handPool();
     PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),total:pool.list.length,fallback:pool.fallback}; renderPractica();
   });
 }
