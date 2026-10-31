@@ -130,11 +130,11 @@ function sessionSummary(s){
   };
   return h('div',{class:'card'}, h('h3',{}, s.mode==='lesson'?'Lo aprendido en esta lección':'Lo repasado en esta sesión'), h('div',{class:'small muted',style:'margin:2px 0 8px'}, nf?`${nf} ${plural(nf,'fallado')} · ${rs.length-nf} ${plural(rs.length-nf,'acertado')}`:'Todo acertado'), h('div',{class:'sess'}, rs.map(card)));
 }
-// Fila de la cola de repasos: solo el ítem y su etapa; sin lectura ni significado para no adelantar la respuesta
+// Fila de la cola de repasos: solo el significado en español y la etapa, para ir recordando el japonés desde la propia lista
 function itemRow(it){
   const rec=S.items[keyOf(it)]||{s:0};
-  const main = it.kind==='k'?it.k : it.kind==='v'?it.w : it.t;
-  return h('div',{class:'item'}, h('span',{class:'pill '+it.kind}, it.kind==='k'?'kanji':it.kind==='v'?'vocab':'gram.'), h('div',{style:'min-width:0;flex:1'}, h('div',{class:'t jp'},main)), h('span',{class:'badge soft'},STAGE_NAMES[rec.s]||'Nuevo'));
+  const main = it.kind==='g' ? String(it.e||it.t).split(/[.:]/)[0].slice(0,70) : (it.m||[]).slice(0,2).join(', ');
+  return h('div',{class:'item'}, h('span',{class:'pill '+it.kind}, it.kind==='k'?'kanji':it.kind==='v'?'vocab':'gram.'), h('div',{style:'min-width:0;flex:1'}, h('div',{class:'t'},main)), h('span',{class:'badge soft'},STAGE_NAMES[rec.s]||'Nuevo'));
 }
 
 // ===================== Tarjeta de estudio =====================
