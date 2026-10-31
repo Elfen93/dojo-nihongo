@@ -71,5 +71,7 @@ document.addEventListener('keydown',e=>{
   else if (e.key==='ArrowRight'){ e.preventDefault(); if(LESSON.i<LESSON.batch.length-1){ LESSON.i++; renderLesson(); window.scrollTo(0,0); } else { const b=LESSON.batch, t=LESSON.track; LESSON=null; startSession('lesson',b,{track:t}); } }
 });
 boot();
+setTimeout(checkVersion,2500);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkVersion(); });
 // Descarga en segundo plano (sin ejecutar) las fichas ampliadas y el furigana, para que queden en caché
 (window.requestIdleCallback||setTimeout)(()=>{ try{ fetch('ext.js').catch(()=>{}); }catch(e){} }, {timeout:6000});

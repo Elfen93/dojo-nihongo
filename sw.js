@@ -1,4 +1,4 @@
-const CACHE='dojo-v9';
+const CACHE='dojo-v10';
 const ASSETS=['./','./index.html','./config.js','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png','./icons/garden.svg'];
 // Librería de la cuenta: se guarda en caché para poder abrir la app sin conexión
 const CDN=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js'];
@@ -12,6 +12,7 @@ self.addEventListener('fetch',e=>{
     return;
   }
   if (u.origin!==location.origin) return;
+  if (u.pathname.endsWith('/version.json')) return; // siempre a la red: sirve para detectar versiones nuevas
   // Caché primero y actualización por detrás: la app abre al instante y la versión nueva se ve en la siguiente apertura.
   e.respondWith(caches.open(CACHE).then(async c=>{
     const cached=await c.match(e.request);

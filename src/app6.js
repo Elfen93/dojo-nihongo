@@ -193,6 +193,10 @@ async function updateApp(){
   try{ if('serviceWorker' in navigator){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); } if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){ console.warn('update',e); }
   location.reload();
 }
+// Comprueba si hay una versión publicada distinta de la que está abierta (sin depender del caché del navegador)
+async function checkVersion(){
+  try{ const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const j=await r.json(); if(j&&j.build&&j.build!==APP_BUILD) showUpdateBar(); }catch(e){}
+}
 function showUpdateBar(){
   if ($('#updatebar')) return;
   const bar=h('div',{id:'updatebar',class:'updatebar'}, h('span',{},'Hay una versión nueva.'), h('button',{class:'btn sm primary',onclick:updateApp},'Actualizar'), h('button',{class:'btn sm ghost','aria-label':'Cerrar',onclick:()=>bar.remove()},'✕'));

@@ -25,4 +25,6 @@ if os.path.exists('data/strokes.json'):
 app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js','app9b.js','app9c.js','app9d.js','app9.js'])
 out=open('src/template.html').read().replace('/*__DATA__*/',data).replace('/*__APP__*/',app)
 open('index.html','w').write(out)
+import re as _re
+open('version.json','w').write(json.dumps({'build':_re.search(r'const APP_BUILD="([^"]+)"',data).group(1)}))
 print('index.html', len(out.encode()), 'bytes')
