@@ -169,6 +169,7 @@ function renderExam(){
   if (q.passage){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].pid!==q.pid}, h('summary',{},'Texto'), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2;white-space:pre-wrap'}, q.passage))); }
   if (q.reading){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].reading!==q.reading}, h('summary',{}, q.reading.title), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2'}, plainReading(q.reading)))); }
   card.append(h('div',{class:'small muted'}, q.prompt));
+  if (q.dialog){ const play=()=>speakSeq(q.dialog); card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:play},'音 Escuchar'))); if(!q._played){ q._played=true; setTimeout(play,400); } }
   if (q.audio){ card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:()=>speak(q.audio)},'音 Escuchar'))); if(!q._played){ q._played=true; setTimeout(()=>speak(q.audio),400); } }
   if (q.type==='order'){ const o=q.o; const parts=o.parts.map((p,i)=> i===q.star? h('span',{class:'slot star'},'★') : h('span',{class:'slot'},'＿')); card.append(h('div',{class:'exam-q',lang:'ja'}, o.pre, ...parts, o.post)); }
   else if (q.text){ const t=q.under? h('span',{html:esc(q.text).replace(esc(q.under),'<u>'+esc(q.under)+'</u>')}) : q.text; card.append(h('div',{class:'exam-q',lang:'ja'}, t)); }
@@ -196,7 +197,7 @@ function renderExam(){
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok, unknown){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, unknown:!!unknown, topic:q.topic, why:q.why, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.dynamic){ plAnswer(E,q,ok,unknown); const nq=plNext(E); if(!nq){ finishPlacement(E); return; } E.qs.push(nq); renderExam(); return; } if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok, unknown){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, unknown:!!unknown, topic:q.topic, why:q.why, text:q.reviewText||q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.dynamic){ plAnswer(E,q,ok,unknown); const nq=plNext(E); if(!nq){ finishPlacement(E); return; } E.qs.push(nq); renderExam(); return; } if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
   const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS
