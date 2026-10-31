@@ -99,33 +99,40 @@ function mutateReading(r){
   return [...out];
 }
 const usedBank=new Set();
-function bankSentence(v){ const cands=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=S.level&&x.v.includes(v.w)&&x.j.includes(v.w)); const fresh=cands.filter(x=>!usedBank.has(x.j)); const c=rnd(fresh.length?fresh:cands); if(c) usedBank.add(c.j); return c; }
+let EXAM_CAP=null; const examCap=()=>EXAM_CAP||S.level; // en un simulacro manda el nivel del simulacro, no tu nivel
+function bankSentence(v){ const cands=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=examCap()&&x.v.includes(v.w)&&x.j.includes(v.w)); const fresh=cands.filter(x=>!usedBank.has(x.j)); const c=rnd(fresh.length?fresh:cands); if(c) usedBank.add(c.j); return c; }
 function sentFor(v){ const b=bankSentence(v); if(b) return {text:b.j,es:b.es,fresh:true}; if(v.ex && v.ex.includes(v.w)) return {text:v.ex,es:v.es,fresh:false}; return null; }
-function qKanjiReading(v){ const st=sentFor(v); if(!st) return null; const ds=uniq([...mutateReading(v.r), ...pick(VOCAB_ALL.filter(x=>x.r!==v.r&&Math.abs(x.r.length-v.r.length)<=1).map(x=>x.r),3)]).filter(x=>x!==v.r).slice(0,3); if(ds.length<3) return null; return {sec:'漢字読み', type:'mc', text:st.text, under:v.w, es:st.es, fresh:st.fresh, prompt:'¿Cómo se lee la palabra subrayada?', options:shuffle([v.r,...ds]), answer:v.r, key:keyOf(v)}; }
+function qKanjiReading(v){ if(!hasKanji(v.w)) return null; const st=sentFor(v); if(!st) return null; const ds=uniq([...mutateReading(v.r), ...pick(VOCAB_ALL.filter(x=>x.r!==v.r&&Math.abs(x.r.length-v.r.length)<=1).map(x=>x.r),3)]).filter(x=>x!==v.r).slice(0,3); if(ds.length<3) return null; return {sec:'漢字読み', type:'mc', text:st.text, under:v.w, es:st.es, fresh:st.fresh, prompt:'¿Cómo se lee la palabra subrayada?', options:shuffle([v.r,...ds]), answer:v.r, key:keyOf(v)}; }
 function qOrthography(v){ const ds=kanjiDistractors(v); if(ds.length<3) return null; const st=sentFor(v); if(!st) return null; return {sec:'表記', type:'mc', text:st.text.replace(v.w,v.r), under:v.r, es:st.es, fresh:st.fresh, prompt:'¿Cómo se escribe la palabra subrayada?', options:shuffle([v.w,...ds]), answer:v.w, key:keyOf(v)}; }
 function qContext(v, pool){ const same=pool.filter(x=>x.kind==='v'&&x!==v&&x.p===v.p&&x.w!==v.w); const ds=pick(same.length>=3?same:VOCAB_ALL.filter(x=>x.w!==v.w&&x.p===v.p), 3).map(x=>x.w); if(ds.length<3) return null; const st=sentFor(v); if(!st) return null; return {sec:'文脈規定', type:'mc', text:st.text.replace(v.w,'（　　）'), es:st.es, fresh:st.fresh, prompt:'Elige la palabra que encaja en el hueco', options:shuffle([v.w,...ds]), answer:v.w, key:keyOf(v)}; }
 function qGrammar(g, pool){ const bank=(typeof EXAM_GRAMMAR!=='undefined'?EXAM_GRAMMAR:[]).find(x=>x.g===g.id); const ex=bank?{j:bank.j,s:bank.s,h:bank.h}:rnd(g.ex); const c=parseCloze(ex.j); const others=pool.filter(x=>x.kind==='g'&&x!==g).flatMap(x=>x.ex.map(e=>parseCloze(e.j).answers[0])).filter(a=>a&&a!==c.answers[0]); const near=others.filter(a=>Math.abs(a.length-c.answers[0].length)<=3); const ds=uniq(pick(near.length>=3?near:others,6)).slice(0,3); if(ds.length<3) return null; return {sec:'文法形式', type:'mc', text:c.pre+'（　　）'+c.post, es:ex.s, prompt:'Elige la forma correcta', options:shuffle([c.answers[0],...ds]), answer:c.answers[0], key:keyOf(g)}; }
 function qOrder(o){ const star=1+Math.floor(Math.random()*2); return {sec:'並び替え', type:'order', o, star, prompt:'¿Qué parte va en la posición ★?', options:shuffle(o.parts), answer:o.parts[star], es:o.es}; }
 function qProduction(v){ return {sec:'producción', type:'typed', prompt:'Escribe en japonés (kana):', es:v.m.join(', ')+(v.p?' · '+posLabel(v.p):''), check:a=>matchKana(a,[v.r])||!!vocabSynonym(v,a), answer:v.r+(hasKanji(v.w)?'（'+v.w+'）':''), key:keyOf(v)}; }
-function qListening(pool, usedLi){ const all=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=S.level&&x.es&&!usedLi.has(x.j)); const bank=all.filter(x=>!usedBank.has(x.j)).length>=4?all.filter(x=>!usedBank.has(x.j)):all; if(bank.length<4) return null; const s=rnd(bank); usedLi.add(s.j); const ds=pick(bank.filter(x=>x!==s&&x.es!==s.es),3).map(x=>x.es); if(ds.length<3) return null; return {sec:'聴解', type:'mc', audio:s.j, text:'', prompt:'Escucha la frase y elige lo que significa', options:shuffle([s.es,...ds]), answer:s.es, key:null}; }
+function qListening(pool, usedLi){ const all=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=examCap()&&x.es&&!usedLi.has(x.j)); const bank=all.filter(x=>!usedBank.has(x.j)).length>=4?all.filter(x=>!usedBank.has(x.j)):all; if(bank.length<4) return null; const s=rnd(bank); usedLi.add(s.j); const ds=pick(bank.filter(x=>x!==s&&x.es!==s.es),3).map(x=>x.es); if(ds.length<3) return null; return {sec:'聴解', type:'mc', audio:s.j, text:'', prompt:'Escucha la frase y elige lo que significa', options:shuffle([s.es,...ds]), answer:s.es, key:null}; }
 function qReading(r){ return r.q.map((q,i)=>({sec:'読解', type:'mc', reading:r, text:q.q, prompt:'Lee el texto y responde', options:q.o.slice(), answer:q.o[q.a], key:null})); }
-function buildExam(kind){
+function buildExam(kind,tierName){
+  const tierObj=kind==='mock'?(TIERS.find(t=>t.n===tierName)||TIERS[0]):null; EXAM_CAP=tierObj?tierObj.to:null;
+  try{ return buildExam0(kind,tierObj); } finally { EXAM_CAP=null; }
+}
+function buildExam0(kind,tierObj){
   let pool, n, title, minutes;
   if (kind==='level'){ pool=itemsOfLevel(S.level); n={kr:4,or:3,ctx:3,gr:5,ord:2,prod:5,rd:0,li:2}; title=`Examen de nivel ${S.level}`; minutes=20; }
   else if (kind==='weekly'){ pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:6,or:4,ctx:5,gr:6,ord:3,prod:6,rd:1,li:3}; title='Examen semanal'; minutes=30; }
-  else { pool=learnedKeys().map(k=>ITEMS.get(k)); n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:2,li:6}; title='Simulacro JLPT'; minutes=60; }
+  else { // simulacro: todo el temario del nivel (y algo de los anteriores), sin depender de tu progreso
+    const main=[...ITEMS.values()].filter(i=>i.lv>=tierObj.from&&i.lv<=tierObj.to), low=[...ITEMS.values()].filter(i=>i.lv<tierObj.from);
+    pool=[...main,...shuffle(low).slice(0,Math.round(main.length/3))]; n={kr:12,or:8,ctx:10,gr:14,ord:5,prod:8,rd:tierObj.n==='N5'?1:2,li:6}; title=`Simulacro JLPT ${tierObj.n}`; minutes={N5:45,N4:55,N3:65,N2:75}[tierObj.n]||60; }
   // ítems más débiles primero, mezcla con aleatorios
-  const weak=pool.slice().sort((a,b)=>leechScore(S.items[keyOf(b)]||{})-leechScore(S.items[keyOf(a)]||{}));
-  const hasBank=v=>(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).some(x=>x.lv<=S.level&&x.v.includes(v.w));
+  const weak=kind==='mock'?shuffle(pool):pool.slice().sort((a,b)=>leechScore(S.items[keyOf(b)]||{})-leechScore(S.items[keyOf(a)]||{}));
+  const hasBank=v=>(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).some(x=>x.lv<=examCap()&&x.v.includes(v.w));
   let vs=uniq([...weak.filter(i=>i.kind==='v'&&i.ex).slice(0,10), ...shuffle(pool.filter(i=>i.kind==='v'&&i.ex))]);
   vs=[...vs.filter(hasBank), ...vs.filter(v=>!hasBank(v))];
   const gs=uniq([...weak.filter(i=>i.kind==='g').slice(0,6), ...shuffle(pool.filter(i=>i.kind==='g'))]);
   const qs=[]; let vi=0;
   const take=(fn,count,arr)=>{ let c=0,tries=0; while(c<count&&tries<arr.length*2&&arr.length){ const it=arr[(vi++)%arr.length]; tries++; const q=fn(it); if(q&&!qs.some(x=>x.key===q.key&&x.sec===q.sec)){ qs.push(q); c++; } } };
   take(qKanjiReading,n.kr,vs); take(qOrthography,n.or,vs.filter(v=>hasKanji(v.w))); take(v=>qContext(v,pool),n.ctx,vs); take(g=>qGrammar(g,pool),n.gr,gs);
-  const maxLv=Math.max(S.level,2); let ords=ORDER_QS.filter(o=>o.lv<=maxLv && (kind!=='level'||o.lv===S.level)); if(!ords.length) ords=ORDER_QS.filter(o=>o.lv<=maxLv); pick(ords,n.ord).forEach(o=>qs.push(qOrder(o)));
+  const maxLv=kind==='mock'?tierObj.to:Math.max(S.level,2); let ords=ORDER_QS.filter(o=>o.lv<=maxLv && (kind==='mock'?o.lv>=tierObj.from:(kind!=='level'||o.lv===S.level))); if(!ords.length) ords=ORDER_QS.filter(o=>o.lv<=maxLv); pick(ords,n.ord).forEach(o=>qs.push(qOrder(o)));
   take(qProduction,n.prod,shuffle(vs));
-  if (n.rd){ const rs=READINGS.filter(r=>r.lv<=S.level); pick(rs,n.rd).forEach(r=>qs.push(...qReading(r))); }
+  if (n.rd){ const rs=READINGS.filter(r=>kind==='mock'?(r.lv>=tierObj.from&&r.lv<=tierObj.to):r.lv<=S.level); pick(rs,n.rd).forEach(r=>qs.push(...qReading(r))); }
   const usedLi=new Set(); for (let i=0;i<(n.li||0);i++){ const q=qListening(pool, usedLi); if(q) qs.push(q); }
   // orden por secciones como el JLPT
   const secOrder=['漢字読み','表記','文脈規定','文法形式','並び替え','読解','聴解','producción']; qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
@@ -148,7 +155,7 @@ async function startFreshExam(statusEl){
     renderExam();
   }catch(e){ if(statusEl) statusEl.textContent='No se pudo generar: '+(e.message||e); toast('Error al generar el examen'); }
 }
-function startExam(kind){ const ex=buildExam(kind); if(ex.qs.length<8){ toast('Aún no hay suficiente material aprendido para este examen.'); return; } EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
+function startExam(kind,tier){ const ex=buildExam(kind,tier); if(ex.qs.length<8){ toast(kind==='mock'?'No hay preguntas suficientes para este simulacro.':'Aún no hay suficiente material aprendido para este examen.'); return; } ex.tierName=tier||null; EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
 const fmtTimer = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/6e4), s=Math.floor(ms%6e4/1000); return m+':'+String(s).padStart(2,'0'); };
 function examKeysOff(E){ if(E&&E._kh){ document.removeEventListener('keydown',E._kh); E._kh=null; } }
 function renderExam(){
@@ -194,7 +201,7 @@ function finishExam(){
   const secs={}; E.answers.forEach(a=>{ const s=secs[a.sec]=secs[a.sec]||{ok:0,n:0}; s.n++; if(a.ok) s.ok++; });
   // consecuencias: los fallos bajan de nivel SRS y vuelven ya
   let penal=0; E.answers.filter(a=>!a.ok&&a.key&&S.items[a.key]&&S.items[a.key].s>0&&S.items[a.key].s<9).forEach(a=>{ const r=S.items[a.key]; r.s=Math.max(1,r.s-1); r.due=now(); r.w=(r.w||0)+1; r.ls=now(); penal++; });
-  const rec={kind:E.kind,date:now(),score:pct,ok,total,secs,level:S.level,minutes:Math.round((now()-E.start)/6e4)}; S.exams.push(rec); bump('ex');
+  const rec={kind:E.kind,date:now(),score:pct,ok,total,secs,level:E.kind==='mock'&&E.tierName?E.tierName:S.level,minutes:Math.round((now()-E.start)/6e4)}; S.exams.push(rec); bump('ex');
   let passed=false, msg='';
   if (E.kind==='weekly'){ S.weekly.last=now(); msg = pct>=80?'Buen examen semanal. Mantén el ritmo.': pct>=60?'Aprobado justo. Los fallos ya están de vuelta en tu cola de repasos.':'Por debajo del 60 %. Esta semana toca repasar más y avanzar menos: los fallos vuelven a la cola ahora.'; }
   if (E.kind==='level'){ passed=pct>=80; if(passed){ S.levelPass[S.level]=pct; if(S.level<MAX_LEVEL) S.level++; msg=`Nivel superado. Bienvenido al nivel ${S.level}.`; } else msg='Necesitas un 80 % para subir de nivel. Los fallos ya están en tu cola: repásalos y repite el examen mañana.'; }
