@@ -133,7 +133,7 @@ function sessionSummary(s){
 // Fila de la cola de repasos: solo el significado en español y la etapa, para ir recordando el japonés desde la propia lista
 function itemRow(it){
   const rec=S.items[keyOf(it)]||{s:0};
-  const main = it.kind==='g' ? String(it.e||it.t).split(/[.:]/)[0].slice(0,70) : (it.m||[]).slice(0,2).join(', ');
+  const main = it.kind==='g' ? (String(it.e||'').replace(/[«»]/g,'').split(/[(:.]/)[0].trim().replace(/[\u3040-\u30ff\u4e00-\u9fff].*$/,'').trim().slice(0,60)||'Punto de gramática') : (it.m||[]).slice(0,2).join(', ');
   return h('div',{class:'item'}, h('span',{class:'pill '+it.kind}, it.kind==='k'?'kanji':it.kind==='v'?'vocab':'gram.'), h('div',{style:'min-width:0;flex:1'}, h('div',{class:'t'},main)), h('span',{class:'badge soft'},STAGE_NAMES[rec.s]||'Nuevo'));
 }
 
