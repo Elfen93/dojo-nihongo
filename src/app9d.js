@@ -11,15 +11,25 @@ function loadStrokes(){
     document.head.append(s);
   });
 }
-// Kanji para practicar: primero los que más tiempo llevan sin escribirse o con más fallos; solo los que ya has empezado a aprender
 const HW_SESSION=3; // kanji por sesión: poco y a diario
+// Repasos de caligrafía: cada kanji tiene su etapa (0 a 5) y su fecha; acertar la sube y fallar la baja
+const HW_DAYS=[1,3,7,14,30,60];
+function handLearned(){ return [...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1); }
+// pendientes: kanji que ya has escrito y toca repasar, y kanji aprendidos que aún no has escrito
+function handStatus(){
+  const hand=S.hand||{}, t=now(); const learned=handLearned();
+  const due=learned.filter(i=>hand[i.k]&&(hand[i.k].due||0)<=t).sort((a,b)=>(hand[a.k].due||0)-(hand[b.k].due||0));
+  const fresh=learned.filter(i=>!hand[i.k]).sort((a,b)=>(S.items['k|'+b.k].ls||0)-(S.items['k|'+a.k].ls||0)||a.lv-b.lv);
+  return {due,fresh,learned};
+}
 function handPool(n=HW_SESSION){
-  const hand=S.hand||{};
-  let ks=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1);
-  let fallback=false;
-  if (!ks.length){ ks=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&i.lv<=3); fallback=true; }
-  ks.sort((a,b)=>{ const ha=hand[a.k]||{}, hb=hand[b.k]||{}; const sa=(ha.last||0)-((ha.n||0)-(ha.ok||0))*864e5, sb=(hb.last||0)-((hb.n||0)-(hb.ok||0))*864e5; return sa-sb; });
-  return {list:ks.slice(0,n).map(i=>i.k), fallback};
+  const st=handStatus(); const list=[...st.due.map(i=>i.k),...st.fresh.map(i=>i.k)].slice(0,n);
+  if (list.length) return {list,fallback:false,extra:false};
+  // sin nada pendiente: práctica extra con los que más tiempo llevan sin escribirse
+  const hand=S.hand||{}; const ex=st.learned.sort((a,b)=>((hand[a.k]||{}).last||0)-((hand[b.k]||{}).last||0)).slice(0,n).map(i=>i.k);
+  if (ex.length) return {list:ex,fallback:false,extra:true};
+  const n5=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&i.lv<=3).slice(0,n).map(i=>i.k);
+  return {list:n5,fallback:true,extra:false};
 }
 function strokeSvg(ch,opts={}){
   const st=STROKES[ch]; if(!st) return '';
@@ -45,7 +55,7 @@ function startHandwriting(){
   loadStrokes().then(()=>{
     if (STROKE_STATE!==2){ toast('No se pudieron cargar los trazos (¿sin conexión?)'); return; }
     const pool=handPool();
-    PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),total:pool.list.length,fallback:pool.fallback}; renderPractica();
+    PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),total:pool.list.length,fallback:pool.fallback,extra:pool.extra}; renderPractica();
   });
 }
 function renderEscritura(){
@@ -84,7 +94,10 @@ function renderEscritura(){
     }
   }
   function grade(ok){
-    S.hand=S.hand||{}; const r=S.hand[ch]||{n:0,ok:0,last:0}; r.n++; if(ok) r.ok++; r.last=now(); S.hand[ch]=r; S.settingsAt=now(); bump('hw');
+    S.hand=S.hand||{}; const r=S.hand[ch]||{n:0,ok:0,last:0,st:0}; r.n++; if(ok) r.ok++; r.last=now();
+    // solo el primer intento de la sesión cuenta para el calendario; las repeticiones después de un fallo no lo cambian
+    if (!P.seen.has(ch)){ if(ok){ r.st=(r.st||0)+1; r.due=now()+HW_DAYS[Math.min(r.st-1,HW_DAYS.length-1)]*864e5; } else { r.st=Math.max(0,(r.st||0)-2); r.due=now()+0.5*864e5; } }
+    S.hand[ch]=r; S.settingsAt=now(); bump('hw');
     const first=!P.seen.has(ch); P.seen.add(ch);
     if(ok){ if(first) P.ok++; }
     else { P.again.push(ch); P.queue.splice(Math.min(P.queue.length,P.i+3+Math.floor(Math.random()*2)),0,ch); } // vuelve a salir tras 2 o 3 kanji más, hasta que lo escribas bien
@@ -93,4 +106,18 @@ function renderEscritura(){
   el.append(h('div',{class:'card stack',style:'align-items:center'}, info, h('div',{style:'width:100%;display:flex;justify-content:center'},box), status, actions));
   el.append(h('div',{class:'small muted',style:'text-align:center;margin-top:10px'},'Trazos: KanjiVG (CC BY-SA 3.0)'));
   refresh();
+}
+
+// Resumen para la tarjeta de Práctica y la pantalla Hoy (no necesita los datos de trazos: usa el catálogo de kanji)
+function hwCounts(){
+  const hand=S.hand||{}, t=now();
+  const learned=[...ITEMS.values()].filter(i=>i.kind==='k'&&S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1);
+  const due=learned.filter(i=>hand[i.k]&&(hand[i.k].due||0)<=t).length, fresh=learned.filter(i=>!hand[i.k]).length;
+  return {due,fresh,total:learned.length};
+}
+function hwSummary(){
+  const c=hwCounts();
+  if (!c.total) return 'Con los kanji que ya has empezado a aprender';
+  if (c.due) return `${c.due} ${plural(c.due,'repaso pendiente','repasos pendientes')}`+(c.fresh?` · ${c.fresh} sin estrenar`:'');
+  return c.fresh?`Nada que repasar · ${c.fresh} ${plural(c.fresh,'kanji sin estrenar','kanji sin estrenar')}`:'Al día: nada pendiente';
 }

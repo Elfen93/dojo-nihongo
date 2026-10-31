@@ -110,7 +110,7 @@ function mergeRemote(remote){
   for (const [k,v] of Object.entries(L.readings||{})) if(v&&fresh(v.date)&&(!M.readings[k]||(v.date||0)>(M.readings[k].date||0))) M.readings[k]=v;
   M.listen={}; for (const [k,v] of Object.entries(R.listen||{})) if(v&&fresh(v.date)) M.listen[k]=v; for (const [k,v] of Object.entries(L.listen||{})) if(v&&fresh(v.date)&&(!M.listen[k]||(v.date||0)>(M.listen[k].date||0))) M.listen[k]=v;
   const hcut=Math.max(L.handResetAt||0,R.handResetAt||0); M.handResetAt=hcut;
-  M.hand={}; for (const src of [R.hand||{},L.hand||{}]) for (const [k,v] of Object.entries(src)){ if((v.last||0)<hcut) continue; const o=M.hand[k]; M.hand[k]=o?{n:Math.max(o.n||0,v.n||0),ok:Math.max(o.ok||0,v.ok||0),last:Math.max(o.last||0,v.last||0)}:{...v}; }
+  M.hand={}; for (const src of [R.hand||{},L.hand||{}]) for (const [k,v] of Object.entries(src)){ if((v.last||0)<hcut) continue; const o=M.hand[k]; M.hand[k]=o?{...((v.last||0)>(o.last||0)?v:o),n:Math.max(o.n||0,v.n||0),ok:Math.max(o.ok||0,v.ok||0),last:Math.max(o.last||0,v.last||0)}:{...v}; }
   M.wrDel=uniq([...(L.wrDel||[]),...(R.wrDel||[])]).slice(-200);
   const wr={}; [...(L.writings||[]),...(R.writings||[])].filter(w=>w&&fresh(w.date)&&!M.wrDel.includes(w.date)).forEach(w=>{ wr[w.date]=w; }); M.writings=Object.values(wr).sort((a,b)=>a.date-b.date).slice(-50);
   { const pl={}; [...(L.placements||[]),...(R.placements||[])].filter(x=>x&&fresh(x.date)).forEach(x=>{ pl[x.date]=x; }); M.placements=Object.values(pl).sort((a,b)=>a.date-b.date).slice(-10); }
