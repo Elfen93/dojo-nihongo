@@ -130,10 +130,12 @@ function sessionSummary(s){
   };
   return h('div',{class:'card'}, h('h3',{}, s.mode==='lesson'?'Lo aprendido en esta lección':'Lo repasado en esta sesión'), h('div',{class:'small muted',style:'margin:2px 0 8px'}, nf?`${nf} ${plural(nf,'fallado')} · ${rs.length-nf} ${plural(rs.length-nf,'acertado')}`:'Todo acertado'), h('div',{class:'sess'}, rs.map(card)));
 }
+// La idea del punto en español (la función, no la forma): sirve de pista sin regalar la respuesta
+function grammarGist(it){ return String(it.e||'').replace(/[«»]/g,'').split(/[(:.]/)[0].trim().replace(/[\u3040-\u30ff\u4e00-\u9fff].*$/,'').trim().slice(0,70)||'Punto de gramática'; }
 // Fila de la cola de repasos: solo el significado en español y la etapa, para ir recordando el japonés desde la propia lista
 function itemRow(it){
   const rec=S.items[keyOf(it)]||{s:0};
-  const main = it.kind==='g' ? (String(it.e||'').replace(/[«»]/g,'').split(/[(:.]/)[0].trim().replace(/[\u3040-\u30ff\u4e00-\u9fff].*$/,'').trim().slice(0,60)||'Punto de gramática') : (it.m||[]).slice(0,2).join(', ');
+  const main = it.kind==='g' ? grammarGist(it) : (it.m||[]).slice(0,2).join(', ');
   return h('div',{class:'item'}, h('span',{class:'pill '+it.kind}, it.kind==='k'?'kanji':it.kind==='v'?'vocab':'gram.'), h('div',{style:'min-width:0;flex:1'}, h('div',{class:'t'},main)), h('span',{class:'badge soft'},STAGE_NAMES[rec.s]||'Nuevo'));
 }
 
@@ -172,6 +174,7 @@ function renderStudy(){
     card.append(trans);
     if (hidden) card.append(h('button',{class:'btn sm ghost',onclick:e=>{ trans.style.display=trans.style.display==='none'?'':'none'; e.currentTarget.textContent=trans.style.display==='none'?'Ver traducción':'Ocultar traducción'; }},'Ver traducción'));
     if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Pista: ', h('span',{class:'jp'},...furiText(p.ex.h))));
+    { const gist=grammarGist(p.it); if (ask&&gist!=='Punto de gramática') card.append(h('div',{class:'small'}, h('span',{class:'badge soft',title:'Qué función tiene el punto que se pide (no la forma)'},'Idea: '+gist))); }
     card.append(h('div',{class:'small'}, (ask||c.ok)?null:h('button',{class:'pill g jp',title:'Ver la ficha de este punto',onclick:()=>itemSheet(p.it)}, p.it.t, ' ›'), p.reg?h('span',{class:'badge soft',style:ask?'':'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
   } else if (c.f==='vp'){
     card.append(h('div',{class:'big-es'}, p.mainEs));
