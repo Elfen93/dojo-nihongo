@@ -112,7 +112,10 @@ function qListening(pool, usedLi){ const all=(typeof EXAM_SENTS!=='undefined'?EX
 function qReading(r){ return r.q.map((q,i)=>({sec:'読解', type:'mc', reading:r, text:q.q, prompt:'Lee el texto y responde', options:q.o.slice(), answer:q.o[q.a], key:null})); }
 function buildExam(kind,tierName){
   const tierObj=kind==='mock'?(TIERS.find(t=>t.n===tierName)||TIERS[0]):null; EXAM_CAP=tierObj?tierObj.to:null;
-  try{ return buildExam0(kind,tierObj); } finally { EXAM_CAP=null; }
+  try{
+    if(kind==='mock'){ const qs=buildMockFromBank(tierObj); if(qs&&qs.length>=40){ const minutes={N5:45,N4:55,N3:65,N2:75}[tierObj.n]||60; return {kind,title:`Simulacro JLPT ${tierObj.n}`,qs,minutes,i:0,answers:[],start:now(),deadline:now()+minutes*6e4}; } }
+    return buildExam0(kind,tierObj);
+  } finally { EXAM_CAP=null; }
 }
 function buildExam0(kind,tierObj){
   let pool, n, title, minutes;
@@ -163,6 +166,7 @@ function renderExam(){
   const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Abandonar el examen? No se guardará.',()=>go('examenes'))},'✕ Abandonar'), h('span',{class:'sp'}), h('span',{class:'num'},`${E.i+1}/${E.total||E.qs.length}`), E.dynamic?null:h('span',{class:'timer',id:'timer'},fmtTimer(E.deadline-now())));
   const card=h('div',{class:'card stack'});
   card.append(h('div',{class:'row between'}, h('span',{class:'section-tag'}, q.sec), h('span',{class:'small muted'}, E.title)));
+  if (q.passage){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].pid!==q.pid}, h('summary',{},'Texto'), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2;white-space:pre-wrap'}, q.passage))); }
   if (q.reading){ card.append(h('details',{open:E.i===0||E.qs[E.i-1].reading!==q.reading}, h('summary',{}, q.reading.title), h('div',{class:'reader small',lang:'ja',style:'font-size:1.05rem;line-height:2'}, plainReading(q.reading)))); }
   card.append(h('div',{class:'small muted'}, q.prompt));
   if (q.audio){ card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn big',style:'width:auto',onclick:()=>speak(q.audio)},'音 Escuchar'))); if(!q._played){ q._played=true; setTimeout(()=>speak(q.audio),400); } }
@@ -192,7 +196,7 @@ function renderExam(){
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
-function recordExam(q, given, ok, unknown){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, unknown:!!unknown, topic:q.topic, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.dynamic){ plAnswer(E,q,ok,unknown); const nq=plNext(E); if(!nq){ finishPlacement(E); return; } E.qs.push(nq); renderExam(); return; } if(E.i>=E.qs.length) finishExam(); else renderExam(); }
+function recordExam(q, given, ok, unknown){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, unknown:!!unknown, topic:q.topic, why:q.why, text:q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.dynamic){ plAnswer(E,q,ok,unknown); const nq=plNext(E); if(!nq){ finishPlacement(E); return; } E.qs.push(nq); renderExam(); return; } if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
   const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS
@@ -226,7 +230,7 @@ function renderExamResult(E, rec, secs, penal, msg){
   const rows=E.answers.filter(a=>!a.ok).map(a=>{ const st=h('span',{class:'small muted'}); 
     const valid=h('button',{class:'btn sm ghost',title:'Mi respuesta era correcta',onclick:()=>{ penal=examMarkValid(E,rec,secs,a,penal); renderExamResult(E,rec,secs,penal,msg); toast('Contada como correcta'); }},'Era válida');
     const ask=h('button',{class:'btn sm ghost',onclick:async()=>{ if(!sb||!USER){ st.textContent='Inicia sesión para comprobarlo.'; return; } ask.disabled=true; st.textContent='Comprobando…'; try{ const r=await callFunction('exam',{judge:true,es:a.es||'',answer:a.answer,given:a.given,level:tierOf(S.level).n}); if(r&&r.valid){ penal=examMarkValid(E,rec,secs,a,penal); toast('Es correcta'); renderExamResult(E,rec,secs,penal,msg); } else { st.textContent=((r&&r.why)||'No es correcta.'); } }catch(e){ st.textContent='No se pudo consultar: '+(e.message||e); ask.disabled=false; } }},'Comprobar');
-    return h('tr',{}, h('td',{class:'jp wrap'},a.text||a.es||''), h('td',{class:'jp wrap',style:'color:var(--warn)'},a.given), h('td',{class:'jp wrap',style:'color:var(--ok)'},a.answer), h('td',{class:'wrap'}, a.typed?h('div',{class:'stack',style:'gap:4px'}, valid, ask, st):null)); });
+    return h('tr',{}, h('td',{class:'jp wrap'},a.text||a.es||'', a.why?h('div',{class:'small muted',style:'font-family:var(--f-ui);margin-top:4px'},a.why):null), h('td',{class:'jp wrap',style:'color:var(--warn)'},a.given), h('td',{class:'jp wrap',style:'color:var(--ok)'},a.answer), h('td',{class:'wrap'}, a.typed?h('div',{class:'stack',style:'gap:4px'}, valid, ask, st):null)); });
   el.append(h('div',{class:'study stack'},
     h('div',{class:'card',style:'text-align:center'}, h('div',{class:'eyebrow'},E.title), h('div',{class:'score '+(pct>=passAt?'pass':'fail')},pct+'%'), h('div',{class:'muted'},`${ok}/${total} · ${rec.minutes} min`), h('p',{},msg), penal?h('div',{class:'small muted'},`${penal} ${plural(penal,'ítem','ítems')} han bajado de nivel SRS y están pendientes ahora.`):null),
     h('div',{class:'result-grid'}, Object.entries(secs).map(([s,v])=>h('div',{class:'card'}, h('div',{class:'section-tag'},s), h('div',{class:'num',style:'font-weight:700;font-size:1.2rem'},`${v.ok}/${v.n}`), h('div',{class:'bar gold'},h('i',{style:'width:'+Math.round(100*v.ok/v.n)+'%'}))))),

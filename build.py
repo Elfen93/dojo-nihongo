@@ -12,17 +12,20 @@ import datetime,json
 data+='const APP_BUILD="'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M')+' UTC";\n'
 rk=json.load(open('data/roadmap_kanji.json',encoding='utf-8')); rk['N3']=[]; rk['N2']=[]  # N3 y N2 ya están escritos a mano
 data+='const ROADMAP_KANJI='+json.dumps(rk,ensure_ascii=False,separators=(',',':'))+';\n'
-data+='const GRAM_EXT={},FURI={},STROKES={};\n'
+data+='const GRAM_EXT={},FURI={},STROKES={},MOCK_Q=[];\n'
 import json,re
 ext=''
 for f in part('gram_ext_*.js'):
     t=open('data/'+f,encoding='utf-8').read(); m=t[t.index('{'):t.rindex('}')+1]; ext+='Object.assign(GRAM_EXT,'+json.dumps(json.loads(m),ensure_ascii=False,separators=(',',':'))+');\n'
 if os.path.exists('data/furi.json'): ext+='Object.assign(FURI,'+open('data/furi.json',encoding='utf-8').read()+');\n'
 open('ext.js','w',encoding='utf-8').write(ext); print('ext.js',len(ext.encode()),'bytes')
+mk=part('mock_n*.js')
+if mk:
+    t=''.join(open('data/'+f,encoding='utf-8').read()+'\n' for f in mk); open('mock.js','w',encoding='utf-8').write(t); print('mock.js',len(t.encode()),'bytes')
 if os.path.exists('data/strokes.json'):
     st='Object.assign(STROKES,'+open('data/strokes.json',encoding='utf-8').read()+');\n'
     open('strokes.js','w',encoding='utf-8').write(st); print('strokes.js',len(st.encode()),'bytes')
-app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js','app9b.js','app9c.js','app9d.js','app9.js'])
+app=''.join(open('src/'+f).read()+'\n' for f in ['app1.js','app2.js','app3.js','app4.js','app5.js','app6.js','app7.js','app8.js','app9b.js','app9c.js','app9d.js','app9e.js','app9.js'])
 out=open('src/template.html').read().replace('/*__DATA__*/',data).replace('/*__APP__*/',app)
 open('index.html','w').write(out)
 import re as _re
