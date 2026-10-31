@@ -17,6 +17,9 @@ function renderAjustes(){
   const transChk=h('input',{type:'checkbox',checked:!!st.showTrans});
   const autoNext=h('input',{id:'s-auto',type:'checkbox',checked:st.autoNext!==false});
   const askR=h('input',{id:'s-askr',type:'checkbox',checked:!!st.askReading});
+  const est=h('div',{class:'push info small stack',style:'gap:4px'});
+  const updEst=()=>{ const e=planEstimate(tier.value,target.value,Math.max(0,Math.round(+goal.value)||0),Math.max(0,Math.round(+goalG.value)||0)); est.innerHTML=''; planEstimateText(e).forEach((t,i,a)=>est.append(h('div',{style:i===a.length-1?'opacity:.75':''},t))); };
+  [tier,target,goal,goalG,presets].forEach(x=>{ x.addEventListener('input',updEst); x.addEventListener('change',updEst); }); updEst();
   const clamp=(v,lo,hi,def)=>{ v=Math.round(+v); return isFinite(v)?Math.max(lo,Math.min(hi,v)):def; };
   const saveBtn=h('button',{class:'btn primary',onclick:()=>{ st.name=name.value.trim().slice(0,40); st.target=/^\d{4}-\d{2}-\d{2}$/.test(target.value)?target.value:''; st.targetTier=tier.value; st.goalLessons=clamp(goal.value,0,60,10); st.goalGrammar=clamp(goalG.value,0,20,2); st.maxReviews=clamp(maxr.value,10,500,100); st.strict=strict.checked; st.manualPace=manual.checked; st.furigana=furi.checked; st.furiMode=furiSel.value; st.showTrans=transChk.checked; st.autoNext=autoNext.checked; st.askReading=askR.checked;
     // también lo que esté escrito en los demás paneles (token de WaniKani, voz), por si se pulsa solo este botón
@@ -27,6 +30,7 @@ function renderAjustes(){
   el.append(updateCard());
   el.append(h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Plan de estudio'),
     h('div',{class:'grid c2'}, f('Nombre',name), f('Fecha objetivo (examen JLPT)',h('div',{class:'stack'},presets,target),'El JLPT se celebra el primer domingo de julio y de diciembre.'), f('Nivel objetivo para esa fecha',tier), f('Kanji y vocabulario nuevos por día (techo)',goal,'El ritmo real lo decide la app según tu carga (Recuperación, Suave, Normal, Impulso) sin pasar de este techo. Las palabras se desbloquean cuando sus kanji llegan a Gurú.'), f('Puntos de gramática nuevos por día',goalG,'Se reduce a la mitad en modo Suave y a cero en Recuperación. Con 1 al día llegas a N2 en unos dos años; con 2, en uno.'), f('Máximo de repasos por sesión',maxr)),
+    est,
     h('div',{class:'row'}, h('label',{class:'row small'},strict,' Modo estricto')), h('div',{class:'row'}, h('label',{class:'row small'},manual,' Ritmo fijo (sin adaptación)')), h('div',{class:'row'}, h('label',{class:'row small'},furi,' Furigana en las lecturas')), h('div',{class:'row small',style:'align-items:center;gap:8px'},'Furigana en las frases:',furiSel), h('div',{class:'row'}, h('label',{class:'row small'},transChk,' Mostrar la traducción de las frases en los ejercicios')), h('div',{class:'row'}, h('label',{class:'row small'},autoNext,' Avanzar solo al acertar')), h('div',{class:'row'}, h('label',{class:'row small'},askR,' Preguntar también la lectura')),
     saveBtn));
   // Sincronización WaniKani / Bunpro (directa)

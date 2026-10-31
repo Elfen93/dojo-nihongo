@@ -19,6 +19,31 @@ function planInfo(){
   if (tg>start){ frac=Math.max(0,Math.min(1,(now()-start)/(tg-start))); days=Math.max(0,Math.ceil((tg-now())/864e5)); }
   return {tier:tier.n,to:tier.to,target:tg,days,frac};
 }
+// Estimación del plan: lo que falta hasta el nivel objetivo, lo que hace falta por día y a qué ritmo llegarías con tus ajustes y con tu ritmo real
+function planEstimate(tierName,dateStr,goalL,goalG){
+  const tier=TIERS.find(t=>t.n===tierName)||TIERS[1];
+  const scope=[...ITEMS.values()].filter(i=>i.lv<=tier.to);
+  const started=i=>{ const r=S.items[keyOf(i)]; return r&&r.s>=1; };
+  const remKV=scope.filter(i=>i.kind!=='g'&&!started(i)).length, remG=scope.filter(i=>i.kind==='g'&&!started(i)).length;
+  const tg=/^\d{4}-\d{2}-\d{2}$/.test(dateStr||'')?new Date(dateStr+'T23:59:00').getTime():0;
+  const days=tg>now()?Math.max(1,Math.ceil((tg-now())/864e5)):0;
+  // ritmo real: media diaria de los últimos 14 días
+  let l=0,g=0; for(let i=0;i<14;i++){ const d=S.days[todayKey(new Date(now()-i*864e5))]; if(d){ l+=d.l||0; g+=d.lg||0; } }
+  const real={kv:l/14,g:g/14};
+  const finish=(kvPerDay,gPerDay)=>{ const dk=kvPerDay>0?remKV/kvPerDay:(remKV?Infinity:0), dg=gPerDay>0?remG/gPerDay:(remG?Infinity:0); const d=Math.max(dk,dg); return isFinite(d)?Math.ceil(d):null; };
+  return {tier:tier.n,remKV,remG,days,tg,need:days?{kv:remKV/days,g:remG/days}:null,ceilDays:finish(goalL,goalG),realDays:(real.kv+real.g)>0?finish(real.kv,real.g):null,real};
+}
+function planEstimateText(e){
+  const fmt=n=>n<1?'menos de uno':n<10?(Math.round(n*10)/10).toString().replace('.',','):Math.round(n).toString();
+  const at=n=>fmtDate(now()+n*864e5);
+  const L=[`Te quedan ${e.remKV} ${plural(e.remKV,'kanji o palabra','kanji y palabras')} y ${e.remG} ${plural(e.remG,'punto de gramática','puntos de gramática')} hasta el final de ${e.tier}.`];
+  if (e.need) L.push(`Para la fecha elegida (${e.days} días) harían falta unos ${fmt(e.need.kv)} ${plural(Math.ceil(e.need.kv),'kanji o palabra','kanji y palabras')} y ${fmt(e.need.g)} de gramática al día.`);
+  if (e.ceilDays!=null){ const margin=e.days?e.days-e.ceilDays:null; L.push(`Con tu techo actual lo completarías hacia el ${at(e.ceilDays)}`+(margin==null?'.':margin>=0?` (con ${margin} días de margen).`:` (unos ${-margin} días después de tu fecha: sube el techo o mueve la fecha).`)); }
+  if (e.realDays!=null) L.push(`A tu ritmo de las dos últimas semanas (${fmt(e.real.kv)} y ${fmt(e.real.g)} al día de media) llegarías hacia el ${at(e.realDays)}.`);
+  if (e.tier==='N1') L.push('El contenido de N1 todavía no está completo, así que la cuenta es parcial.');
+  L.push('Es una estimación: el ritmo real se adapta a tu carga de repasos y las palabras esperan a sus kanji.');
+  return L;
+}
 function caminoSvg(){
   // El sendero llega hasta el nivel objetivo de tu plan de estudio y su marca de «hoy» sigue la fecha que fijaste
   const slots=36; const plan=planInfo();
