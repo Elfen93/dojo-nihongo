@@ -131,7 +131,14 @@ function sessionSummary(s){
   return h('div',{class:'card'}, h('h3',{}, s.mode==='lesson'?'Lo aprendido en esta lección':'Lo repasado en esta sesión'), h('div',{class:'small muted',style:'margin:2px 0 8px'}, nf?`${nf} ${plural(nf,'fallado')} · ${rs.length-nf} ${plural(rs.length-nf,'acertado')}`:'Todo acertado'), h('div',{class:'sess'}, rs.map(card)));
 }
 // La idea del punto en español (la función, no la forma): sirve de pista sin regalar la respuesta
-function grammarGist(it){ return String(it.e||'').replace(/[«»]/g,'').split(/[(:.]/)[0].trim().replace(/[\u3040-\u30ff\u4e00-\u9fff].*$/,'').trim().slice(0,70)||'Punto de gramática'; }
+function grammarGist(it){
+  const e=String(it.e||'');
+  const first=e.replace(/[«»]/g,'').split(/[(:.]/)[0].trim().replace(/[\u3040-\u30ff\u4e00-\u9fff].*$/,'').trim().slice(0,70);
+  if (first.length>=5) return first;
+  // la explicación empieza con la forma japonesa: se queda con la parte en español
+  const sp=e.replace(/[\u3040-\u30ff\u4e00-\u9fff〜～]+/g,'').replace(/[«»]/g,'').split('.').map(x=>x.replace(/^[\s:;,()\/=]+|[\s:;,()\/=]+$/g,'').trim()).filter(x=>x.length>=5);
+  const g=sp.slice(0,2).join(' · ').slice(0,80); return g?g[0].toUpperCase()+g.slice(1):'Punto de gramática';
+}
 // Fila de la cola de repasos: solo el significado en español y la etapa, para ir recordando el japonés desde la propia lista
 function itemRow(it){
   const rec=S.items[keyOf(it)]||{s:0};
@@ -170,11 +177,13 @@ function renderStudy(){
   if (c.f==='gc'){
     const cl=p.cloze;
     card.append(h('div',{class:'mid-jp',lang:'ja'}, ...furiText(cl.pre), h('span',{class:'blank'}, s.phase==='ask'?'　　　':cl.answers[0]), ...furiText(cl.post)));
-    const ask=s.phase==='ask'; const hidden=ask&&!S.settings.showTrans; const trans=h('div',{class:'muted',style:hidden?'display:none':''}, p.ex.s);
-    card.append(trans);
-    if (hidden) card.append(h('button',{class:'btn sm ghost',onclick:e=>{ trans.style.display=trans.style.display==='none'?'':'none'; e.currentTarget.textContent=trans.style.display==='none'?'Ver traducción':'Ocultar traducción'; }},'Ver traducción'));
-    if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Pista: ', h('span',{class:'jp'},...furiText(p.ex.h))));
-    { const gist=grammarGist(p.it); if (ask&&gist!=='Punto de gramática') card.append(h('div',{class:'small'}, h('span',{class:'badge soft',title:'Qué función tiene el punto que se pide (no la forma)'},'Idea: '+gist))); }
+    // Pistas por niveles, como en Bunpro: 0 = solo la frase y la palabra base; 1 = la idea (función) del punto; 2 = traducción. Cada toque en «Pista» sube un nivel.
+    const ask=s.phase==='ask'; const base0=S.settings.hintLevel!=null?S.settings.hintLevel:(S.settings.showTrans?2:0); const hl=ask?(c.hint!=null?c.hint:base0):2;
+    if (p.ex.h) card.append(h('div',{class:'small muted'}, 'Palabra: ', h('span',{class:'jp'},...furiText(p.ex.h))));
+    const gist=grammarGist(p.it);
+    if (hl>=1&&gist!=='Punto de gramática') card.append(h('div',{class:'small'}, h('span',{class:'badge soft',title:'Qué función tiene el punto que se pide (no la forma)'},'Idea: '+gist)));
+    if (hl>=2) card.append(h('div',{class:'muted'}, p.ex.s));
+    if (ask&&hl<2) card.append(h('button',{class:'btn sm ghost',onclick:()=>{ const inp=$('#ans'), v=inp?inp.value:''; c.hint=hl+1; renderStudy(); const i2=$('#ans'); if(i2){ i2.value=v; i2.focus(); } }},hl===0?'Pista: la idea del punto':'Pista: traducción'));
     card.append(h('div',{class:'small'}, (ask||c.ok)?null:h('button',{class:'pill g jp',title:'Ver la ficha de este punto',onclick:()=>itemSheet(p.it)}, p.it.t, ' ›'), p.reg?h('span',{class:'badge soft',style:ask?'':'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
   } else if (c.f==='vp'){
     card.append(h('div',{class:'big-es'}, p.mainEs));
