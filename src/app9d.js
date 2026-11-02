@@ -58,6 +58,24 @@ function startHandwriting(){
     PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),total:pool.list.length,fallback:pool.fallback,extra:pool.extra}; renderPractica();
   });
 }
+function startHandPick(){
+  loadStrokes().then(()=>{
+    if (STROKE_STATE!==2){ toast('No se pudieron cargar los trazos (¿sin conexión?)'); return; }
+    PRACT={mode:'escritura-pick',sel:new Set()}; renderPractica();
+  });
+}
+function renderHandPick(){
+  const P=PRACT, el=$('#main'); el.innerHTML=''; const hand=S.hand||{};
+  el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Elegir kanji')));
+  const list=handLearned().sort((a,b)=>a.lv-b.lv);
+  if (!list.length){ el.append(h('div',{class:'card muted'},'Aún no has empezado ningún kanji.')); return; }
+  const cnt=h('span',{class:'num'},''); const go=h('button',{class:'btn primary',onclick:()=>{ const q=[...P.sel]; if(!q.length) return; PRACT={mode:'escritura',queue:q,i:0,ok:0,again:[],seen:new Set(),total:q.length,fallback:false,extra:true}; renderPractica(); }},'');
+  const upd=()=>{ cnt.textContent=P.sel.size; go.textContent=P.sel.size?`Practicar ${P.sel.size}`:'Elige uno o más'; go.disabled=!P.sel.size; };
+  const cells=list.map(i=>{ const b=h('button',{class:'btn hw-pick'+(P.sel.has(i.k)?' on':''),title:(i.m||[]).join(', '),onclick:()=>{ P.sel.has(i.k)?P.sel.delete(i.k):P.sel.add(i.k); b.classList.toggle('on'); upd(); }},i.k); return b; });
+  const rnd=h('button',{class:'btn',onclick:()=>{ const a=list.map(i=>i.k).sort(()=>Math.random()-.5).slice(0,10); P.sel=new Set(a); renderHandPick(); }},'10 al azar');
+  el.append(h('div',{class:'card stack'}, h('div',{class:'small muted'},'Toca los kanji que quieras escribir. Cuentan para tu repaso igual que los demás.'), h('div',{class:'hw-picks'},...cells), h('div',{class:'row'},go,rnd)));
+  upd();
+}
 function renderEscritura(){
   const P=PRACT, el=$('#main'); el.innerHTML='';
   el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Escribir a mano')));
