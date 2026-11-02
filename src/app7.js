@@ -14,19 +14,37 @@ function dictationPool(){
 }
 // Si respondes con kanji en el dictado, se pasan a kana alineando la frase original con su lectura
 function dictKanaize(ans,j,k){
-  if(!/[\u4e00-\u9fff々]/.test(ans)) return ans;
-  const segs=j.match(/[\u4e00-\u9fff々]+|[^\u4e00-\u9fff々]+/g)||[]; const esc=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const re=new RegExp('^'+segs.map(x=>/[\u4e00-\u9fff々]/.test(x)?'(.+?)':[...x].map(c=>/[、。！？,.!? ]/.test(c)?'':esc(c)).join('')).join('')+'$');
+  const KJ=/[一-鿿々]/;
+  if(!KJ.test(ans)) return ans;
+  const segs=j.match(/[一-鿿々]+|[^一-鿿々]+/g)||[]; const esc=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp('^'+segs.map(x=>KJ.test(x)?'(.+?)':[...x].map(c=>/[、。！？,.!? ]/.test(c)?'':esc(c)).join('')).join('')+'$');
   const m=normKana(k).match(re); if(!m) return ans;
-  const KJ=/[\u4e00-\u9fff々]/; const map={}, plain=x=>x.replace(/[がぎぐげござじずぜぞだぢづでど]/g,c=>String.fromCharCode(c.charCodeAt(0)-1)).replace(/[ばびぶべぼぱぴぷぺぽ]/g,c=>String.fromCharCode(c.charCodeAt(0)-(c.charCodeAt(0)%3===0?1:2)));
+  const plain=x=>x.replace(/[がぎぐげござじずぜぞだぢづでど]/g,c=>String.fromCharCode(c.charCodeAt(0)-1)).replace(/[ばびぶべぼぱぴぷぺぽ]/g,c=>String.fromCharCode(c.charCodeAt(0)-(c.charCodeAt(0)%3===0?1:2)));
   const cands=ch=>{ const it=ITEMS.get('k|'+ch); if(!it) return []; return [...(it.on||[]).map(r=>kataToHira(r.split('.')[0])),...(it.kun||[]).map(r=>r.split('.')[0])].filter(Boolean); };
-  let gi=1; segs.forEach(sg=>{ if(!KJ.test(sg)) return; const r=[...m[gi++]], cs=[...sg];
-    // reparto de la lectura entre los kanji del grupo: gana el que más trozos reconocidos tenga
-    let best=null; const rec=(ci,ri,acc,score)=>{ if(ci===cs.length){ if(ri===r.length&&(!best||score>best.score)) best={acc:acc.slice(),score}; return; }
+  // fichas de la frase original: cada kanji lleva su trozo de lectura
+  const toks=[]; let gi=1;
+  segs.forEach(sg=>{ if(!KJ.test(sg)){ [...sg].forEach(c=>{ if(!/[、。！？,.!? ]/.test(c)) toks.push({c}); }); return; }
+    const r=[...m[gi++]], cs=[...sg]; let best=null;
+    const rec=(ci,ri,acc,score)=>{ if(ci===cs.length){ if(ri===r.length&&(!best||score>best.score)) best={acc:acc.slice(),score}; return; }
       for(let l=1;l<=r.length-ri-(cs.length-ci-1)&&l<=4;l++){ const piece=r.slice(ri,ri+l).join(''); const ok=cands(cs[ci]).some(c=>c===piece||plain(c)===plain(piece)); acc.push(piece); rec(ci+1,ri+l,acc,score+(ok?1:0)); acc.pop(); } };
-    rec(0,0,[],0); if(best) cs.forEach((c,i)=>{ if(!(c in map)) map[c]=best.acc[i]; }); });
-  const out=[...ans].map(c=>map[c]!=null?map[c]:c).join('');
-  return out;
+    rec(0,0,[],0); cs.forEach((c,i)=>toks.push({c,kj:true,piece:best?best.acc[i]:''})); });
+  // alineación posición a posición: un kanji solo vale si es EL de la frase en ese sitio
+  const A=[...normKana(ans)], n=A.length, t=toks.length, INF=1e9;
+  const D=Array.from({length:n+1},()=>Array(t+1).fill(INF)), B=Array.from({length:n+1},()=>Array(t+1).fill(null)); D[0][0]=0;
+  const upd=(i,j,c,op)=>{ if(c<D[i][j]){ D[i][j]=c; B[i][j]=op; } };
+  for(let i=0;i<=n;i++) for(let q=0;q<=t;q++){ const d=D[i][q]; if(d>=INF) continue;
+    if(i<n) upd(i+1,q,d+1,['ins',i,q]);
+    if(q<t) upd(i,q+1,d+1,['del',i,q]);
+    if(i<n&&q<t){ const tk=toks[q]; const eq=A[i]===tk.c; upd(i+1,q+1,d+(eq?0:1),[eq?(tk.kj?'kj':'ka'):'sub',i,q]);
+      if(tk.kj&&tk.piece){ const pc=[...tk.piece]; if(i+pc.length<=n&&pc.every((c,x)=>A[i+x]===c)) upd(i+pc.length,q+1,d,['pc',i,q]); } } }
+  let i=n,q=t; const out=[];
+  while(i>0||q>0){ const op=B[i][q]; if(!op) break; const [k2,pi,pq]=op;
+    if(k2==='kj') out.unshift(toks[pq].piece);
+    else if(k2==='pc') out.unshift(A.slice(pi,i).join(''));
+    else if(k2==='ka') out.unshift(A[pi]);
+    else if(k2==='sub'||k2==='ins') out.unshift(KJ.test(A[pi])?'？':A[pi]);
+    i=pi; q=pq; }
+  return out.join('');
 }
 // Comparación carácter a carácter (kana): porcentaje de acierto y marcado de diferencias
 function kanaDiff(a,b){ a=[...normKana(a)]; b=[...normKana(b)]; const m=a.length,n=b.length; const d=Array.from({length:m+1},()=>Array(n+1).fill(0)); for(let i=0;i<=m;i++) d[i][0]=i; for(let j=0;j<=n;j++) d[0][j]=j; for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); let i=m,j=n; const marks=[]; while(i>0||j>0){ if(i>0&&j>0&&a[i-1]===b[j-1]&&d[i][j]===d[i-1][j-1]){ marks.unshift({c:b[j-1],ok:true}); i--; j--; } else if(j>0&&(i===0||d[i][j]===d[i][j-1]+1)){ marks.unshift({c:b[j-1],ok:false}); j--; } else if(i>0&&(j===0||d[i][j]===d[i-1][j]+1)){ i--; } else { marks.unshift({c:b[j-1],ok:false}); i--; j--; } } return {pct:n?Math.max(0,Math.round(100*(1-d[m][n]/n))):0, marks}; }
@@ -74,7 +92,7 @@ function renderDictado(){
   const wrap=h('div',{class:'study'}, head, card);
   if (P.answer==null){
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
-    const submit=()=>{ const v=input.value.trim(); if(!v) return; P.answer=dictKanaize(toKana(v,true),c.j,c.k); const r=kanaDiff(P.answer,c.k); P.last=r; S.stats=S.stats||{}; const st=S.stats.di=S.stats.di||{c:0,w:0}; if(r.pct>=85) st.c++; else st.w++; renderDictado(); };
+    const submit=()=>{ const v=input.value.trim(); if(!v) return; P.answer=dictKanaize(toKana(v,true),c.j,c.k); const r=kanaDiff(P.answer,c.k); if(P.answer.includes('？')) r.pct=Math.min(r.pct,80); P.last=r; S.stats=S.stats||{}; const st=S.stats.di=S.stats.di||{c:0,w:0}; if(r.pct>=85) st.c++; else st.w++; renderDictado(); };
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
     wrap.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Corregir',onclick:submit},'→')));
     setTimeout(()=>input.focus(),0);
