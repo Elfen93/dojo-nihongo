@@ -39,7 +39,7 @@ function handPool(){
 function strokeSvg(ch,opts={}){
   const st=STROKES[ch]; if(!st) return '';
   const nums=opts.numbers?st.map((d,i)=>{ const m=d.match(/^M\s*(-?[\d.]+)[ ,]+(-?[\d.]+)/); return m?`<text x="${(+m[1]-5).toFixed(1)}" y="${(+m[2]-1.5).toFixed(1)}" class="hw-num">${i+1}</text>`:''; }).join(''):'';
-  return `<svg viewBox="0 0 109 109" class="hw-model" aria-hidden="true">${st.map((d,i)=>`<path d="${d}" fill="none" stroke="currentColor" stroke-width="${opts.w||4.2}" stroke-linecap="round" stroke-linejoin="round"${opts.focus!=null?(i===opts.focus?' class="hw-next" stroke-width="6"':(i<opts.focus?' opacity=".18"':' opacity=".35" stroke-dasharray="1.5 4"')):''}/>`).join('')}${nums}</svg>`;
+  return `<svg viewBox="0 0 109 109" class="hw-model" aria-hidden="true">${st.map((d,i)=>`<path d="${d}" fill="none" stroke="currentColor" stroke-width="${opts.w||4.2}" stroke-linecap="round" stroke-linejoin="round"${opts.focus!=null?(i===opts.focus?' class="hw-next" stroke-width="6"':(i<opts.focus?' opacity=".12"':' opacity=".28"')):''}/>`).join('')}${nums}</svg>`;
 }
 function animateStrokes(box){
   const ps=[...box.querySelectorAll('path')]; let t=0;
@@ -117,7 +117,7 @@ function renderEscritura(){
       status.textContent=n?`${n} ${n===1?'trazo':'trazos'}`:'Escribe el kanji de memoria; si no te acuerdas, pulsa «Ver modelo»';
       actions.append(h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.undo()},'Deshacer trazo'), h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.clear()},'Borrar'),
         h('button',{class:'btn sm ghost',onclick:()=>{ tracing=!tracing; setModel(tracing,false,false); refresh(); }},tracing?'Quitar guía':'Calcar'),
-        tracing?h('button',{class:'btn sm ghost',onclick:()=>{ tracing=false; setModel(true,true,true); const t=total*900+400; setTimeout(()=>{ if(!revealed){ tracing=true; setModel(true,false,true); } },t); }},'Ver el orden'):null,
+        ...(tracing?[h('button',{class:'btn sm ghost',onclick:()=>{ tracing=false; setModel(true,true,true); const t=total*900+400; setTimeout(()=>{ if(!revealed){ tracing=true; setModel(true,false,true); } },t); }},'Ver el orden')]:[]),
         h('button',{class:'btn primary',onclick:()=>{ revealed=true; tracing=false; setModel(true,true,true); refresh(); }},'Ver modelo'));
     } else {
       const same=n===total;
