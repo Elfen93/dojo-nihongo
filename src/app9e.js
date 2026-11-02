@@ -33,19 +33,21 @@ function mockToQs(it){
 }
 const MOCK_PLANS={N5:{kanji:12,orth:8,ctx:10,para:5,gram:16,order:5,cloze:1,read:4,readm:2,info:1,listen:7,resp:6},default:{kanji:9,orth:6,ctx:10,para:5,usage:5,gram:15,order:5,cloze:1,read:4,readm:2,info:2,listen:8,resp:6}};
 // Monta un simulacro con el banco del nivel: primero las preguntas que aún no te han salido
-function buildMockFromBank(tierObj){
+function buildMockFromBank(tierObj,num){
   const bank=(typeof MOCK_Q!=='undefined'?MOCK_Q:[]).filter(q=>q.lv===tierObj.n); if(bank.length<40) return null;
   const seen=S.mockSeen||{}; const chosen=[];
   for (const [t,n] of Object.entries(MOCK_PLANS[tierObj.n]||MOCK_PLANS.default)){
     const pool=bank.filter(q=>q.t===t); if(!pool.length) continue;
+    if (num){ // simulacro numerado: siempre las mismas preguntas (reparto fijo por orden de id)
+      const sp=pool.slice().sort((x,y)=>x.id<y.id?-1:1), off=((num-1)*n)%sp.length; chosen.push(...sp.concat(sp).slice(off,off+Math.min(n,sp.length))); continue; }
     const fresh=shuffle(pool.filter(q=>!seen[q.id])); const old=pool.filter(q=>seen[q.id]).sort((a,b)=>seen[a.id]-seen[b.id]);
     chosen.push(...fresh.concat(old).slice(0,n));
   }
   const qs=chosen.flatMap(mockToQs);
   // escucha: si el banco no tiene diálogos todavía, se completa con frases sueltas
-  if (!qs.some(q=>q.dialog)){ const usedLi=new Set(); for (let i=0;i<6;i++){ const q=qListening([],usedLi); if(q) qs.push(q); } }
+  if (!num&&!qs.some(q=>q.dialog)){ const usedLi=new Set(); for (let i=0;i<6;i++){ const q=qListening([],usedLi); if(q) qs.push(q); } }
   const secOrder=['漢字読み','表記','文脈規定','言い換え','用法','文法形式','並び替え','文章の文法','読解','聴解'];
   qs.sort((a,b)=>secOrder.indexOf(a.sec)-secOrder.indexOf(b.sec));
-  S.mockSeen=S.mockSeen||{}; chosen.forEach(q=>{ S.mockSeen[q.id]=now(); }); save();
+  if (!num){ S.mockSeen=S.mockSeen||{}; chosen.forEach(q=>{ S.mockSeen[q.id]=now(); }); save(); }
   return qs;
 }

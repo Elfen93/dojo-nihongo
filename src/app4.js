@@ -110,10 +110,10 @@ function qOrder(o){ const star=1+Math.floor(Math.random()*2); return {sec:'並�
 function qProduction(v){ return {sec:'producción', type:'typed', prompt:'Escribe en japonés (kana):', es:v.m.join(', ')+(v.p?' · '+posLabel(v.p):''), check:a=>matchKana(a,[v.r])||!!vocabSynonym(v,a), answer:v.r+(hasKanji(v.w)?'（'+v.w+'）':''), key:keyOf(v)}; }
 function qListening(pool, usedLi){ const all=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.lv<=examCap()&&x.es&&!usedLi.has(x.j)); const bank=all.filter(x=>!usedBank.has(x.j)).length>=4?all.filter(x=>!usedBank.has(x.j)):all; if(bank.length<4) return null; const s=rnd(bank); usedLi.add(s.j); const ds=pick(bank.filter(x=>x!==s&&x.es!==s.es),3).map(x=>x.es); if(ds.length<3) return null; return {sec:'聴解', type:'mc', audio:s.j, text:'', prompt:'Escucha la frase y elige lo que significa', options:shuffle([s.es,...ds]), answer:s.es, key:null}; }
 function qReading(r){ return r.q.map((q,i)=>({sec:'読解', type:'mc', reading:r, text:q.q, prompt:'Lee el texto y responde', options:q.o.slice(), answer:q.o[q.a], key:null})); }
-function buildExam(kind,tierName){
+function buildExam(kind,tierName,num){
   const tierObj=kind==='mock'?(TIERS.find(t=>t.n===tierName)||TIERS[0]):null; EXAM_CAP=tierObj?tierObj.to:null;
   try{
-    if(kind==='mock'){ const qs=buildMockFromBank(tierObj); if(qs&&qs.length>=40){ const minutes={N5:45,N4:55,N3:65,N2:75}[tierObj.n]||60; return {kind,title:`Simulacro JLPT ${tierObj.n}`,qs,minutes,i:0,answers:[],start:now(),deadline:now()+minutes*6e4}; } }
+    if(kind==='mock'){ const qs=buildMockFromBank(tierObj,num); if(qs&&qs.length>=40){ const minutes={N5:45,N4:55,N3:65,N2:75}[tierObj.n]||60; return {kind,title:`Simulacro JLPT ${tierObj.n}`+(num?` · nº ${num}`:''),mockNo:num||0,qs,minutes,i:0,answers:[],start:now(),deadline:now()+minutes*6e4}; } }
     return buildExam0(kind,tierObj);
   } finally { EXAM_CAP=null; }
 }
@@ -158,7 +158,7 @@ async function startFreshExam(statusEl){
     renderExam();
   }catch(e){ if(statusEl) statusEl.textContent='No se pudo generar: '+(e.message||e); toast('Error al generar el examen'); }
 }
-function startExam(kind,tier){ const ex=buildExam(kind,tier); if(ex.qs.length<8){ toast(kind==='mock'?'No hay preguntas suficientes para este simulacro.':'Aún no hay suficiente material aprendido para este examen.'); return; } ex.tierName=tier||null; EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
+function startExam(kind,tier,num){ const ex=buildExam(kind,tier,num); if(ex.qs.length<8){ toast(kind==='mock'?'No hay preguntas suficientes para este simulacro.':'Aún no hay suficiente material aprendido para este examen.'); return; } ex.tierName=tier||null; EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
 const fmtTimer = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/6e4), s=Math.floor(ms%6e4/1000); return m+':'+String(s).padStart(2,'0'); };
 function examKeysOff(E){ if(E&&E._kh){ document.removeEventListener('keydown',E._kh); E._kh=null; } }
 function renderExam(){
@@ -206,7 +206,7 @@ function finishExam(){
   const secs={}; E.answers.forEach(a=>{ const s=secs[a.sec]=secs[a.sec]||{ok:0,n:0}; s.n++; if(a.ok) s.ok++; });
   // consecuencias: los fallos bajan de nivel SRS y vuelven ya
   let penal=0; E.answers.filter(a=>!a.ok&&a.key&&S.items[a.key]&&S.items[a.key].s>0&&S.items[a.key].s<9).forEach(a=>{ const r=S.items[a.key]; r.s=Math.max(1,r.s-1); r.due=now(); r.w=(r.w||0)+1; r.ls=now(); penal++; });
-  const rec={kind:E.kind,date:now(),score:pct,ok,total,secs,level:E.kind==='mock'&&E.tierName?E.tierName:S.level,minutes:Math.round((now()-E.start)/6e4)}; S.exams.push(rec); bump('ex');
+  const rec={kind:E.kind,date:now(),score:pct,ok,total,secs,level:E.kind==='mock'&&E.tierName?E.tierName:S.level,no:E.mockNo||0,minutes:Math.round((now()-E.start)/6e4)}; S.exams.push(rec); bump('ex');
   let passed=false, msg='';
   if (E.kind==='weekly'){ S.weekly.last=now(); msg = pct>=80?'Buen examen semanal. Mantén el ritmo.': pct>=60?'Aprobado justo. Los fallos ya están de vuelta en tu cola de repasos.':'Por debajo del 60 %. Esta semana toca repasar más y avanzar menos: los fallos vuelven a la cola ahora.'; }
   if (E.kind==='level'){ passed=pct>=80; if(passed){ S.levelPass[S.level]=pct; if(S.level<MAX_LEVEL) S.level++; msg=`Nivel superado. Bienvenido al nivel ${S.level}.`; } else msg='Necesitas un 80 % para subir de nivel. Los fallos ya están en tu cola: repásalos y repite el examen mañana.'; }
