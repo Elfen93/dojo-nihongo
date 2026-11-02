@@ -11,24 +11,29 @@ function loadStrokes(){
     document.head.append(s);
   });
 }
-const HW_SESSION=3; // kanji por sesión: poco y a diario
-// Repasos de caligrafía: cada kanji tiene su etapa (0 a 5) y su fecha; acertar la sube y fallar la baja
-const HW_DAYS=[1,3,7,14,30,60];
-function handLearned(){ return [...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1); }
-// pendientes: kanji que ya has escrito y toca repasar, y kanji aprendidos que aún no has escrito
+// Escritura a mano: ciclo propio, como WaniKani. Cada kanji tiene su etapa de escritura, independiente de la de reconocimiento.
+// Lecciones nuevas (calcar y luego de memoria) hasta una cuota diaria + repasos de lo ya escrito.
+const HW_STEPS=[4/24,8/24,1,2,7,14,30,120]; // días hasta el siguiente repaso según la etapa (1 a 8); a la etapa 9 está «quemado»
+const HW_REV_MAX=20; // repasos máximos por sesión
+function hwQuota(){ const q=(S.settings||{}).hwNew; return q==null?5:q; }
+function hwAvail(){ const lvl=S.level||1; return [...ITEMS.values()].filter(i=>i.kind==='k'&&(i.lv<=lvl||(S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1))); }
+function handLearned(){ return hwAvail().filter(i=>STROKES[i.k]).sort((a,b)=>a.lv-b.lv); }
+// disponibles: kanji de tu nivel (aunque no sepas escribirlos); pendientes = repasos que tocan; nuevos = sin escribir nunca
 function handStatus(){
   const hand=S.hand||{}, t=now(); const learned=handLearned();
   const due=learned.filter(i=>hand[i.k]&&(hand[i.k].due||0)<=t).sort((a,b)=>(hand[a.k].due||0)-(hand[b.k].due||0));
-  const fresh=learned.filter(i=>!hand[i.k]).sort((a,b)=>(S.items['k|'+b.k].ls||0)-(S.items['k|'+a.k].ls||0)||a.lv-b.lv);
+  const fresh=learned.filter(i=>!hand[i.k]);
   return {due,fresh,learned};
 }
-function handPool(n=HW_SESSION){
-  const st=handStatus(); const list=[...st.due.map(i=>i.k),...st.fresh.map(i=>i.k)].slice(0,n);
+function handPool(){
+  const st=handStatus(), d=day(); const newLeft=Math.max(0,hwQuota()-(d.hwn||0));
+  const rev=st.due.slice(0,HW_REV_MAX).map(i=>i.k), nw=st.fresh.slice(0,newLeft).map(i=>i.k); const list=[...rev,...nw];
   if (list.length) return {list,fallback:false,extra:false};
-  // sin nada pendiente: práctica extra con los que más tiempo llevan sin escribirse
-  const hand=S.hand||{}; const ex=st.learned.sort((a,b)=>((hand[a.k]||{}).last||0)-((hand[b.k]||{}).last||0)).slice(0,n).map(i=>i.k);
+  // sin nada pendiente ni lecciones: práctica extra con los que más tiempo llevan sin escribirse
+  const hand=S.hand||{}; const ex=st.learned.filter(i=>hand[i.k]).sort((a,b)=>(hand[a.k].last||0)-(hand[b.k].last||0)).slice(0,5).map(i=>i.k);
   if (ex.length) return {list:ex,fallback:false,extra:true};
-  const n5=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&i.lv<=3).slice(0,n).map(i=>i.k);
+  const nw2=st.fresh.slice(0,3).map(i=>i.k); if (nw2.length) return {list:nw2,fallback:false,extra:true};
+  const n5=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&i.lv<=3).slice(0,3).map(i=>i.k);
   return {list:n5,fallback:true,extra:false};
 }
 function strokeSvg(ch,opts={}){
@@ -55,7 +60,7 @@ function startHandwriting(){
   loadStrokes().then(()=>{
     if (STROKE_STATE!==2){ toast('No se pudieron cargar los trazos (¿sin conexión?)'); return; }
     const pool=handPool();
-    PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),total:pool.list.length,fallback:pool.fallback,extra:pool.extra}; renderPractica();
+    PRACT={mode:'escritura',queue:pool.list,i:0,ok:0,again:[],seen:new Set(),learned:new Set(),total:pool.list.length,fallback:pool.fallback,extra:pool.extra}; renderPractica();
   });
 }
 function startHandPick(){
@@ -69,7 +74,7 @@ function renderHandPick(){
   el.append(h('div',{class:'topline'}, h('button',{class:'btn sm ghost',onclick:()=>{ PRACT={mode:null}; renderPractica(); }},'← Práctica'), h('h1',{},'Elegir kanji')));
   const list=handLearned().sort((a,b)=>a.lv-b.lv);
   if (!list.length){ el.append(h('div',{class:'card muted'},'Aún no has empezado ningún kanji.')); return; }
-  const cnt=h('span',{class:'num'},''); const go=h('button',{class:'btn primary',onclick:()=>{ const q=[...P.sel]; if(!q.length) return; PRACT={mode:'escritura',queue:q,i:0,ok:0,again:[],seen:new Set(),total:q.length,fallback:false,extra:true}; renderPractica(); }},'');
+  const cnt=h('span',{class:'num'},''); const go=h('button',{class:'btn primary',onclick:()=>{ const q=[...P.sel]; if(!q.length) return; PRACT={mode:'escritura',queue:q,i:0,ok:0,again:[],seen:new Set(),learned:new Set(),total:q.length,fallback:false,extra:true}; renderPractica(); }},'');
   const upd=()=>{ cnt.textContent=P.sel.size; go.textContent=P.sel.size?`Practicar ${P.sel.size}`:'Elige uno o más'; go.disabled=!P.sel.size; };
   const cells=list.map(i=>{ const b=h('button',{class:'btn hw-pick'+(P.sel.has(i.k)?' on':''),title:(i.m||[]).join(', '),onclick:()=>{ P.sel.has(i.k)?P.sel.delete(i.k):P.sel.add(i.k); b.classList.toggle('on'); upd(); }},i.k); return b; });
   const rnd=h('button',{class:'btn',onclick:()=>{ const a=list.map(i=>i.k).sort(()=>Math.random()-.5).slice(0,10); P.sel=new Set(a); renderHandPick(); }},'10 al azar');
@@ -86,9 +91,10 @@ function renderEscritura(){
     return;
   }
   const ch=P.queue[P.i]; const it=ITEMS.get('k|'+ch); const total=STROKES[ch].length;
-  let revealed=false, tracing=false, n=0;
+  const isNew=!(S.hand&&S.hand[ch])&&!P.learned.has(ch); // kanji que nunca has escrito: primero lección (calcar), luego de memoria
+  let revealed=false, tracing=isNew, n=0;
   const read=[...(it.on||[]).slice(0,2).map(r=>kataToHira(r.split('.')[0])), ...(it.kun||[]).slice(0,2).map(r=>r.split('.')[0])].filter(Boolean);
-  const info=h('div',{class:'stack',style:'text-align:center;gap:4px'}, h('div',{class:'eyebrow'},P.seen.has(ch)?'Repetición: ahora de memoria':`Kanji ${Math.min(P.seen.size+1,P.total)} de ${P.total}`), h('div',{style:'font-size:1.4rem;font-weight:600'},(it.m||[]).join(', ')), h('div',{class:'small muted jp'},read.join('・')));
+  const info=h('div',{class:'stack',style:'text-align:center;gap:4px'}, h('div',{class:'eyebrow'},isNew?'Lección nueva: calca el kanji siguiendo la guía':(P.learned.has(ch)&&!P.seen.has(ch)?'Ahora de memoria':(P.seen.has(ch)?'Repetición: ahora de memoria':`Kanji ${Math.min(P.seen.size+1,P.total)} de ${P.total}`))), h('div',{style:'font-size:1.4rem;font-weight:600'},(it.m||[]).join(', ')), h('div',{class:'small muted jp'},read.join('・')));
   const status=h('div',{class:'small muted',style:'text-align:center'});
   const model=h('div',{class:'hw-overlay',html:''});
   const cv=handCanvas(c=>{ n=c; refresh(); });
@@ -102,7 +108,12 @@ function renderEscritura(){
   function refresh(){
     actions.innerHTML='';
     if (!revealed&&tracing) setModel(true,false,true);
-    if (!revealed){
+    if (isNew&&!revealed){
+      status.textContent=n>=total?'Listo. Ahora lo escribirás de memoria.':`${n} de ${total} trazos · sigue la guía`;
+      actions.append(h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.undo()},'Deshacer trazo'), h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.clear()},'Borrar'),
+        h('button',{class:'btn sm ghost',onclick:()=>{ tracing=false; setModel(true,true,true); const t=total*900+400; setTimeout(()=>{ if(!revealed){ tracing=true; setModel(true,false,true); } },t); }},'Ver el orden'),
+        h('button',{class:'btn primary',disabled:n<total,onclick:()=>{ P.learned.add(ch); renderPractica(); }},'Ya lo calqué'));
+    } else if (!revealed){
       status.textContent=n?`${n} ${n===1?'trazo':'trazos'}`:'Escribe el kanji de memoria; si no te acuerdas, pulsa «Ver modelo»';
       actions.append(h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.undo()},'Deshacer trazo'), h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.clear()},'Borrar'),
         h('button',{class:'btn sm ghost',onclick:()=>{ tracing=!tracing; setModel(tracing,false,false); refresh(); }},tracing?'Quitar guía':'Calcar'),
@@ -116,10 +127,10 @@ function renderEscritura(){
     }
   }
   function grade(ok){
-    S.hand=S.hand||{}; const r=S.hand[ch]||{n:0,ok:0,last:0,st:0}; r.n++; if(ok) r.ok++; r.last=now();
+    S.hand=S.hand||{}; const firstEver=!(S.hand[ch]&&S.hand[ch].n); const r=S.hand[ch]||{n:0,ok:0,last:0,st:0}; r.n++; if(ok) r.ok++; r.last=now();
     // solo el primer intento de la sesión cuenta para el calendario; las repeticiones después de un fallo no lo cambian
-    if (!P.seen.has(ch)){ if(ok){ r.st=(r.st||0)+1; r.due=now()+HW_DAYS[Math.min(r.st-1,HW_DAYS.length-1)]*864e5; } else { r.st=Math.max(0,(r.st||0)-2); r.due=now()+0.5*864e5; } }
-    S.hand[ch]=r; S.settingsAt=now(); bump('hw');
+    if (!P.seen.has(ch)){ if(ok){ r.st=(r.st||0)+1; r.due=now()+(r.st>=9?3650:HW_STEPS[r.st-1])*864e5; } else { r.st=(r.st||1)>=5?(r.st||1)-2:Math.max(1,(r.st||1)-1); r.due=now()+HW_STEPS[0]*864e5; } }
+    S.hand[ch]=r; S.settingsAt=now(); bump('hw'); if(firstEver) bump('hwn');
     const first=!P.seen.has(ch); P.seen.add(ch);
     if(ok){ if(first) P.ok++; }
     else { P.again.push(ch); P.queue.splice(Math.min(P.queue.length,P.i+3+Math.floor(Math.random()*2)),0,ch); } // vuelve a salir tras 2 o 3 kanji más, hasta que lo escribas bien
@@ -128,18 +139,18 @@ function renderEscritura(){
   el.append(h('div',{class:'card stack',style:'align-items:center'}, info, h('div',{style:'width:100%;display:flex;justify-content:center'},box), status, actions));
   el.append(h('div',{class:'small muted',style:'text-align:center;margin-top:10px'},'Trazos: KanjiVG (CC BY-SA 3.0)'));
   refresh();
+  if (isNew){ setModel(true,true,true); setTimeout(()=>{ if(!revealed&&n===0&&P.queue[P.i]===ch){ tracing=true; setModel(true,false,true); } },total*900+400); }
 }
 
 // Resumen para la tarjeta de Práctica y la pantalla Hoy (no necesita los datos de trazos: usa el catálogo de kanji)
 function hwCounts(){
-  const hand=S.hand||{}, t=now();
-  const learned=[...ITEMS.values()].filter(i=>i.kind==='k'&&S.items['k|'+i.k]&&S.items['k|'+i.k].s>=1);
-  const due=learned.filter(i=>hand[i.k]&&(hand[i.k].due||0)<=t).length, fresh=learned.filter(i=>!hand[i.k]).length;
-  return {due,fresh,total:learned.length};
+  const hand=S.hand||{}, t=now(); const av=hwAvail(), d=day();
+  const due=av.filter(i=>hand[i.k]&&(hand[i.k].due||0)<=t).length, fresh=av.filter(i=>!hand[i.k]).length;
+  return {due,fresh,total:av.length,newLeft:Math.min(fresh,Math.max(0,hwQuota()-(d.hwn||0))),done:d.hw||0};
 }
 function hwSummary(){
   const c=hwCounts();
-  if (!c.total) return 'Con los kanji que ya has empezado a aprender';
-  if (c.due) return `${c.due} ${plural(c.due,'repaso pendiente','repasos pendientes')}`+(c.fresh?` · ${c.fresh} sin estrenar`:'');
-  return c.fresh?`Nada que repasar · ${c.fresh} ${plural(c.fresh,'kanji sin estrenar','kanji sin estrenar')}`:'Al día: nada pendiente';
+  if (!c.total) return 'Los kanji de tu nivel, aunque ya los reconozcas';
+  const bits=[]; if(c.due) bits.push(`${c.due} ${plural(c.due,'repaso','repasos')}`); if(c.newLeft) bits.push(`${c.newLeft} ${plural(c.newLeft,'lección nueva','lecciones nuevas')} hoy`);
+  return bits.length?bits.join(' · '):(c.fresh?'Al día hoy · más lecciones mañana':'Al día: nada pendiente');
 }
