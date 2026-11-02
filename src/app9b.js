@@ -6,7 +6,7 @@ const REV_TR={
  'Señalar un error':'誤りの報告','¿Qué está mal o suena raro?':'何が間違い、または不自然ですか？','Cómo debería ser (opcional)':'正しい表現（任意）','Cancelar':'キャンセル','Enviar':'送信',
  'Escribe qué falla':'内容を書いてください','Gracias: aviso enviado':'ありがとうございます。送信しました','Guardado; se enviará cuando haya conexión':'保存しました。接続後に送信されます',
  'Señalar error':'誤りを報告','Proponer corrección':'修正を提案','Revisado ✓':'確認済み ✓','Pendiente':'未確認','Marcar revisado':'確認済みにする','Quitar revisado':'確認済みを取り消す',
- 'Revisión':'校閲','Contenido a revisar por una persona nativa':'ネイティブによる内容確認','Gramática':'文法','Vocabulario':'語彙','Kanji':'漢字','Lecturas':'読解','Frases de examen':'試験の例文',
+ 'Simulacros':'模擬試験','Tipo':'種類','Respuesta correcta':'正解','Explicación (en español)':'解説（スペイン語）','Orden correcto':'正しい順序','Diálogo':'会話','Texto':'本文','Cargando…':'読み込み中…', 'Revisión':'校閲','Contenido a revisar por una persona nativa':'ネイティブによる内容確認','Gramática':'文法','Vocabulario':'語彙','Kanji':'漢字','Lecturas':'読解','Frases de examen':'試験の例文',
  'Todos':'すべて','Solo pendientes':'未確認のみ','Buscar…':'検索…','Progreso de la revisión':'確認の進み具合','Mostrar más':'もっと見る',
  'No quedan pendientes con este filtro.':'この条件では未確認はありません。','Sin resultados.':'該当なし。','Esta sección es solo para revisores.':'このページは校閲担当者専用です。',
  'Preguntas ({n})':'問題（{n}）','{done} de {total} revisados en este filtro · mostrando {shown} de {vis}':'{done}/{total} 確認済み・{vis}件中{shown}件を表示',

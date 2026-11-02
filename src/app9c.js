@@ -1,5 +1,5 @@
 // ===================== Vista de revisión (solo para revisores y administración) =====================
-const REV_CATS=[['g','Gramática'],['v','Vocabulario'],['k','Kanji'],['r','Lecturas'],['x','Frases de examen']];
+const REV_CATS=[['g','Gramática'],['v','Vocabulario'],['k','Kanji'],['r','Lecturas'],['x','Frases de examen'],['m','Simulacros']];
 let REV={cat:'g',tier:'N5',pending:true,q:'',shown:40};
 const plainJp=t=>String(t||'').replace(/\[([^\]|]*)\|[^\]|]*\|[^\]]*\]/g,'$1').replace(/\[([^\]|]+)\|[^\]]*\]/g,'$1');
 function revRows(cat){
@@ -9,10 +9,28 @@ function revRows(cat){
       label: cat==='g'?it.t:cat==='v'?it.w+'（'+it.r+'）':it.k,
       sub: cat==='g'?(it.s||''):(it.m||[]).join(', ')}));
   if (cat==='r') return READINGS.filter(r=>!r.user).map(r=>({key:'r|'+r.id,rd:r,tier:tier(r.lv),lv:r.lv,label:r.title,sub:r.sub||''}));
+  if (cat==='m') return (typeof MOCK_Q!=='undefined'?MOCK_Q:[]).map(it=>({key:'q|'+it.id,mq:it,tier:it.lv,lv:it.lv,label:'['+it.t+'] '+String(it.s||it.w||it.j||(it.lines&&it.lines[0].j)||(it.p&&plainJp(it.p).slice(0,40))||(it.parts&&it.parts.join(''))||'').replace(/[【】]/g,'').slice(0,44),sub:''}));
   return (typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).filter(x=>x.es).map(x=>({key:'x|'+x.j,sent:x,tier:tier(x.lv),lv:x.lv,label:x.j,sub:x.es}));
+}
+function mockReviewBody(it){
+  const box=h('div',{class:'stack',style:'gap:8px'}); const jp=t=>h('div',{class:'jp',style:'font-size:1.1rem;line-height:1.8;white-space:pre-wrap'},t);
+  const opts=(o,a)=>h('div',{class:'stack',style:'gap:4px'},...o.map((x,i)=>h('div',{class:'jp'+(i===a?' ok':''),style:'padding:4px 8px;border-radius:8px;border:1px solid var(--line)'+(i===a?';font-weight:600':'')},(i===a?'✓ ':'　')+x)));
+  box.append(h('div',{class:'small muted'},tr('Tipo')+': '+it.t));
+  if (it.lines) box.append(h('div',{class:'small muted'},tr('Diálogo')), jp(it.lines.map(l=>l.s+'：'+l.j).join('\n')), it.q?jp(it.q):null);
+  if (it.t==='resp') box.append(jp(it.j));
+  if (it.t==='usage') box.append(jp('「'+it.w+'」'));
+  if (it.s) box.append(jp(it.s));
+  if (it.t==='order') box.append(jp((it.pre||'')+it.parts.join(' / ')+(it.post||'。')), h('div',{class:'small muted'},tr('Orden correcto')+': '+it.parts.join(' → ')));
+  if (it.p&&!it.q) box.append(jp(it.p));
+  if (it.o&&it.a!=null&&!Array.isArray(it.q)) box.append(opts(it.o,it.a));
+  if (it.t==='cloze') { box.append(jp(it.p)); it.q.forEach((q,i)=>box.append(h('div',{class:'small muted'},'('+(i+1)+')'),opts(q.o,q.a))); }
+  else if (Array.isArray(it.q)&&it.t!=='listen') { if(it.p) box.append(h('div',{class:'small muted'},tr('Texto')),jp(plainJp(it.p))); it.q.forEach(q=>{ box.append(jp(q.q),opts(q.o,q.a)); if(q.why) box.append(h('div',{class:'small muted'},q.why)); }); }
+  if (it.why) box.append(h('div',{class:'small muted'},tr('Explicación (en español)')+': '+it.why));
+  return box;
 }
 function revBody(row,onChange){
   const box=h('div',{class:'stack',style:'padding:6px 2px 2px'});
+  if (row.mq){ box.append(mockReviewBody(row.mq),reviewRow(row.key,row.label,true,onChange)); return box; }
   if (row.it&&row.it.kind==='g'){ box.append(grammarSheet(row.it)); return box; }
   if (row.it&&row.it.kind==='v'){ const it=row.it; box.append(h('div',{class:'jp',style:'font-size:1.3rem'},it.w,' ',h('span',{class:'muted'},'（'+it.r+'）'),' ',spkBtn(it.w)), h('div',{},it.m.join(', ')), it.p?h('div',{class:'small muted'},posLabel(it.p)):null, it.ex?h('div',{class:'gs-ex'},h('div',{class:'t'},h('div',{class:'j',lang:'ja'},it.ex),h('div',{class:'es'},it.es||'')),spkBtn(it.ex)):null); }
   else if (row.it&&row.it.kind==='k'){ const it=row.it; box.append(h('div',{class:'big-jp',style:'font-size:2.4rem'},it.k), h('div',{},it.m.join(', ')), h('div',{class:'small jp'},'On: '+((it.on||[]).join('・')||'—')+' · Kun: '+((it.kun||[]).join('・')||'—')), it.mn?h('div',{class:'small'},it.mn):null); }
@@ -26,6 +44,7 @@ function renderRevision(){
   if (!(CAN_REVIEW||IS_ADMIN)){ el.append(h('div',{class:'card'},tr('Esta sección es solo para revisores.'))); return; }
   el.append(h('div',{class:'topline'}, h('h1',{},tr('Revisión')), h('span',{class:'small muted'},tr('Contenido a revisar por una persona nativa')), h('span',{class:'sp'}), h('button',{class:'btn sm ghost',onclick:()=>{ setRevLang(revLang()==='ja'?'es':'ja'); go('revision'); }},revLang()==='ja'?'Español':'日本語')));
   el.append(h('div',{class:'push info small'},tr('Las explicaciones están escritas en español para estudiantes hispanohablantes. Lo más importante es que revises que el japonés (frases, lecturas, vocabulario) sea correcto y natural.')));
+  if (typeof MOCK_STATE!=='undefined'&&MOCK_STATE!==2){ const ld=h('div',{class:'small muted'},tr('Cargando…')); el.append(ld); loadMock().then(()=>{ if(ld.isConnected){ el.innerHTML=''; renderRevision(); } }); return; }
   const head=h('div',{class:'card stack'}); const list=h('div',{class:'stack',style:'margin-top:12px;gap:8px'}); const more=h('div',{style:'text-align:center;margin-top:8px'});
   el.append(head,list,more);
   // resumen global (cuántos ítems están revisados)
