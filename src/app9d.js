@@ -29,10 +29,10 @@ function handPool(){
   const st=handStatus(), d=day(); const newLeft=Math.max(0,hwQuota()-(d.hwn||0));
   const rev=st.due.slice(0,HW_REV_MAX).map(i=>i.k), nw=st.fresh.slice(0,newLeft).map(i=>i.k); const list=[...rev,...nw];
   if (list.length) return {list,fallback:false,extra:false};
-  // sin nada pendiente ni lecciones: práctica extra con los que más tiempo llevan sin escribirse
+  // cuota del día agotada y sin repasos: más lecciones nuevas si quedan; si no, práctica extra con los que más tiempo llevan sin escribirse
+  const nw2=st.fresh.slice(0,5).map(i=>i.k); if (nw2.length) return {list:nw2,fallback:false,extra:true};
   const hand=S.hand||{}; const ex=st.learned.filter(i=>hand[i.k]).sort((a,b)=>(hand[a.k].last||0)-(hand[b.k].last||0)).slice(0,5).map(i=>i.k);
   if (ex.length) return {list:ex,fallback:false,extra:true};
-  const nw2=st.fresh.slice(0,3).map(i=>i.k); if (nw2.length) return {list:nw2,fallback:false,extra:true};
   const n5=[...ITEMS.values()].filter(i=>i.kind==='k'&&STROKES[i.k]&&i.lv<=3).slice(0,3).map(i=>i.k);
   return {list:n5,fallback:true,extra:false};
 }
