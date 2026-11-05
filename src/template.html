@@ -410,6 +410,7 @@ details summary{cursor:pointer;font-weight:600}
 .gs-ex .j mark{background:transparent;color:var(--accent);font-weight:700;border-bottom:2px solid var(--accent-soft)}
 .gs-ex .es{font-size:.9rem;color:var(--muted);margin-top:2px;line-height:1.5}
 .gs-ex button{flex:none;min-height:34px;padding:4px 9px}
+.lnk{padding:10px 6px;min-height:40px}
 .gs-more>summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.9rem;padding:6px 2px}
 .gs-more .gs-exs{margin-top:8px}
 .gs-rel{padding:11px 13px;border:1px solid var(--line);border-radius:14px;margin-top:8px;line-height:1.55}
@@ -445,6 +446,23 @@ details summary{cursor:pointer;font-weight:600}
 .wr-main{flex:1;min-width:0;text-align:left;background:none;border:0;padding:4px 0;cursor:pointer;font:inherit;color:inherit}
 .wr-t{font-weight:500}
 @media (max-width:760px){.pgrid{grid-template-columns:1fr}.pc{padding:18px}}
+
+/* ===== Estándar responsive: tamaños mínimos de texto y zonas táctiles (44 px en campos y botones, 11 px de texto mínimo) ===== */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{min-height:44px;box-sizing:border-box}
+input[type=checkbox],input[type=radio]{width:22px;height:22px;flex:none}
+select{padding-right:28px}
+.btn.sm{min-height:40px}
+main a:not(.btn){display:inline-block;padding:10px 0}
+input[type=range]{min-height:32px}
+main details>summary,main summary{padding-top:12px;padding-bottom:12px}
+.gs-more>summary{min-height:44px;box-sizing:border-box;display:flex;align-items:center}
+.badge{font-size:max(.72rem,11px)}
+@media (max-width:860px){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{font-size:16px}
+  nav.tabs button{font-size:max(.72rem,11.5px)}
+  nav.tabs button .badge{font-size:max(.68rem,11px)}
+  .stages .l{font-size:max(.68rem,11px)}
+}
 </style>
 
 <div class="app">

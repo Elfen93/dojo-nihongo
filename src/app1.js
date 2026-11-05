@@ -1,4 +1,6 @@
 'use strict';
+// Los DOM append/prepend convierten null, undefined y false en el texto «null»; aquí se ignoran como hace h()
+(()=>{ for (const T of [Element,DocumentFragment]) for (const m of ['append','prepend']){ const o=T.prototype[m]; T.prototype[m]=function(...a){ return o.apply(this,a.filter(x=>x!=null&&x!==false)); }; } })();
 const CONFIG = Object.assign({SUPABASE_URL:'',SUPABASE_ANON_KEY:''}, window.DOJO_CONFIG||{});
 // ===================== Utilidades =====================
 const $ = (s, el=document) => el.querySelector(s);
