@@ -2,7 +2,7 @@
 // Cada kanji se muestra como «Partes: 亻 persona + 氏 …»; tocar una pieza lista los kanji de la app que la usan. Datos: data/components.js
 const kanjiParts=ch=>(typeof KPARTS!=='undefined'&&KPARTS[ch])||[];
 function partsRow(ch,opts={}){
-  const ps=kanjiParts(ch); if(!ps.length) return null;
+  const ps=kanjiParts(ch); if(!ps.length||ps.every(x=>'一丨丿丶乙亅'.includes(x))) return null; // sin partes, o solo rayas sueltas: no aporta nada
   const items=[]; ps.forEach((p,i)=>{ if(i) items.push(h('span',{class:'muted'},'+')); const nm=((typeof KCOMP!=='undefined'&&KCOMP[p])||{}).n||'';
     items.push(h('button',{class:'kpart',title:'Ver los kanji que usan esta pieza',onclick:e=>{ e.stopPropagation(); showPieceSheet(p); }}, h('span',{class:'jp kp-c'},p), nm?h('span',{class:'kp-n'},nm):null)); });
   return h('div',{class:'kparts'}, opts.label===false?null:h('b',{class:'small'},'Partes ·'), ...items);
