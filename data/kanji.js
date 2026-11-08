@@ -53,7 +53,7 @@ const KANJI = [
 {k:"友",lv:2,m:["amigo"],on:["ユウ"],kun:["とも"],mn:"Dos manos que se estrechan: amigo."},
 {k:"学",lv:2,m:["estudiar","aprendizaje"],on:["ガク"],kun:["まな"],mn:"Un niño (子) con un gorro de graduación: estudiar."},
 {k:"生",lv:2,m:["vida","nacer","crudo","estudiante"],on:["セイ","ショウ"],kun:["い","う","なま"],mn:"Una planta brotando de la tierra: vida."},
-{k:"先",lv:2,m:["antes","anterior","punta"],on:["セン"],kun:["さき"],mn:"Tierra (土) sobre piernas (儿): quien llega primero a la meta va antes."},
+{k:"先",lv:2,m:["antes","anterior","punta"],on:["セン"],kun:["さき"],mn:"Una persona (儿) con un trazo largo que se adelanta a los demás: va primero."},
 {k:"校",lv:2,m:["escuela"],on:["コウ"],kun:[],mn:"Árbol (木) + cruzar (交): se cruzan los niños entre los árboles del patio de la escuela."},
 {k:"本",lv:2,m:["libro","origen","raíz"],on:["ホン"],kun:["もと"],mn:"Un árbol (木) con una raya en la raíz: el origen; los libros son de madera."},
 {k:"語",lv:2,m:["idioma","palabra"],on:["ゴ"],kun:["かた"],mn:"Decir (言) + cinco (五) + boca (口): cinco bocas hablando un idioma."},

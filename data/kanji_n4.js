@@ -23,7 +23,7 @@ const KANJI_N4 = [
 // nivel 5
 {k:"開",lv:5,m:["abrir"],on:["カイ"],kun:["あ","ひら"],mn:"Dos manos (开) abriendo la puerta (門)."},
 {k:"界",lv:5,m:["mundo","frontera"],on:["カイ"],kun:[],mn:"Campo (田) + entre (介): entre los campos está la frontera del mundo."},
-{k:"楽",lv:5,m:["divertido","música","fácil"],on:["ガク","ラク"],kun:["たの"],mn:"Un árbol (木) con un tambor blanco (白) y dos cuerdas (幺幺): música alegre."},
+{k:"楽",lv:5,m:["divertido","música","fácil"],on:["ガク","ラク"],kun:["たの"],mn:"Un árbol (木) con un tambor blanco (白) y adornos a los lados: música y diversión."},
 {k:"館",lv:5,m:["edificio","pabellón"],on:["カン"],kun:[],mn:"Comida (食) + funcionario (官): el edificio donde comen los funcionarios."},
 {k:"漢",lv:5,m:["China","chino (Han)"],on:["カン"],kun:[],mn:"Agua (氵) con hierba (艹) y un hombre (夫) a la orilla: los caracteres chinos."},
 {k:"寒",lv:5,m:["frío"],on:["カン"],kun:["さむ"],mn:"Bajo un techo (宀) con mucha paja y dos gotas de hielo: frío."},
@@ -131,7 +131,7 @@ const KANJI_N4 = [
 {k:"特",lv:10,m:["especial"],on:["トク"],kun:[],mn:"Vaca (牛) + templo (寺): la vaca del templo es especial."},
 {k:"肉",lv:0},
 // nivel 11
-{k:"発",lv:11,m:["partir","emitir","salir"],on:["ハツ"],kun:[],mn:"Dos pies (癶) arriba y un arco (弓) tensado: ¡sale disparado, parte!"},
+{k:"発",lv:11,m:["partir","emitir","salir"],on:["ハツ"],kun:[],mn:"Dos pies (癶) arriba y las piernas listas debajo: salen disparados, parten."},
 {k:"飯",lv:11,m:["arroz cocido","comida"],on:["ハン"],kun:["めし"],mn:"Comida (食) + oponerse (反): nadie se opone al arroz."},
 {k:"病",lv:11,m:["enfermedad"],on:["ビョウ"],kun:["やまい"],mn:"Una cama (疒) con alguien dentro: enfermedad."},
 {k:"品",lv:11,m:["artículo","producto"],on:["ヒン"],kun:["しな"],mn:"Tres cajas (口口口): productos apilados."},
@@ -140,7 +140,7 @@ const KANJI_N4 = [
 {k:"服",lv:11,m:["ropa"],on:["フク"],kun:[],mn:"Luna (月) y una persona agachada que se viste: la ropa."},
 {k:"物",lv:0},
 {k:"文",lv:11,m:["texto","frase","cultura"],on:["ブン","モン"],kun:["ふみ"],mn:"Un sombrero (亠) sobre una cruz de trazos: letras bordadas, un texto."},
-{k:"別",lv:11,m:["separar","otro","diferente"],on:["ベツ"],kun:["わか"],mn:"Boca (口), fuerza (力) y cuchillo (刂): lo partes con fuerza y queda separado."},
+{k:"別",lv:11,m:["separar","otro","diferente"],on:["ベツ"],kun:["わか"],mn:"Un trazo a cada lado y un cuchillo (刂) en medio: lo cortas y quedan separados."},
 {k:"勉",lv:11,m:["esfuerzo","estudiar"],on:["ベン"],kun:[],mn:"Escapar (免) + fuerza (力): esfuerzo para escapar de los exámenes."},
 {k:"歩",lv:0},
 {k:"方",lv:11,m:["dirección","persona (formal)","manera"],on:["ホウ"],kun:["かた"],mn:"Una bandera que señala la dirección."},
