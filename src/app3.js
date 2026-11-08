@@ -323,6 +323,7 @@ function itemDetails(it, p){
   const add=(t,d)=>dl.append(h('dt',{},t),h('dd',{},d));
   if (it.kind==='k'){
     add('Significado', it.m.join(', ')); add('On', h('span',{class:'jp'},(it.on||[]).join('・')||'—')); add('Kun', h('span',{class:'jp'},(it.kun||[]).join('・')||'—'));
+    { const pr=partsRow(it.k,{label:false}); if(pr) add('Partes', pr); }
     if (it.mn) add('Mnemotecnia', it.mn);
     const vs=vocabWithKanji(it.k).slice(0,3); if(vs.length) add('Palabras', h('span',{class:'jp'}, vs.map(v=>v.w+'（'+v.r+'）').join('、')));
   } else if (it.kind==='v'){

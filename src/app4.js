@@ -61,6 +61,7 @@ function renderLesson(){
   if (it.kind==='k'){
     card.append(h('div',{class:'ask k',style:'text-align:center'},'Kanji nuevo'), h('div',{class:'big-jp',lang:'ja',style:'text-align:center'},it.k), h('div',{class:'big-es',style:'text-align:center;font-size:1.4rem'}, it.m.join(', ')),
       h('div',{class:'readings'}, h('div',{}, h('b',{},'On\'yomi'), h('span',{class:'jp'},(it.on||[]).join('・')||'—')), h('div',{}, h('b',{},'Kun\'yomi'), h('span',{class:'jp'},(it.kun||[]).join('・')||'—'))),
+      partsRow(it.k),
       it.mn?h('div',{class:'mn'}, h('b',{class:'small'},'Mnemotecnia · '), it.mn):null);
     const vs=vocabWithKanji(it.k).slice(0,4); if(vs.length) card.append(h('div',{class:'ex'}, h('div',{class:'eyebrow'},'Palabras con este kanji'), vs.map(v=>h('div',{class:'jp',style:'margin-top:4px'}, v.w, ' ', h('span',{class:'muted'},'（'+v.r+'）'), ' ', h('span',{class:'muted',style:'font-family:var(--f-ui)'}, v.m[0])))));
   } else if (it.kind==='v'){

@@ -460,6 +460,11 @@ details summary{cursor:pointer;font-weight:600}
 .hw-chip{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:600}
 .hw-chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .hw-card-actions .btn{flex:1}
+.kparts{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
+.kpart{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);font:inherit}
+.kp-c{font-size:1.25rem}.kp-n{font-size:.9rem;color:var(--muted)}
+.piece-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:59}
+.piece-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;max-width:380px;width:calc(100% - 32px);max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 /* ===== Estándar responsive: tamaños mínimos de texto y zonas táctiles (44 px en campos y botones, 11 px de texto mínimo) ===== */
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{min-height:44px;box-sizing:border-box}
 input[type=checkbox],input[type=radio]{width:22px;height:22px;flex:none}

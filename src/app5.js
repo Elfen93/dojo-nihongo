@@ -208,7 +208,7 @@ function itemSheet(it){
   const k=keyOf(it), rec=S.items[k]||{s:0,c:0,w:0};
   const total=(rec.c||0)+(rec.w||0); const acc=total?Math.round(100*(rec.c||0)/total):null;
   const body=h('div',{class:'stack'});
-  if (it.kind==='k') body.append(h('div',{class:'big-jp',style:'text-align:center'},it.k), h('div',{style:'text-align:center'},it.m.join(', ')), h('div',{class:'small muted',style:'text-align:center'},'On: '+((it.on||[]).join('・')||'—')+' · Kun: '+((it.kun||[]).join('・')||'—')), it.mn?h('div',{class:'small'},it.mn):null, h('div',{class:'small jp'}, vocabWithKanji(it.k).slice(0,5).map(v=>v.w+'（'+v.r+'）').join('、')));
+  if (it.kind==='k') body.append(h('div',{class:'big-jp',style:'text-align:center'},it.k), h('div',{style:'text-align:center'},it.m.join(', ')), h('div',{class:'small muted',style:'text-align:center'},'On: '+((it.on||[]).join('・')||'—')+' · Kun: '+((it.kun||[]).join('・')||'—')), partsRow(it.k),it.mn?h('div',{class:'small'},it.mn):null, h('div',{class:'small jp'}, vocabWithKanji(it.k).slice(0,5).map(v=>v.w+'（'+v.r+'）').join('、')));
   else if (it.kind==='v') body.append(h('div',{class:'big-jp',style:'text-align:center;font-size:2.2rem'},it.w), h('div',{style:'text-align:center'},h('span',{class:'jp'},it.r),' · ',it.m.join(', ')), it.ex?h('div',{class:'small'}, h('div',{class:'jp'},it.ex), h('div',{class:'muted'},it.es||'')):null);
   else body.append(grammarSheet(it));
   if (it.kind!=='g') body.append(reviewRow(k, it.kind==='k'?it.k:it.w));
