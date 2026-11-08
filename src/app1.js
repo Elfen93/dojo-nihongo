@@ -13,6 +13,8 @@ const h = (tag, attrs={}, ...kids) => {
     else if (v===false||v==null) {}
     else el.setAttribute(k, v===true?'':v);
   }
+  // el japonés no se traduce si alguien usa el traductor del navegador sobre la página en español
+  if (/(^|\s)(jp|gs-term|big-jp|mid-jp)(\s|$)/.test(el.className)||el.getAttribute('lang')==='ja') el.setAttribute('translate','no');
   for (const kid of kids.flat()) if (kid!=null && kid!==false) el.append(kid.nodeType?kid:document.createTextNode(String(kid)));
   return el;
 };
