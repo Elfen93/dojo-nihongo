@@ -99,31 +99,32 @@ function renderEscritura(){
   const model=h('div',{class:'hw-overlay',html:''});
   const cv=handCanvas(c=>{ n=c; refresh(); });
   const box=h('div',{class:'hw-box'}, model, cv.el);
-  const actions=h('div',{class:'row',style:'justify-content:center;gap:8px;flex-wrap:wrap'});
+  const actions=h('div',{class:'row hw-card-actions',style:'width:100%;gap:10px'});
   function setModel(show,animate,numbers){
     // Calcar: guía trazo a trazo (el siguiente resaltado, los hechos tenues); Ver modelo: todo el kanji animado en orden
     const guide=show&&!revealed&&tracing;
     model.innerHTML=show?strokeSvg(ch,{numbers:numbers||guide,w:4.6,focus:guide?Math.min(n,total-1):null}):''; model.style.opacity=show?(revealed?'.55':(guide?'.8':'.16')):'0'; if(show&&animate) animateStrokes(model);
   }
+  const tools=h('div',{class:'hw-tools'});
+  const ic=(g,label,fn,dis)=>h('button',{class:'hw-ic',title:label,'aria-label':label,disabled:!!dis,onclick:fn},g);
+  const playOrder=()=>{ const was=tracing; tracing=false; setModel(true,true,true); setTimeout(()=>{ if(!revealed&&was){ tracing=true; setModel(true,false,true); } },total*900+400); };
   function refresh(){
-    actions.innerHTML='';
+    actions.innerHTML=''; tools.innerHTML='';
     if (!revealed&&tracing) setModel(true,false,true);
-    if (isNew&&!revealed){
+    const undo=ic('↶','Deshacer el último trazo',()=>cv.undo(),!n), clear=ic('✕','Borrar todo',()=>cv.clear(),!n);
+    if (isNew&&!revealed){ // lección: calcar con la guía
       status.textContent=n>=total?'Listo. Ahora lo escribirás de memoria.':`${n} de ${total} trazos · sigue la guía`;
-      actions.append(h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.undo()},'Deshacer trazo'), h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.clear()},'Borrar'),
-        h('button',{class:'btn sm ghost',onclick:()=>{ tracing=false; setModel(true,true,true); const t=total*900+400; setTimeout(()=>{ if(!revealed){ tracing=true; setModel(true,false,true); } },t); }},'Ver el orden'),
-        h('button',{class:'btn primary',disabled:n<total,onclick:()=>{ P.learned.add(ch); renderPractica(); }},'Ya lo calqué'));
-    } else if (!revealed){
-      status.textContent=n?`${n} ${n===1?'trazo':'trazos'}`:'Escribe el kanji de memoria; si no te acuerdas, pulsa «Ver modelo»';
-      actions.append(h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.undo()},'Deshacer trazo'), h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.clear()},'Borrar'),
-        h('button',{class:'btn sm ghost',onclick:()=>{ tracing=!tracing; setModel(tracing,false,false); refresh(); }},tracing?'Quitar guía':'Calcar'),
-        ...(tracing?[h('button',{class:'btn sm ghost',onclick:()=>{ tracing=false; setModel(true,true,true); const t=total*900+400; setTimeout(()=>{ if(!revealed){ tracing=true; setModel(true,false,true); } },t); }},'Ver el orden')]:[]),
-        h('button',{class:'btn primary',onclick:()=>{ revealed=true; tracing=false; setModel(true,true,true); refresh(); }},'Ver modelo'));
-    } else {
+      tools.append(undo, clear, ic('▶','Ver el orden de los trazos',playOrder));
+      actions.append(h('button',{class:'btn primary',disabled:n<total,onclick:()=>{ P.learned.add(ch); renderPractica(); }},'Ya lo calqué'));
+    } else if (!revealed){ // de memoria
+      status.textContent=n?`${n} ${n===1?'trazo':'trazos'}`:'Escríbelo de memoria';
+      tools.append(undo, clear, h('button',{class:'hw-chip'+(tracing?' on':''),onclick:()=>{ tracing=!tracing; setModel(tracing,false,false); refresh(); }},'Guía'), ...(tracing?[ic('▶','Ver el orden de los trazos',playOrder)]:[]));
+      actions.append(h('button',{class:'btn primary',onclick:()=>{ revealed=true; tracing=false; setModel(true,true,true); refresh(); }},'Ver modelo'));
+    } else { // modelo a la vista: ¿coincide?
       const same=n===total;
-      status.innerHTML=''; status.append(h('span',{style:'color:'+(same?'var(--ok)':'var(--warn)')},`Tus trazos: ${n} · modelo: ${total}`), h('div',{class:'small muted'},'Compara la forma y el orden. Algunos kanji admiten variantes: sé honesto contigo.'));
-      actions.append(h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.undo()},'Deshacer trazo'), h('button',{class:'btn sm',disabled:!n,onclick:()=>cv.clear()},'Borrar'), h('button',{class:'btn sm ghost',onclick:()=>{ setModel(true,true,true); }},'Repetir animación'),
-        h('button',{class:'btn warn',title:'Volverá a salir dentro de unos kanji',onclick:()=>grade(false)},'Necesito repetirlo'), h('button',{class:'btn primary',onclick:()=>grade(true)},'Lo escribí bien'));
+      status.innerHTML=''; status.append(h('div',{style:'font-weight:600'},'¿Lo escribiste bien?'), h('div',{class:'small muted'},`Tus trazos: ${n} · modelo: ${total}${same?'':' (no coinciden)'}. Compara forma y orden; sé honesto contigo.`));
+      tools.append(undo, clear, ic('▶','Repetir la animación',()=>setModel(true,true,true)));
+      actions.append(h('button',{class:'btn warn',onclick:()=>grade(false)},'No, repetir'), h('button',{class:'btn primary',onclick:()=>grade(true)},'Sí, bien'));
     }
   }
   function grade(ok){
@@ -136,7 +137,7 @@ function renderEscritura(){
     else { P.again.push(ch); P.queue.splice(Math.min(P.queue.length,P.i+3+Math.floor(Math.random()*2)),0,ch); } // vuelve a salir tras 2 o 3 kanji más, hasta que lo escribas bien
     P.i++; renderPractica();
   }
-  el.append(h('div',{class:'card stack',style:'align-items:center'}, info, h('div',{style:'width:100%;display:flex;justify-content:center'},box), status, actions));
+  el.append(h('div',{class:'card stack',style:'align-items:center'}, info, h('div',{style:'width:100%;display:flex;justify-content:center'},box), status, tools, actions));
   el.append(h('div',{class:'small muted',style:'text-align:center;margin-top:10px'},'Trazos: KanjiVG (CC BY-SA 3.0)'));
   refresh();
   if (isNew){ setModel(true,true,true); setTimeout(()=>{ if(!revealed&&n===0&&P.queue[P.i]===ch){ tracing=true; setModel(true,false,true); } },total*900+400); }

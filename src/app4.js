@@ -158,7 +158,7 @@ async function startFreshExam(statusEl){
     renderExam();
   }catch(e){ if(statusEl) statusEl.textContent='No se pudo generar: '+(e.message||e); toast('Error al generar el examen'); }
 }
-function startExam(kind,tier,num){ const ex=buildExam(kind,tier,num); if(ex.qs.length<8){ toast(kind==='mock'?'No hay preguntas suficientes para este simulacro.':'Aún no hay suficiente material aprendido para este examen.'); return; } ex.tierName=tier||null; EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
+function startExam(kind,tier,num){ const ex=buildExam(kind,tier,num); if(ex.qs.length<8){ toast(kind==='mock'?'No hay preguntas suficientes para este simulacro.':'Aún no hay suficiente material aprendido para este examen.'); return; } ex.tierName=tier||null; if(!ex.dynamic) ex.given={}; EXAM=ex; clearInterval(examTimer); examTimer=setInterval(()=>{ const t=$('#timer'); if(!EXAM){clearInterval(examTimer);return;} const left=EXAM.deadline-now(); if(t){ t.textContent=fmtTimer(left); t.classList.toggle('low',left<3*6e4);} if(left<=0){ clearInterval(examTimer); toast('Tiempo agotado'); finishExam(); } },1000); renderExam(); }
 const fmtTimer = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/6e4), s=Math.floor(ms%6e4/1000); return m+':'+String(s).padStart(2,'0'); };
 function examKeysOff(E){ if(E&&E._kh){ document.removeEventListener('keydown',E._kh); E._kh=null; } }
 function renderExam(){
@@ -184,22 +184,41 @@ function renderExam(){
     card.append(h('div',{class:'big-es',style:'font-size:1.4rem'}, q.es));
     const input=h('input',{type:'text',id:'ans',autocomplete:'off',autocapitalize:'off',lang:'ja',placeholder:'romaji → かな'}); kanaInput(input);
     let sent=false; const submit=()=>{ if(sent||EXAM!==E) return; const v=input.value.trim(); if(!v) return; sent=true; recordExam(q, toKana(v,true), q.check(v)); };
-    input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();submit();} });
-    card.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Responder',onclick:submit},'→'))); if(E.dynamic) card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>{ if(EXAM!==E) return; recordExam(q,'(no sé)',false,true); }},'No sé'))); setTimeout(()=>input.focus(),0);
+    if (!E.dynamic){ input.value=(E.given&&E.given[E.i])||''; input.addEventListener('input',()=>{ E.given[E.i]=input.value; }); input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); E.given[E.i]=input.value; examGo(1); } }); card.append(h('div',{class:'answer'}, input)); }
+    else { input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();submit();} });
+    card.append(h('div',{class:'answer'}, input, h('button',{class:'btn primary',title:'Responder',onclick:submit},'→'))); } if(E.dynamic) card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>{ if(EXAM!==E) return; recordExam(q,'(no sé)',false,true); }},'No sé'))); setTimeout(()=>input.focus(),0);
   } else {
     const ch=h('div',{class:'choices text'+(q.options.some(o=>o.length>12)?' one':'')});
-    let sent=false; const choose=(o,unk)=>{ if(sent||EXAM!==E) return; sent=true; [...ch.children].forEach(b=>b.disabled=true); recordExam(q,o,!unk&&o===q.answer,!!unk); };
-    q.options.forEach((o,i)=>ch.append(h('button',{lang:'ja',onclick:()=>choose(o)}, h('span',{class:'muted small',style:'margin-right:8px'},(i+1)+'.'), o)));
+    let sent=false; const choose=(o,unk)=>{ if(sent||EXAM!==E) return; if(!E.dynamic){ E.given[E.i]=o; [...ch.children].forEach(b=>b.classList.toggle('on',b.dataset.o===o)); return; } sent=true; [...ch.children].forEach(b=>b.disabled=true); recordExam(q,o,!unk&&o===q.answer,!!unk); };
+    q.options.forEach((o,i)=>ch.append(h('button',{lang:'ja','data-o':o,class:(!E.dynamic&&E.given&&E.given[E.i]===o)?'on':'',onclick:()=>choose(o)}, h('span',{class:'muted small',style:'margin-right:8px'},(i+1)+'.'), o)));
     card.append(ch); if(E.dynamic) card.append(h('div',{class:'row',style:'justify-content:center'}, h('button',{class:'btn sm ghost',onclick:()=>choose('(no sé)',true)},'No sé')));
-    const kh=e=>{ if(EXAM!==E||E.qs[E.i]!==q||e.ctrlKey||e.metaKey||e.altKey) return; const n=parseInt(e.key); if(n>=1&&n<=q.options.length){ examKeysOff(E); choose(q.options[n-1]); } };
+    const kh=e=>{ if(EXAM!==E||E.qs[E.i]!==q||e.ctrlKey||e.metaKey||e.altKey) return; if(!E.dynamic&&e.key==='ArrowRight'){ examGo(1); return; } if(!E.dynamic&&e.key==='ArrowLeft'){ examGo(-1); return; } const n=parseInt(e.key); if(n>=1&&n<=q.options.length){ if(E.dynamic) examKeysOff(E); choose(q.options[n-1]); } };
     document.addEventListener('keydown',kh); E._kh=kh;
   }
+  if (!E.dynamic) card.append(h('div',{class:'exam-nav'}, h('button',{class:'btn',disabled:E.i===0,onclick:()=>examGo(-1)},'← Anterior'), h('button',{class:'btn ghost',onclick:()=>examGo(E.qs.length)},'Resumen'), h('button',{class:'btn primary',onclick:()=>examGo(1)},E.i===E.qs.length-1?'Revisar y entregar':'Siguiente →')));
   el.append(h('div',{class:'study stack'}, head, card));
   window.scrollTo(0,0);
 }
+// Navegación libre en los exámenes que no son adaptativos: se puede volver atrás y cambiar la respuesta; la nota se calcula al entregar
+function examGo(d){ const E=EXAM; if(!E) return; examKeysOff(E); const n=E.i+d; if(n<0) return; if(n>=E.qs.length){ renderExamSummary(); return; } E.i=n; renderExam(); }
+function examAnswered(E,i){ const g=E.given&&E.given[i]; return g!=null&&String(g).trim()!==''; }
+function renderExamSummary(){
+  const E=EXAM, el=$('#main'); el.innerHTML=''; examKeysOff(E); window.scrollTo(0,0);
+  const blank=E.qs.map((q,i)=>i).filter(i=>!examAnswered(E,i)); const head=h('div',{class:'study-head'}, h('button',{class:'btn sm ghost',onclick:()=>confirmBox('¿Abandonar el examen? No se guardará.',()=>go('examenes'))},'✕ Abandonar'), h('span',{class:'sp'}), h('span',{class:'num'},`${E.qs.length-blank.length}/${E.qs.length}`), h('span',{class:'timer',id:'timer'},fmtTimer(E.deadline-now())));
+  const grid=h('div',{class:'qgrid'}, E.qs.map((q,i)=>h('button',{class:examAnswered(E,i)?'done':'',title:q.sec,onclick:()=>{ E.i=i; renderExam(); }},String(i+1))));
+  el.append(h('div',{class:'study stack'}, head, h('div',{class:'card stack'}, h('h3',{},'Resumen del examen'), h('div',{class:'small muted'}, blank.length?`Sin responder: ${blank.length}. Toca un número para volver a esa pregunta.`:'Has respondido todas las preguntas. Toca un número si quieres revisar alguna.'), grid,
+    h('div',{class:'row'}, h('button',{class:'btn',onclick:()=>{ E.i=blank.length?blank[0]:E.qs.length-1; renderExam(); }},blank.length?'Ir a la primera sin responder':'Volver a la última'), h('span',{class:'sp'}), h('button',{class:'btn primary',onclick:()=>{ const go2=()=>finishExam(); blank.length?confirmBox(`Hay ${blank.length} ${blank.length===1?'pregunta sin responder':'preguntas sin responder'} y contarán como fallo. ¿Entregar el examen?`,go2):go2(); }},'Entregar examen')))));
+}
+function examCommit(E){
+  E.answers=[]; E.qs.forEach((q,i)=>{ const g=E.given&&E.given[i]; const has=examAnswered(E,i);
+    const base={sec:q.sec, answer:q.answer, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, topic:q.topic, why:q.why, text:q.reviewText||q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')};
+    if(!has) E.answers.push({...base, ok:false, given:'(sin responder)', key:null, unknown:true});
+    else if(q.type==='typed') E.answers.push({...base, ok:!!q.check(g), given:toKana(String(g).trim(),true), key:q.key, unknown:false});
+    else E.answers.push({...base, ok:g===q.answer, given:g, key:q.key, unknown:false}); });
+}
 function recordExam(q, given, ok, unknown){ const E=EXAM; if(!E) return; examKeysOff(E); E.answers.push({sec:q.sec, ok, given, answer:q.answer, key:q.key, es:q.es, typed:q.type==='typed', skill:q.skill, d:q.d, unknown:!!unknown, topic:q.topic, why:q.why, text:q.reviewText||q.text||q.audio||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); E.i++; if(E.dynamic){ plAnswer(E,q,ok,unknown); const nq=plNext(E); if(!nq){ finishPlacement(E); return; } E.qs.push(nq); renderExam(); return; } if(E.i>=E.qs.length) finishExam(); else renderExam(); }
 function finishExam(){
-  const E=EXAM; if(!E) return; EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
+  const E=EXAM; if(!E) return; if(!E.dynamic) examCommit(E); EXAM=null; clearInterval(examTimer); examKeysOff(E); document.body.classList.remove('focus');
   // sin responder (se acabó el tiempo): cuentan como fallo en la nota, pero no penalizan el SRS
   for (let i=E.answers.length;i<E.qs.length;i++){ const q=E.qs[i]; E.answers.push({sec:q.sec, ok:false, given:'(sin responder)', answer:q.answer, key:null, es:q.es, text:q.text||(q.o?q.o.pre+q.o.parts.join('')+q.o.post:'')}); }
   const total=E.qs.length, ok=E.answers.filter(a=>a.ok).length, pct=Math.round(100*ok/total);

@@ -205,6 +205,9 @@ function renderStudy(){
     sendBtn.addEventListener('click',submit);
     input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
     study.append(h('div',{class:'answer'}, input, sendBtn));
+    // No lo sé: cuenta como fallo y muestra la respuesta, sin tener que escribir nada
+    const giveUp=()=>{ if(SESSION!==s||s.cur!==c||s.phase!=='ask'||c.answer!==undefined) return; c.answer='(no lo sé)'; c.giveUp=true; sendBtn.disabled=true; input.classList.add('wrong'); input.disabled=true; setTimeout(()=>answerCurrent(false),0); };
+    study.append(h('div',{class:'row',style:'justify-content:center;margin-top:6px'}, h('button',{class:'btn sm ghost',onclick:giveUp},'No lo sé')));
     setTimeout(()=>input.focus(),0);
   } else if (s.phase==='pick'){
     study.append(h('div',{class:'muted',style:'margin-top:10px;text-align:center'}, 'Lectura correcta: ', h('b',{class:'jp'},p.it.r), '. Ahora elige cómo se escribe.'));
@@ -339,7 +342,7 @@ function itemDetails(it, p){
 function feedbackPanel(c){
   const p=c.p, it=p.it, ok=c.ok;
   const fb=h('div',{class:'feedback'});
-  fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null));
+  fb.append(h('div',{class:'verdict '+(ok?'ok':'ko')}, ok?'Correcto':'Incorrecto', c.giveUp?h('span',{class:'muted',style:'font-weight:400'},' · no lo sabías'):(c.answer?h('span',{class:'muted',style:'font-weight:400'}, ' · tu respuesta: ', h('span',{class:'jp'},p.input==='kana'?toKana(c.answer,true):c.answer)):null)));
   if (c.regNote) fb.append(h('div',{class:'push info small',style:'margin-top:8px'},c.regNote));
   fb.append(itemDetails(it, p));
   const rec=S.items[c.k]; if(rec&&rec.s>0) fb.append(h('div',{class:'small muted',style:'margin-top:8px'}, 'Nivel SRS actual: '+STAGE_NAMES[rec.s]));
