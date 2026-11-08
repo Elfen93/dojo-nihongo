@@ -130,10 +130,12 @@ function mergeRemote(remote){
 async function initDb(){
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){ AUTH_PENDING=false; setSyncLabel('Sin cuenta configurada: guardado solo aquí'); render(); return; }
   if (!window.supabase){ // no cargó la librería (sin conexión): si este dispositivo ya tenía sesión, se trabaja en local y se sube al volver la red
-    AUTH_PENDING=false; AUTH_OPT=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); } else setSyncLabel('Sin conexión'); render(); return; }
+    AUTH_PENDING=false; AUTH_OPT=false; if (localOwner()){ OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); window.addEventListener('online',()=>{ location.reload(); },{once:true}); } else setSyncLabel('Sin conexión'); render(); return; }
   try{
     sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-    let session=null; try{ ({ data:{ session } } = await withTimeout(sb.auth.getSession(), 8000)); }catch(e){ console.warn('getSession', e); }
+    let session=null, sessFail=false; try{ const r=await withTimeout(sb.auth.getSession(), 8000); session=r.data&&r.data.session; if(r.error&&!session) sessFail=true; }catch(e){ console.warn('getSession', e); sessFail=true; }
+    // sin red y sin sesión renovable, pero este dispositivo ya tiene una cuenta: se trabaja en local y se sincroniza al volver la red
+    if (!session && localOwner() && (sessFail||navigator.onLine===false)){ USER=null; AUTH_PENDING=false; AUTH_OPT=false; OFFLINE=true; setSyncLabel('Sin conexión: guardado solo aquí'); render(); window.addEventListener('online',()=>{ if(OFFLINE){ OFFLINE=false; initDb(); } },{once:true}); return; }
     USER = session ? session.user : null; AUTH_PENDING=false; AUTH_OPT=false;
     sb.auth.onAuthStateChange((ev, sess)=>{ const was=USER&&USER.id; const u=sess?sess.user:null; if (u && u.id!==was){ USER=u; AUTH_PENDING=false; setTimeout(onSignedIn,0); } else if (!u && USER && ev==='SIGNED_OUT'){ USER=null; render(); } });
     if (USER) await onSignedIn(); else { setSyncLabel('Sin sesión'); render(); }

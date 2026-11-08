@@ -208,7 +208,8 @@ function showUpdateBar(){
   document.body.append(bar);
 }
 function updateCard(){
-  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Actualizar la app'), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:updateApp},'Actualizar ahora'), h('span',{class:'small muted'},'Versión: '+APP_BUILD)));
+  const off=h('div',{class:'small muted'},'Sin conexión: comprobando…'); offlineCheck(off);
+  return h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Actualizar la app'), h('div',{class:'row'}, h('button',{class:'btn primary',onclick:updateApp},'Actualizar ahora'), h('span',{class:'small muted'},'Versión: '+APP_BUILD)), off);
 }
 function masteredGrammarCard(){
   const box=h('div',{class:'card stack',style:'margin-top:12px'}, h('h3',{},'Gramática que ya dominas'));
@@ -274,4 +275,14 @@ function adminCard(){
   const revChk=h('input',{type:'checkbox'});
   box.append(list, h('div',{class:'row adm-form'}, email, note, h('label',{class:'row small',style:'align-items:center;gap:6px'},revChk,'Revisora'), h('button',{class:'btn primary',onclick:async()=>{ const v=email.value.trim().toLowerCase(); if(!/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(v)){ toast('Correo no válido: usa solo letras, números y los símbolos habituales (sin espacios ni caracteres invisibles)'); return; } const dom=v.split('@')[1], typos={'gnail.com':'gmail.com','gmial.com':'gmail.com','gamil.com':'gmail.com','gmai.com':'gmail.com','gmail.co':'gmail.com','gmail.con':'gmail.com','gmaill.com':'gmail.com','hotmial.com':'hotmail.com','hotmal.com':'hotmail.com','outlok.com':'outlook.com','yaho.com':'yahoo.com'}; if(typos[dom]){ toast('¿Querías decir @'+typos[dom]+'? «'+dom+'» parece un error de escritura'); return; } try{ await adminAdd(v,note.value.trim()); if(revChk.checked) await adminSetReviewer(v,true); email.value=''; note.value=''; revChk.checked=false; toast('Cuenta autorizada'); refresh(); }catch(e){ toast('Error: '+e.message); } }},'Autorizar')));
   refresh(); return box;
+}
+
+// Uso sin conexión: la app guarda en el dispositivo todo lo necesario (código, trazos, banco de simulacros, fichas)
+const OFFLINE_FILES=['./index.html','./ext.js','./strokes.js','./mock.js'];
+async function offlineCheck(box){
+  const draw=(ok,busy)=>{ box.innerHTML=''; box.append(h('div',{class:'small'}, ok?'✓ Disponible sin conexión: puedes estudiar, repasar, hacer simulacros y practicar escritura. Lo que hagas se guarda aquí y se sube a tu cuenta cuando vuelva la red.':'Aún no está todo guardado para usar sin conexión.'), ok?null:h('button',{class:'btn sm',disabled:!!busy,onclick:prep},busy?'Guardando…':'Preparar uso sin conexión'), h('div',{class:'small muted'},'Sin conexión no funcionan: iniciar sesión con Google, la corrección de redacciones ni sincronizar con otros dispositivos.')); };
+  async function ready(){ try{ if(!('caches' in window)) return false; const ks=await caches.keys(); for(const k of ks){ if(!k.startsWith('dojo-')) continue; const c=await caches.open(k); const hits=await Promise.all(OFFLINE_FILES.map(f=>c.match(f))); if(hits.every(Boolean)) return true; } return false; }catch(e){ return false; } }
+  async function prep(){ draw(false,true); try{ const ks=await caches.keys(); const k=ks.filter(x=>x.startsWith('dojo-')).sort().pop()||'dojo-v11'; const c=await caches.open(k); await Promise.all(OFFLINE_FILES.map(f=>c.add(f).catch(()=>{}))); }catch(e){} draw(await ready(),false); if(!(await ready())) toast('No se pudo guardar todo: comprueba la conexión e inténtalo otra vez'); }
+  if (!('serviceWorker' in navigator)){ box.textContent='Este navegador no permite usar la app sin conexión.'; return; }
+  draw(await ready(),false);
 }
