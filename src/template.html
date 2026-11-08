@@ -448,8 +448,9 @@ details summary{cursor:pointer;font-weight:600}
 .wr-t{font-weight:500}
 @media (max-width:760px){.pgrid{grid-template-columns:1fr}.pc{padding:18px}}
 
-.exam-nav{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:16px}
-.exam-nav .btn{flex:1}
+.exam-nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:16px}
+.exam-nav .btn{flex:1 1 30%;min-width:0;padding-left:8px;padding-right:8px}
+.exam-nav .btn.primary{flex:2 1 100%}
 .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px}
 .qgrid button{min-height:44px;border:1px solid var(--line);background:var(--card);border-radius:10px;font-weight:600;font-variant-numeric:tabular-nums}
 .qgrid button.done{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
