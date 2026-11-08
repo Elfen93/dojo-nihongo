@@ -183,7 +183,8 @@ function renderStudy(){
     const gist=grammarGist(p.it);
     if (hl>=1&&gist!=='Punto de gramática') card.append(h('div',{class:'small'}, h('span',{class:'badge soft',title:'Qué función tiene el punto que se pide (no la forma)'},'Idea: '+gist)));
     if (hl>=2) card.append(h('div',{class:'muted'}, p.ex.s));
-    if (ask&&hl<2) card.append(h('button',{class:'btn sm ghost',onclick:()=>{ const inp=$('#ans'), v=inp?inp.value:''; c.hint=hl+1; renderStudy(); const i2=$('#ans'); if(i2){ i2.value=v; i2.focus(); } }},hl===0?'Pista: la idea del punto':'Pista: traducción'));
+    if (ask&&(hl<2||hl>0)){ const setHint=n=>{ const inp=$('#ans'), v=inp?inp.value:''; c.hint=n; renderStudy(); const i2=$('#ans'); if(i2){ i2.value=v; i2.focus(); } };
+      card.append(h('div',{class:'row',style:'justify-content:center;gap:8px'}, hl>0?h('button',{class:'btn sm ghost',onclick:()=>setHint(hl-1)},'Quitar pista'):null, hl<2?h('button',{class:'btn sm ghost',onclick:()=>setHint(hl+1)},hl===0?'Pista: la idea del punto':'Pista: traducción'):null)); }
     card.append(h('div',{class:'small'}, (ask||c.ok)?null:h('button',{class:'pill g jp',title:'Ver la ficha de este punto',onclick:()=>itemSheet(p.it)}, p.it.t, ' ›'), p.reg?h('span',{class:'badge soft',style:ask?'':'margin-left:6px',title:'Registro que pide la frase'},p.reg):null));
   } else if (c.f==='vp'){
     card.append(h('div',{class:'big-es'}, p.mainEs));
