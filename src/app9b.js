@@ -72,6 +72,11 @@ function reviewRow(key,label,inline,onChange){
 }
 // Texto de un ítem para el informe de correcciones
 function itemSnapshot(key){
+  if (key.startsWith('q|')){ const q=(typeof MOCK_Q!=='undefined'?MOCK_Q:[]).find(x=>'q|'+x.id===key); if(!q) return ''; const opt=(o,a)=>(o||[]).map((x,i)=>(i===a?'  ✓ ':'    ')+x).join('\n');
+    const body=q.lines?q.lines.map(l=>l.s+'：'+l.j).join('\n')+(q.q?'\n'+q.q:''):[q.s,q.w&&'「'+q.w+'」',q.j,q.p,q.parts&&((q.pre||'')+q.parts.join(' / ')+(q.post||''))].filter(Boolean).join('\n');
+    const qs=Array.isArray(q.q)?q.q.map(x=>x.q+'\n'+opt(x.o,x.a)).join('\n'):(q.o?opt(q.o,q.a):'');
+    return `[${q.lv} · ${q.t}] ${body}\n${qs}\n  explicación: ${q.why||''}`; }
+  if (key.startsWith('x|')){ const x=(typeof EXAM_SENTS!=='undefined'?EXAM_SENTS:[]).find(e=>'x|'+e.j===key); return x?`Frase de examen: ${x.j} = ${x.es||''}`:key.slice(2); }
   const it=ITEMS.get(key); if(!it){ const rd=key.startsWith('r|')?READINGS.find(r=>r.id===key.slice(2)):null; return rd?`Lectura «${rd.title}»`:''; }
   if(it.kind==='g') return `${it.t} | ${it.s||''}\n  explicación: ${it.e||''}\n`+(it.ex||[]).map(x=>'  ej: '+x.j+' = '+x.s).join('\n');
   if(it.kind==='v') return `${it.w}（${it.r}）= ${it.m.join('; ')}\n  ej: ${it.ex||''} = ${it.es||''}`;
@@ -92,7 +97,7 @@ function reviewCard(){
         h('div',{class:'row'}, note, h('button',{class:'btn sm',onclick:()=>set('fixed')},tr('Corregido')), h('button',{class:'btn sm ghost',onclick:()=>set('ok')},tr('Está bien')))));
     });
   };
-  const load=async()=>{ try{ const r=await sb.from('content_reports').select('*').eq('status','open').order('created_at'); if(r.error) throw r.error; rows=r.data||[]; draw(); }catch(e){ list.innerHTML=''; list.append(h('div',{class:'small muted'},'No se pudo leer: '+e.message+'. ¿Has ejecutado schema5.sql?')); } };
+  const load=async()=>{ try{ await loadMock(); }catch(e){} try{ const r=await sb.from('content_reports').select('*').eq('status','open').order('created_at'); if(r.error) throw r.error; rows=r.data||[]; draw(); }catch(e){ list.innerHTML=''; list.append(h('div',{class:'small muted'},'No se pudo leer: '+e.message+'. ¿Has ejecutado schema5.sql?')); } };
   const copy=h('button',{class:'btn sm',onclick:()=>{ const t=rows.map((r,i)=>`${i+1}. [${r.key}] ${r.label||''}\n  AVISO: ${r.comment}${r.suggestion?'\n  PROPUESTA: '+r.suggestion:''}\n  ACTUAL: ${itemSnapshot(r.key)}`).join('\n\n'); navigator.clipboard.writeText(t).then(()=>toast('Informe copiado')).catch(()=>toast('No se pudo copiar')); }},tr('Copiar informe'));
   box.append(list, h('div',{class:'row'}, h('button',{class:'btn sm primary',onclick:()=>go('revision')},tr('Abrir la revisión por niveles')), copy, h('button',{class:'btn sm ghost',onclick:load},tr('Actualizar'))));
   load(); return box;
