@@ -39,8 +39,23 @@ function stopSpeak(){ SEQ++; try{ if(ttsAudio){ ttsAudio.pause(); ttsAudio=null;
 function setSpeaking(on){ speaking=on; }
 // Voz del hablante B en diálogos: otra voz japonesa si el navegador la tiene; si no, tono distinto
 function voiceFor(spk){ const base=bestVoice(); if(spk!=='B') return {voice:base,pitch:1}; const vs=jaVoices().filter(v=>!base||v.name!==base.name); return vs.length?{voice:vs[0],pitch:1}:{voice:base,pitch:0.8}; }
+// Texto que se manda a la voz: la voz del navegador lee mal los kanji sueltos y los contadores (火→か, 上→かみ, 十分→じゅうぶん…),
+// así que se le pasa la lectura en kana: la de la palabra del vocabulario, la de la frase de examen o la que da el furigana
+const TTS_FIX={'兄は毎日新聞を読みます。':'あにはまいにち、しんぶんをよみます。'};
+let VOCAB_RD=null;
+function ttsText(t){
+  t=String(t||''); if(!hasKanji(t)) return t; if(TTS_FIX[t]) return TTS_FIX[t];
+  if(!VOCAB_RD){ VOCAB_RD={}; const amb={}; for(const v of (typeof VOCAB_ALL!=='undefined'?VOCAB_ALL:[])){ if(!v||!v.w||!v.r||!hasKanji(v.w)) continue; if(VOCAB_RD[v.w]&&VOCAB_RD[v.w]!==v.r) amb[v.w]=1; VOCAB_RD[v.w]=v.r; } for(const k in amb) delete VOCAB_RD[k]; }
+  if(VOCAB_RD[t]) return VOCAB_RD[t];
+  if(typeof EXAM_KANA!=='undefined'&&EXAM_KANA[t]) return EXAM_KANA[t];
+  if(typeof FURI!=='undefined'&&typeof JP_RUN!=='undefined'){ let out='',last=0; for(const m of t.matchAll(JP_RUN)){ out+=t.slice(last,m.index)+furiKana(m[0]); last=m.index+m[0].length; } out+=t.slice(last); if(!hasKanji(out)) return out; }
+  return t;
+}
+function furiKana(run){ const f=FURI[run]; if(!f) return run; let cur=0, out=''; for(const [sf,rd] of f.split(';').map(x=>x.split('|'))){ const i=run.indexOf(sf,cur); if(i<0) continue; out+=run.slice(cur,i)+rd; cur=i+sf.length; } return out+run.slice(cur); }
 function speakOnce(text, spk){
   return new Promise(async resolve=>{
+    if(hasKanji(String(text||''))&&typeof EXT_STATE!=='undefined'&&EXT_STATE!==2){ try{ await loadExt(); }catch(e){} }
+    text=ttsText(text);
     if (S&&S.settings&&S.settings.neuralVoice && typeof sb!=='undefined' && sb && USER){
       try{
         const nv=spk==='B'?'ja-JP-Neural2-C':'ja-JP-Neural2-B', key=nv+'|'+text; let url=TTS_CACHE.get(key);
@@ -60,7 +75,7 @@ async function speakSeq(chunks){
   if (token===SEQ) setSpeaking(false);
 }
 function speak(text, spk){ return speakSeq([{text,spk}]); }
-const spkBtn = text => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(text);}},'音');
+const spkBtn = (text,rd) => h('button',{class:'btn sm ghost',title:'Escuchar (pulsa otra vez para parar)',onclick:e=>{e.stopPropagation();speak(rd||text);}},'音');
 
 // ===================== Kana / romaji =====================
 const kataToHira = s => s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60));

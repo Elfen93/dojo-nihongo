@@ -1,4 +1,5 @@
 # Calcula el furigana (lectura por palabra) de los textos japoneses de las fichas. Uso: python3 -I tools/furi.py strings.json
+# Después: python3 -I tools/furi_fix.py  (corrige contadores, 何時, 富士山, 下 y otras lecturas que Sudachi da mal)
 import sys,json,re
 from sudachipy import dictionary,tokenizer
 tok=dictionary.Dictionary().create(); M=tokenizer.Tokenizer.SplitMode.B

@@ -24,6 +24,10 @@ Object.assign(GRAM_EXT,{
 {
 "j": "兄は医者です。",
 "s": "Mi hermano mayor es médico."
+},
+{
+"j": "これは私のかさじゃないです。",
+"s": "Este no es mi paraguas."
 }
 ],
 "r": [
@@ -50,7 +54,8 @@ Object.assign(GRAM_EXT,{
 "about": [
 "です es la forma cortés del verbo «ser» para decir qué es algo o quién es alguien. Se pone detrás de un nombre o de un adjetivo: 学生です (soy estudiante), 元気です (estoy bien). No cambia según la persona: sirve para «yo soy», «tú eres», «él es».",
 "La negación cortés es じゃありません (más hablada) o ではありません (algo más seria). El pasado es でした y el pasado negativo es じゃありませんでした. En la conversación entre amigos se usa だ (だ, じゃない) en vez de です.",
-"です también se pone al final de frases con adjetivos い para hacerlas corteses (高いです), pero allí no tiene significado de «ser»: solo da cortesía. Con verbos no se usa; con ellos se usa ます."
+"です también se pone al final de frases con adjetivos い para hacerlas corteses (高いです), pero allí no tiene significado de «ser»: solo da cortesía. Con verbos no se usa; con ellos se usa ます.",
+"En la conversación cortés también se oye じゃないです como negativo (学生じゃないです), un poco menos formal que じゃありません. Entre amigos, en vez de だ se suele no poner nada o poner una partícula final: 元気？ — 元気だよ / 元気だね."
 ],
 "ojo": "No pongas です detrás de un verbo en forma ます (食べますです es incorrecto). Con adjetivos い el pasado no es 高いでした, sino 高かったです."
 },
@@ -191,6 +196,14 @@ Object.assign(GRAM_EXT,{
 {
 "j": "駅で友だちを待ちます。",
 "s": "Espero a mi amigo en la estación."
+},
+{
+"j": "毎朝八時に家を出ます。",
+"s": "Salgo de casa a las ocho cada mañana."
+},
+{
+"j": "次の駅で電車を降ります。",
+"s": "Me bajo del tren en la próxima estación."
 }
 ],
 "r": [
@@ -218,7 +231,8 @@ Object.assign(GRAM_EXT,{
 "about": [
 "を marca el objeto directo: lo que recibe la acción del verbo. Se pone después del nombre y antes del verbo: パンを食べます (como pan). Aunque se escribe を, se lee «o». Solo se usa con verbos que tienen objeto directo, como 食べる, 飲む, 見る, 買う, 読む, 書く.",
 "También marca el lugar por el que se mueve alguien con verbos de movimiento como 歩く, 走る, 渡る, 通る: 公園を歩く (paseo por el parque), 橋を渡る (cruzo el puente). Aquí を indica el recorrido, no el destino.",
-"Con した de 勉強する, 掃除する, etc., el nombre lleva を: 日本語を勉強する. Con ~たい, el objeto puede llevar を o が: 水を飲みたい, 水が飲みたい."
+"Con した de 勉強する, 掃除する, etc., el nombre lleva を: 日本語を勉強する. Con ~たい, el objeto puede llevar を o が: 水を飲みたい, 水が飲みたい.",
+"を también marca el lugar del que sales o que dejas: 家を出る (salir de casa), バスを降りる (bajar del autobús), 大学を卒業する (terminar la universidad)."
 ],
 "ojo": "No uses を con 好き, 嫌い, 上手, 下手, ある ni わかる: esos usan が. Tampoco lo uses para el destino: 学校を行きます es incorrecto, se dice 学校へ行きます."
 },
@@ -229,8 +243,8 @@ Object.assign(GRAM_EXT,{
 "s": "Salgo de casa a las ocho de la mañana."
 },
 {
-"j": "土曜日に家で休みます。",
-"s": "El sábado descanso en casa."
+"j": "毎朝七時に起きます。",
+"s": "Me levanto a las siete todas las mañanas."
 },
 {
 "j": "毎年八月に国へ帰ります。",
@@ -274,7 +288,8 @@ Object.assign(GRAM_EXT,{
 "about": [
 "に tiene dos usos principales en este nivel. El primero es marcar un momento concreto: la hora, el día de la semana, la fecha, el mes o el año: 七時に, 月曜日に, 三月に, 二〇二五年に. El segundo es marcar el destino de un movimiento: 日本に行く, 駅に着く, 部屋に入る.",
 "No se usa con palabras de tiempo relativo, que no dan un punto fijo: 今日, 明日, 昨日, 毎日, 毎朝, 今, 来週, 先月. Se dice 明日行きます, no 明日に行きます.",
-"También marca la persona que recibe algo o el lugar donde se pone algo (友だちにあげる, 机に置く). Si el destino es un lugar, に y へ casi siempre son intercambiables."
+"También marca la persona que recibe algo o el lugar donde se pone algo (友だちにあげる, 机に置く). Si el destino es un lugar, に y へ casi siempre son intercambiables.",
+"Con los días de la semana y palabras como 週末, cuando hablas de lo que sueles hacer suena más natural は que に: 土曜日は家で休みます (los sábados descanso en casa)."
 ],
 "ojo": "Con una hora o una fecha exacta, no te olvides de に (七時に起きます). Con palabras como 毎日 o 明日 no lo pongas nunca."
 },
@@ -442,7 +457,8 @@ Object.assign(GRAM_EXT,{
 "about": [
 "か se pone al final de una frase para convertirla en pregunta. No cambia el orden de las palabras ni hace falta ningún signo: お茶を飲みますか (¿tomas té?). Se escribe con el signo ？ solo a veces; normalmente basta con か.",
 "Se usa con las palabras interrogativas (何, 誰, どこ, いつ, どれ), que se quedan en el mismo lugar que la respuesta: これは何ですか. Para preguntas de sí o no se responde はい o いいえ.",
-"También sirve para dar a elegir entre dos cosas: 肉ですか、魚ですか (¿carne o pescado?). En la conversación informal se puede quitar か y subir la entonación al final."
+"También sirve para dar a elegir entre dos cosas: 肉ですか、魚ですか (¿carne o pescado?). En la conversación informal se puede quitar か y subir la entonación al final.",
+"La entonación cambia el sentido: そうですか con el tono subiendo pregunta «¿ah, sí?»; con el tono bajando solo indica que has entendido y lo aceptas: そうですか↓。わかりました。 (Ya veo. Entendido.)"
 ],
 "ojo": "No traduzcas か como «¿?»: es una palabra que se lee y se pronuncia. En una pregunta cortés siempre se pone: 行きますか, no 行きます con el signo."
 },
@@ -719,7 +735,7 @@ Object.assign(GRAM_EXT,{
 "Siempre llevan un nombre detrás: nunca van solos. Si quieres quitar el nombre, tienes que usar el pronombre: この本 → これ.",
 "Tampoco se conjugan ni usan partículas por sí mismos: la partícula va detrás del nombre (この本を読みます). En lenguaje más cortés se usan こちら, そちら, あちら, どちら."
 ],
-"ojo": "Aunque en español traducimos igual «este libro» y «esto», en japonés una forma lleva nombre (この本) y la otra no (これ). No se pueden intercambiar."
+"ojo": "この siempre va pegado a un nombre: この本 (este libro). これ va solo, sin nombre: これは本です (esto es un libro). No se pueden cambiar: «これ本» o «このは» son incorrectos."
 },
 "koko-soko": {
 "m": [
@@ -999,7 +1015,8 @@ Object.assign(GRAM_EXT,{
 "about": [
 "〜てください es la forma normal de pedir o de dar una instrucción cortés: «haga..., por favor». Se forma con la forma て del verbo más ください: 待ってください (espere), 書いてください (escriba). Se usa para pedir a otros que hagan algo, en tiendas, en clase, en la calle y en el trabajo.",
 "La forma negativa es ないでください (no haga...). Entre amigos o familia se puede quitar ください y usar solo la forma て: ちょっと待って. Con un tono más suave se añade ね: 待ってくださいね.",
-"Sirve para pedir y para dar instrucciones (「ここを押してください」), pero no para ofrecer. Para ofrecer algo a alguien se usan otras expresiones, como どうぞ."
+"Sirve para pedir y para dar instrucciones (「ここを押してください」), pero no para ofrecer. Para ofrecer algo a alguien se usan otras expresiones, como どうぞ.",
+"Junto a どうぞ y con la forma お〜ください sirve para ofrecer o invitar con cortesía: どうぞお食べください (sírvase, coma), どうぞお上がりください (pase, suba), どうぞお入りください (adelante, entre)."
 ],
 "ojo": "No es una orden descortés, pero tampoco es muy humilde. Con personas de mucho respeto se prefiere una petición más suave (お〜ください, 〜ていただけませんか)."
 },
@@ -1895,7 +1912,8 @@ Object.assign(GRAM_EXT,{
 "about": [
 "La forma diccionario (る, う, く, ぐ, す, つ, ぬ, ぶ, む) es la forma básica del verbo, la que aparece en el diccionario. Es la forma informal del presente y del futuro: 食べる, 行く, 読む. Con amigos se usa tal cual, y es la base para muchas construcciones.",
 "Para convertir un verbo en un nombre («el hecho de hacer...») se añade こと o の: 本を読むこと (leer libros), 泳ぐのが好きだ (me gusta nadar). こと es algo más formal y se usa en definiciones, como 趣味は〜ことです. の es más hablado y común con 好き, 上手, 難しい.",
-"Así puedes decir una frase completa: 日本語を話すのは難しいです (hablar japonés es difícil)."
+"Así puedes decir una frase completa: 日本語を話すのは難しいです (hablar japonés es difícil).",
+"En frases del tipo «A es B» (AはBです) cuando B es una acción, solo vale こと, no の: 趣味は散歩することです (mi afición es pasear), 特技は泳ぐことです, 夢はマンションを買うことです."
 ],
 "ojo": "Para decir tu afición hay que usar こと: 趣味は読書です o 趣味は本を読むことです. No se usa 趣味は本を読むのです. Con adjetivos como 好き o 上手, normalmente se usa の."
 },
@@ -2112,6 +2130,11 @@ Object.assign(GRAM_EXT,{
 "id": "noni",
 "t": "〜のに",
 "d": "〜のに (N4) también significa «aunque / a pesar de», pero con un tono de queja o sorpresa."
+},
+{
+"k": "sin",
+"t": "〜けど",
+"d": "けど (o けれど) también significa «pero», con un tono más hablado y suave que が: 高いけど、買います (es caro, pero lo compro)."
 }
 ],
 "cat": "Conjunción",
